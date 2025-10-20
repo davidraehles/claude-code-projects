@@ -150,7 +150,7 @@ A visitor on a mobile device or slow connection needs the page to load quickly w
 - **FR-016**: Statistics MUST be displayed with appropriate context and sourcing
 
 **Contact/CTA Section**:
-- **FR-017**: System MUST provide a contact form with fields for [NEEDS CLARIFICATION: which specific fields - name, email, message? Any additional fields like phone, company?]
+- **FR-017**: System MUST provide a contact form with fields for Name, Email, Company, Phone, and Message (all required except Phone which is optional)
 - **FR-018**: System MUST validate form inputs before submission (email format, required fields)
 - **FR-019**: System MUST display success/error messages after form submission
 - **FR-020**: System MUST provide alternative contact methods (email address, social media links)
