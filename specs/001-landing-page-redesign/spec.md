@@ -9,52 +9,52 @@
 
 ### User Story 1 - First-Time Visitor Discovery (Priority: P1)
 
-A visitor lands on raedical.co for the first time and needs to immediately understand what the service/product offers and determine if it's relevant to their needs.
+A visitor lands on raedical.co for the first time and needs to immediately understand that David Raehles offers professional data consulting services and determine if his expertise matches their needs.
 
-**Why this priority**: The hero section and initial value proposition are the most critical elements - if visitors don't immediately understand the offering, they'll leave before exploring further. This is the foundation of any landing page.
+**Why this priority**: The hero section and initial value proposition are the most critical elements - if visitors don't immediately understand the data consulting offering, they'll leave before exploring further. This is the foundation of any landing page.
 
-**Independent Test**: Can be fully tested by loading the homepage and verifying that within 3 seconds a visitor can articulate what raedical.co offers, even without scrolling.
+**Independent Test**: Can be fully tested by loading the homepage and verifying that within 3 seconds a visitor can articulate that raedical.co offers data science, analytics, and governance consulting services.
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor arrives at raedical.co, **When** the page loads, **Then** they see a clear headline, subheadline, and primary call-to-action above the fold
-2. **Given** a visitor reads the hero section, **When** they spend 5 seconds on the page, **Then** they can understand the core value proposition
-3. **Given** a visitor wants to take action, **When** they view the hero section, **Then** they see a prominently displayed primary CTA button
+1. **Given** a visitor arrives at raedical.co, **When** the page loads, **Then** they see a clear headline communicating data consulting expertise, subheadline with service focus, and primary call-to-action above the fold
+2. **Given** a visitor reads the hero section, **When** they spend 5 seconds on the page, **Then** they understand that raedical.co offers professional services in data science, analytics, and governance
+3. **Given** a visitor wants to take action, **When** they view the hero section, **Then** they see a prominently displayed primary CTA button (e.g., "Get in Touch", "Discuss Your Data Needs")
 4. **Given** a visitor is on mobile, **When** the page loads, **Then** all hero content is readable and actionable without horizontal scrolling
 
 ---
 
-### User Story 2 - Understanding Features and Benefits (Priority: P2)
+### User Story 2 - Understanding Services and Expertise (Priority: P2)
 
-A visitor wants to learn more about specific features, services, or capabilities offered by raedical.co to evaluate if it meets their needs.
+A visitor wants to learn more about the specific data consulting services offered by raedical.co to evaluate if the expertise matches their organizational needs.
 
-**Why this priority**: After the initial hook, visitors need detailed information to make informed decisions. This section builds trust and provides the substance to convert interest into action.
+**Why this priority**: After the initial hook, visitors need detailed information about service offerings to make informed decisions. This section builds credibility and provides the substance to convert interest into action.
 
-**Independent Test**: Can be tested by scrolling to the features section and verifying that each key offering has a clear title, description, and supporting visual.
+**Independent Test**: Can be tested by scrolling to the features section and verifying that all 6 service offerings (Data Governance, BI Dashboards, Data Science, Cloud Solutions, Self-Service Analytics, Data Quality) are clearly presented with icons, titles, and value descriptions.
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor scrolls past the hero section, **When** they reach the features area, **Then** they see 3-6 clearly presented features with icons/images, titles, and descriptions
-2. **Given** a visitor reads the features, **When** they review each one, **Then** each feature communicates a specific benefit or capability
-3. **Given** a visitor is comparing options, **When** they view the features section, **Then** the unique differentiators are clearly highlighted
-4. **Given** a visitor wants more details, **When** they view a feature, **Then** they can access additional information without leaving the page
+1. **Given** a visitor scrolls past the hero section, **When** they reach the services area, **Then** they see exactly 6 service offerings clearly presented with icons, titles, and descriptions (per FR-009)
+2. **Given** a visitor reads the services, **When** they review each one, **Then** each service communicates specific value: governance for foundations, BI for dashboards (Tableau), analytics for insights, cloud for scale, self-service for enablement, quality for reliability (per FR-009a)
+3. **Given** a visitor is evaluating capabilities, **When** they view the services section, **Then** they can identify expertise in their area of need (data governance, analytics, cloud, etc.)
+4. **Given** a visitor wants more details, **When** they view a service, **Then** the description clearly explains the benefit without requiring additional pages
 
 ---
 
-### User Story 3 - Building Trust and Credibility (Priority: P2)
+### User Story 3 - Validating Experience and Impact (Priority: P2)
 
-A visitor needs social proof and validation that raedical.co is trustworthy, established, and delivers on its promises.
+A visitor needs quantifiable proof that David Raehles has significant experience and has delivered meaningful impact in data consulting.
 
-**Why this priority**: Trust is essential for conversion. Visitors need evidence that others have benefited from the service before committing.
+**Why this priority**: Trust is essential for professional services. Visitors need concrete evidence of experience and track record before engaging for consulting services.
 
-**Independent Test**: Can be tested by viewing the social proof section and verifying the presence of testimonials, logos, or statistics.
+**Independent Test**: Can be tested by viewing the achievements section and verifying the presence of 3-4 animated statistics with meaningful context.
 
 **Acceptance Scenarios**:
 
-1. **Given** a visitor is evaluating credibility, **When** they scroll to the social proof section, **Then** they see testimonials, client logos, or quantifiable achievements
-2. **Given** a visitor reads testimonials, **When** they view each one, **Then** they see authentic-looking quotes with attribution (name, title, company where appropriate)
-3. **Given** a visitor wants validation, **When** they view statistics or achievements, **Then** they see concrete numbers that demonstrate success
-4. **Given** a visitor is on mobile, **When** they view social proof elements, **Then** the content is easily readable and properly formatted
+1. **Given** a visitor is evaluating credentials, **When** they scroll to the achievements section, **Then** they see 3-4 quantifiable statistics with context labels (e.g., "8+ Years Experience", "Fortune 500 Clients", "Data Solutions Delivered") (per FR-013, FR-015)
+2. **Given** a visitor views the statistics, **When** they scroll the section into view, **Then** they see animated counters that visually emphasize the numerical achievements (per FR-014)
+3. **Given** a visitor wants to understand impact, **When** they view each statistic, **Then** each number has clear context explaining what it represents (years of experience, enterprise clients, solutions delivered, etc.) (per FR-015)
+4. **Given** a visitor is on mobile, **When** they view statistics, **Then** the metrics are arranged in a responsive grid that remains readable and impactful (per FR-016)
 
 ---
 
@@ -113,13 +113,21 @@ A visitor on a mobile device or slow connection needs the page to load quickly w
 ### Edge Cases
 
 - What happens when a user submits a form with malicious input (SQL injection, XSS attempts)?
+  * **Answer**: All inputs are sanitized client-side and server-side; React automatically escapes rendered content to prevent XSS
 - How does the system handle form submission if the backend service is temporarily unavailable?
+  * **Answer**: Display error message: "Unable to send message. Please email us directly at contact@raedical.co" (per FR-019)
 - What happens when a user has JavaScript disabled in their browser?
+  * **Answer**: Static content remains accessible; form falls back to native HTML form submission or displays message to enable JavaScript
 - How does the page display when images fail to load?
+  * **Answer**: Alt text displays for accessibility; skeleton placeholders show loading states; page layout remains intact (per FR-050, FR-041)
 - What happens when a user visits from an extremely old browser (IE11 or older)?
+  * **Answer**: Display graceful degradation message; support only last 2 versions of modern browsers (per FR-049)
 - How does the page handle extremely long text in testimonials or form inputs?
+  * **Answer**: Form inputs have max length validation (FR-018); statistics don't use testimonials (FR-013); text truncation with ellipsis for any long content
 - What happens when a user tries to submit multiple forms in rapid succession?
+  * **Answer**: Form submission disables button and shows loading state (FR-052); duplicate submission prevention (FR-022)
 - How does the page behave when accessed by bots or scrapers?
+  * **Answer**: Semantic HTML ensures crawlability (FR-033); rate limiting on API prevents abuse; robots.txt configured appropriately
 
 ## Requirements *(mandatory)*
 
@@ -133,26 +141,27 @@ A visitor on a mobile device or slow connection needs the page to load quickly w
 - **FR-005**: System MUST ensure all hero content is visible above the fold on standard desktop resolutions (1920x1080 and 1366x768)
 
 **About/Introduction Section**:
-- **FR-006**: System MUST provide a brief overview explaining what raedical.co offers
-- **FR-007**: System MUST highlight key differentiators or unique selling points
+- **FR-006**: System MUST provide a brief overview explaining that raedical.co offers professional services in data science, analytics, data governance, and business intelligence
+- **FR-007**: System MUST highlight key differentiators: enterprise experience (BMW Group, BMW Bank), expertise across data governance and analytics, self-service enablement approach, and cloud-native solutions (AWS, Google Cloud)
 - **FR-008**: System MUST present information in scannable format (short paragraphs, bullet points, or visual hierarchy)
 
 **Features/Services Section**:
-- **FR-009**: System MUST display between 3 and 6 main features or services
+- **FR-009**: System MUST display exactly 6 main service offerings: (1) Data Governance & Strategy, (2) Business Intelligence & Dashboards, (3) Data Science & Analytics, (4) Cloud Data Solutions, (5) Self-Service Analytics Enablement, (6) Data Quality & Validation
+- **FR-009a**: Each service offering MUST communicate specific value: governance establishes data foundations, BI creates actionable dashboards (Tableau expertise), analytics drives insights, cloud enables scalability (AWS/Google Cloud), self-service empowers teams, and quality ensures reliability
 - **FR-010**: Each feature MUST include an icon or visual element, a title, and a description
 - **FR-011**: System MUST arrange features in a grid or card layout that is visually balanced
 - **FR-012**: System MUST allow features to reflow appropriately on smaller screens
 
 **Social Proof Section**:
-- **FR-013**: System MUST display testimonials, client logos, or quantifiable achievements
-- **FR-014**: Testimonials MUST include attribution (name and optionally title/company)
-- **FR-015**: System MUST present social proof elements in a visually credible manner
-- **FR-016**: Statistics MUST be displayed with appropriate context and sourcing
+- **FR-013**: System MUST display quantifiable achievements and statistics showcasing professional impact (e.g., years of experience, enterprise clients served, data solutions delivered, team members enabled)
+- **FR-014**: System MUST implement animated counter components that visually emphasize numerical achievements when scrolled into view
+- **FR-015**: Statistics MUST be displayed with appropriate context labels and brief descriptions (e.g., "8+ Years Experience", "Fortune 500 Clients", "Tableau Dashboards Deployed")
+- **FR-016**: System MUST arrange statistics in a visually prominent layout (centered row or grid with 3-4 key metrics)
 
 **Contact/CTA Section**:
 - **FR-017**: System MUST provide a contact form with fields for Name, Email, Company, Phone, and Message (all required except Phone which is optional)
 - **FR-018**: System MUST validate form inputs before submission (email format, required fields)
-- **FR-019**: System MUST display success/error messages after form submission
+- **FR-019**: System MUST display success/error messages after form submission; if email service fails, display error message with fallback contact method: "Unable to send message. Please email us directly at contact@raedical.co"
 - **FR-020**: System MUST provide alternative contact methods (email address, social media links)
 - **FR-021**: System MUST offer newsletter subscription capability
 - **FR-022**: System MUST prevent duplicate form submissions
@@ -195,6 +204,12 @@ A visitor on a mobile device or slow connection needs the page to load quickly w
 - **FR-047**: System MUST provide visual feedback for interactive elements (hover states, focus states)
 - **FR-048**: System MUST use consistent branding (colors, typography, imagery)
 - **FR-049**: System MUST display properly in modern browsers (Chrome, Firefox, Safari, Edge - last 2 versions)
+
+**Loading States & Progressive Enhancement**:
+- **FR-050**: System MUST implement progressive image loading with low-quality image placeholders (LQIP) or skeleton screens while images load
+- **FR-051**: System MUST display skeleton screens or loading indicators for content sections that may load asynchronously
+- **FR-052**: System MUST show a loading indicator on form submission button during processing (disable button, show spinner/text change)
+- **FR-053**: System MUST ensure critical above-the-fold content (hero section) renders immediately without waiting for images or external resources
 
 ### Key Entities
 
