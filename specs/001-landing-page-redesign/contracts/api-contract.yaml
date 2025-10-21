@@ -1,0 +1,330 @@
+openapi: 3.0.3
+info:
+  title: Raedical Landing Page API
+  description: |
+    API contracts for the Raedical.co landing page form submissions and newsletter subscriptions.
+    These endpoints will be implemented as Next.js API routes.
+  version: 1.0.0
+  contact:
+    name: Raedical
+    url: https://raedical.co
+
+servers:
+  - url: https://raedical.co/api
+    description: Production
+  - url: http://localhost:3000/api
+    description: Local development
+
+tags:
+  - name: contact
+    description: Contact form submission endpoints
+  - name: newsletter
+    description: Newsletter subscription endpoints
+  - name: health
+    description: Health check endpoints
+
+paths:
+  /contact:
+    post:
+      tags:
+        - contact
+      summary: Submit contact form
+      description: |
+        Accepts contact form submissions from visitors. Validates input, sends email via
+        Resend/SendGrid, and returns success/error response.
+
+        **Rate Limiting**: 5 requests per IP per hour
+        **Requirements**: FR-017, FR-018, FR-019, FR-022
+      operationId: submitContactForm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ContactSubmissionRequest'
+            examples:
+              validSubmission:
+                summary: Valid contact form submission
+                value:
+                  name: "Jane Doe"
+                  email: "jane@example.com"
+                  company: "Acme Corp"
+                  phone: "+15551234567"
+                  message: "I'm interested in learning more about your services."
+              minimalSubmission:
+                summary: Submission without optional phone
+                value:
+                  name: "John Smith"
+                  email: "john@example.com"
+                  company: "Tech Startup"
+                  message: "Please contact me to discuss potential collaboration opportunities."
+      responses:
+        '200':
+          description: Contact form submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContactSubmissionResponse'
+              example:
+                success: true
+                message: "Thank you for contacting us! We'll get back to you soon."
+        '400':
+          description: Validation error - invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                validationError:
+                  summary: Validation errors
+                  value:
+                    success: false
+                    error: "Validation failed"
+                    details:
+                      - field: "email"
+                        message: "Please enter a valid email address"
+                      - field: "message"
+                        message: "Message must be at least 10 characters"
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Too many requests. Please try again later."
+        '500':
+          description: Server error - email service unavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Unable to send your message. Please try again or email us directly at contact@raedical.co"
+
+  /newsletter:
+    post:
+      tags:
+        - newsletter
+      summary: Subscribe to newsletter
+      description: |
+        Accepts newsletter subscription requests. Validates email, checks for existing
+        subscription, and adds to mailing list via email service.
+
+        **Rate Limiting**: 3 requests per IP per hour
+        **Requirements**: FR-021, FR-045
+      operationId: subscribeNewsletter
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewsletterSubscriptionRequest'
+            example:
+              email: "subscriber@example.com"
+              consentGiven: true
+              source: "footer"
+      responses:
+        '200':
+          description: Successfully subscribed to newsletter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsletterSubscriptionResponse'
+              example:
+                success: true
+                message: "Successfully subscribed! Check your email to confirm."
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Validation failed"
+                details:
+                  - field: "email"
+                    message: "Please enter a valid email address"
+                  - field: "consentGiven"
+                    message: "You must agree to receive emails"
+        '409':
+          description: Email already subscribed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "This email is already subscribed to our newsletter."
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Too many requests. Please try again later."
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                success: false
+                error: "Unable to subscribe at this time. Please try again later."
+
+  /health:
+    get:
+      tags:
+        - health
+      summary: Health check
+      description: Returns API health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2025-10-20T12:34:56Z"
+
+components:
+  schemas:
+    ContactSubmissionRequest:
+      type: object
+      required:
+        - name
+        - email
+        - company
+        - message
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Full name of the person submitting the form
+          example: "Jane Doe"
+        email:
+          type: string
+          format: email
+          description: Email address for contact
+          example: "jane@example.com"
+        company:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: Company or organization name
+          example: "Acme Corporation"
+        phone:
+          type: string
+          pattern: '^\+?[1-9]\d{1,14}$'
+          description: Optional phone number in E.164 format
+          example: "+15551234567"
+          nullable: true
+        message:
+          type: string
+          minLength: 10
+          maxLength: 5000
+          description: The message or inquiry content
+          example: "I'm interested in learning more about your services."
+
+    ContactSubmissionResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Indicates if submission was successful
+          example: true
+        message:
+          type: string
+          description: User-facing success message
+          example: "Thank you for contacting us! We'll get back to you soon."
+
+    NewsletterSubscriptionRequest:
+      type: object
+      required:
+        - email
+        - consentGiven
+        - source
+      properties:
+        email:
+          type: string
+          format: email
+          description: Subscriber email address
+          example: "subscriber@example.com"
+        consentGiven:
+          type: boolean
+          description: User consent to receive emails (GDPR/CCPA compliance)
+          example: true
+        source:
+          type: string
+          enum:
+            - hero
+            - footer
+            - contact-form
+          description: Where the subscription originated
+          example: "footer"
+
+    NewsletterSubscriptionResponse:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          description: Indicates if subscription was successful
+          example: true
+        message:
+          type: string
+          description: User-facing success message
+          example: "Successfully subscribed! Check your email to confirm."
+
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - error
+      properties:
+        success:
+          type: boolean
+          description: Always false for error responses
+          example: false
+        error:
+          type: string
+          description: User-facing error message
+          example: "Validation failed"
+        details:
+          type: array
+          description: Detailed validation errors (optional)
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: Field name that failed validation
+                example: "email"
+              message:
+                type: string
+                description: Field-specific error message
+                example: "Please enter a valid email address"
+
+  securitySchemes: {}
+
+security: []
