@@ -422,6 +422,198 @@ logger.info("recipe_harvested", extra={
 
 ---
 
+### 1G: Support Services & Error Handling (Week 4)
+
+**Deliverables**:
+- ✅ Dead Letter Queue (DLQ) for failed events
+- ✅ Error handler agent
+- ✅ Notification service (Phase 1: in-app only)
+- ✅ User preferences service
+
+**Architecture**:
+```
+Event Processing Flow:
+┌─────────────────────────────────────────┐
+│ Event Published (any agent)             │
+└──────────────┬──────────────────────────┘
+               │
+               ├─→ Route by Topic (recipe.*, ingredient.*, etc.)
+               │
+               ├─→ Handler processes successfully
+               │   └─→ Next workflow step
+               │
+               └─→ Handler throws exception
+                   └─→ Retry with exponential backoff (3 attempts)
+                       ├─→ Success after retry: Continue
+                       └─→ Failure after 3 retries
+                           └─→ MOVE TO DEAD LETTER QUEUE (DLQ)
+                               └─→ Error Handler Agent
+                                   ├─→ Log detailed error
+                                   ├─→ Notify user (in-app)
+                                   ├─→ Create support ticket
+                                   └─→ Emit error.unhandled event
+```
+
+**Error Handler Agent**:
+```python
+class ErrorHandlerAgent(Agent):
+    async def handle_failed_event(self, event: Event) -> None:
+        """Process events that failed after retries"""
+        try:
+            # 1. Extract error context
+            error_details = {
+                "eventType": event.eventType,
+                "originalPayload": event.payload,
+                "error": event.error,
+                "retryCount": event.metadata.retryCount,
+                "failureTimestamp": datetime.utcnow()
+            }
+
+            # 2. Store in database for investigation
+            await self.db.failed_events.insert(error_details)
+
+            # 3. Notify user if applicable
+            if event.payload.get("user_id"):
+                await self.notification_service.send_error_notification(
+                    user_id=event.payload.user_id,
+                    event_type=event.eventType,
+                    error_message=event.error
+                )
+
+            # 4. Create monitoring alert
+            self.metrics.error_unhandled_total.labels(
+                event_type=event.eventType
+            ).inc()
+
+            # 5. Log for debugging
+            logger.error(
+                "unhandled_event_in_dlq",
+                extra=error_details
+            )
+        except Exception as e:
+            # Prevent error handler from failing
+            logger.critical("error_handler_failed", extra={"error": str(e)})
+```
+
+**Notification Service**:
+- **Phase 1 (MVP)**: In-app notifications only
+  - "Meal plan generated successfully"
+  - "Recipe harvesting failed, click to retry"
+  - "Knuspr cart created, click to open"
+  - Error notifications (with retry buttons)
+
+- **Phase 2+**: Email + SMS notifications
+  - Integration with SendGrid/AWS SNS
+  - User notification preferences
+  - Digest emails (daily/weekly)
+
+**User Preferences Service**:
+```python
+class UserPreferencesService:
+    async def get_preferences(self, user_id: int) -> UserPreferences:
+        """Get user's app preferences"""
+        # Notifications: in-app, email, sms
+        # Dietary: vegetarian, vegan, gluten-free, etc.
+        # Cuisine: preferred cuisines
+        # Timing: max prep time, meal frequency
+        # Language: for UI localization
+        return user.preferences
+
+    async def update_preferences(
+        self,
+        user_id: int,
+        updates: UserPreferencesUpdate
+    ) -> UserPreferences:
+        """Update user preferences"""
+        user.preferences.update(updates)
+        await self.db.users.update(user)
+        return user.preferences
+```
+
+**Database Table for Failed Events**:
+```sql
+CREATE TABLE failed_events (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT REFERENCES users(id),
+  event_type VARCHAR(255) NOT NULL,
+  original_payload JSONB NOT NULL,
+  error_message TEXT,
+  error_traceback TEXT,
+  retry_count INT DEFAULT 0,
+  failed_at TIMESTAMP DEFAULT NOW(),
+  resolved_at TIMESTAMP,
+  resolution_notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX idx_failed_events_user_id ON failed_events(user_id);
+CREATE INDEX idx_failed_events_resolved ON failed_events(resolved_at);
+```
+
+**Event Bus Dead Letter Queue Pattern**:
+```
+Phase 1 Implementation:
+- Use separate Redis Pub/Sub topic: `*.failed`
+- All failed events published to DLQ topic
+- ErrorHandlerAgent subscribes to DLQ
+- Maximum retry: 3 attempts with exponential backoff (1s, 2s, 4s)
+
+Example Flow:
+1. recipe.harvest.requested published
+2. Harvester fails to extract recipe
+3. After 3 retries, emits recipe.harvest.failed
+4. ErrorHandlerAgent catches in DLQ topic
+5. Stores in failed_events table
+6. Notifies user via in-app notification
+7. User can manually retry from UI
+```
+
+**Notification Event Schema**:
+```json
+{
+  "eventType": "notification.created",
+  "timestamp": "2025-11-14T10:30:00Z",
+  "payload": {
+    "userId": "user-456",
+    "type": "info" | "warning" | "error" | "success",
+    "title": "Meal Plan Generated",
+    "message": "Your 7-day meal plan is ready",
+    "actionUrl": "/meal-plans/plan-789",
+    "actionLabel": "View Plan",
+    "dismissable": true,
+    "expiresAt": "2025-11-15T10:30:00Z"
+  }
+}
+```
+
+**Tasks**:
+```
+1. Create ErrorHandlerAgent class
+2. Implement DLQ topic routing in event bus
+3. Create failed_events table migration
+4. Implement retry logic with exponential backoff
+5. Create NotificationService class
+6. Add in-app notification endpoints
+7. Create UserPreferencesService
+8. Add notification dismissal tracking
+9. Create support ticket system (basic)
+10. Test error scenarios (network failures, timeouts)
+11. Document DLQ investigation procedures
+12. Create dashboards for failed event monitoring
+```
+
+**Metrics to Expose**:
+```
+error_event_retry_total{event_type, attempt}
+error_event_dlq_total{event_type}
+error_event_resolved_total{event_type, resolution}
+notification_created_total{type, user_id}
+notification_read_total{type}
+support_ticket_created_total{issue_type}
+```
+
+---
+
 ## Phase 2: Orchestration & Meal Planning (Weeks 5-7)
 
 ### Objectives
