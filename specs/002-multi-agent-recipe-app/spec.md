@@ -141,7 +141,7 @@ A developer wants to upgrade individual agents (e.g., swap a basic ingredient pa
 
 #### Agent Architecture
 - **FR-025**: System MUST implement agents as independent, single-purpose entities with clear responsibilities
-- **FR-026**: System MUST use an event bus (NATS or RabbitMQ) for inter-agent communication
+- **FR-026**: System MUST use an event bus for inter-agent communication (Phase 1: Redis Pub/Sub or FastAPI background tasks; Phase 2+: NATS or RabbitMQ for higher throughput)
 - **FR-027**: System MUST require each agent to expose a capability manifest describing its functions
 - **FR-028**: System MUST use LangGraph or CrewAI for orchestrating multi-agent workflows
 - **FR-029**: System MUST deploy agents as separate containers for independent scaling
@@ -186,7 +186,7 @@ The system follows a **multi-agent swarm architecture** where specialized agents
 ### Key Design Principles
 
 - **Lego Modularity**: Each agent is independently deployable and replaceable
-- **Event-Driven**: Agents communicate through pub/sub on event bus (NATS/RabbitMQ)
+- **Event-Driven**: Agents communicate through pub/sub on event bus (Phase 1: Redis Pub/Sub, Phase 2+: NATS/RabbitMQ for production scale)
 - **Capability Manifests**: Agents expose their capabilities for dynamic routing
 - **Orchestration**: LangGraph or CrewAI manages complex multi-agent workflows
 - **Containerization**: Each agent runs in its own container for independent scaling
@@ -197,7 +197,7 @@ The system follows a **multi-agent swarm architecture** where specialized agents
 - **Agent Orchestration**: LangChain/LangGraph
 - **Agent Framework**: PydanticAI + AtomicAgents
 - **AI Models**: Anthropic Claude (ingredient intelligence, recipe analysis)
-- **Production Deployment**: Agno + Google ADK
+- **Production Deployment**: Docker Compose (Phase 1), Kubernetes with Agno + Google ADK evaluation (Phase 2+)
 
 **Backend Infrastructure**:
 - **API Framework**: FastAPI (Python)
@@ -207,9 +207,9 @@ The system follows a **multi-agent swarm architecture** where specialized agents
 - **Monitoring**: Prometheus (for performance measurement)
 
 **Supporting Services**:
-- **Event Bus**: Redis (message queuing)
+- **Event Bus**: Redis Pub/Sub or FastAPI background tasks (Phase 1), Redis Streams/RabbitMQ (Phase 2+)
 - **Recipe Harvesting**: Puppeteer (browser automation), Axios (HTTP), feedparser (RSS)
-- **Constraint Solver**: Z3 or OR-Tools for meal planning constraints
+- **Constraint Solver**: Z3 (Phase 1), OR-Tools evaluation for Phase 2 optimization
 - **API Integration**: Knuspr MCP Server (experimental), Knuspr REST client
 
 **Frontend**:
