@@ -141,7 +141,7 @@ A developer wants to upgrade individual agents (e.g., swap a basic ingredient pa
 
 #### Agent Architecture
 - **FR-025**: System MUST implement agents as independent, single-purpose entities with clear responsibilities
-- **FR-026**: System MUST use an event bus (NATS or RabbitMQ) for inter-agent communication
+- **FR-026**: System MUST use an event bus for inter-agent communication (Phase 1: Redis Pub/Sub or FastAPI background tasks; Phase 2+: NATS or RabbitMQ for higher throughput)
 - **FR-027**: System MUST require each agent to expose a capability manifest describing its functions
 - **FR-028**: System MUST use LangGraph or CrewAI for orchestrating multi-agent workflows
 - **FR-029**: System MUST deploy agents as separate containers for independent scaling
@@ -186,29 +186,43 @@ The system follows a **multi-agent swarm architecture** where specialized agents
 ### Key Design Principles
 
 - **Lego Modularity**: Each agent is independently deployable and replaceable
-- **Event-Driven**: Agents communicate through pub/sub on event bus (NATS/RabbitMQ)
+- **Event-Driven**: Agents communicate through pub/sub on event bus (Phase 1: Redis Pub/Sub, Phase 2+: NATS/RabbitMQ for production scale)
 - **Capability Manifests**: Agents expose their capabilities for dynamic routing
 - **Orchestration**: LangGraph or CrewAI manages complex multi-agent workflows
 - **Containerization**: Each agent runs in its own container for independent scaling
 
-### Technology Stack (to be determined in planning phase)
+### Technology Stack
 
-- **Agent Orchestration**: LangGraph or CrewAI
-- **Event Bus**: NATS or RabbitMQ
+**Core Agent & AI Stack**:
+- **Agent Orchestration**: LangChain/LangGraph
+- **Agent Framework**: PydanticAI + AtomicAgents
+- **AI Models**: Anthropic Claude (ingredient intelligence, recipe analysis)
+- **Production Deployment**: Docker Compose (Phase 1), Kubernetes with Agno + Google ADK evaluation (Phase 2+)
+
+**Backend Infrastructure**:
+- **API Framework**: FastAPI (Python)
+- **Data Storage**: PostgreSQL (primary)
+- **Message Queue/Cache**: Redis (prepared for future stages)
+- **Containerization**: Docker
+- **Monitoring**: Prometheus (for performance measurement)
+
+**Supporting Services**:
+- **Event Bus**: Redis Pub/Sub or FastAPI background tasks (Phase 1), Redis Streams/RabbitMQ (Phase 2+)
 - **Recipe Harvesting**: Puppeteer (browser automation), Axios (HTTP), feedparser (RSS)
-- **Constraint Solver**: Z3 or OR-Tools for meal planning constraints
-- **Containerization**: Docker + Kubernetes or Docker Compose
-- **API Integration**: Knuspr API SDK or REST client
-- **Data Storage**: [NEEDS CLARIFICATION: PostgreSQL for recipes/users? Redis for caching? Graph DB for ingredient taxonomy?]
-- **ML Components**: [NEEDS CLARIFICATION: Are we using ML for ingredient parsing? If so, which framework?]
+- **Constraint Solver**: Z3 (Phase 1), OR-Tools evaluation for Phase 2 optimization
+- **API Integration**: Knuspr MCP Server (experimental), Knuspr REST client
 
-## Open Questions
+**Frontend**:
+- **UI Framework**: TBD in planning phase (mobile-first)
+- **CLI**: TBD in planning phase (optional for power users)
 
-1. **Authentication**: How do users authenticate with Knuspr? OAuth, API keys, or credential storage?
-2. **Data Storage**: What database technology for recipes and meal plans? SQL vs NoSQL vs Graph DB?
-3. **ML Integration**: Should ingredient intelligence use ML models? If so, hosted or self-hosted?
-4. **Recipe Sources**: Which specific recipe websites should be prioritized for harvesting?
-5. **Deployment**: Is this for personal use (single-user) or multi-tenant SaaS?
-6. **UI**: Is there a web/mobile UI, or is this backend-only with API exposure?
-7. **Cost Model**: For Knuspr integration, who pays for API access and deliveries?
-8. **Scaling Requirements**: Expected number of concurrent users and recipes in the system?
+## Open Questions - RESOLVED ✅
+
+1. **Authentication**: Users authenticate with Knuspr using login credentials as documented in the projects README. System supports per-user credentials and country selection.
+2. **Data Storage**: PostgreSQL for primary data store. Redis preparation for future stages (caching, message queuing).
+3. **ML Integration**: Using Anthropic Claude models for ingredient intelligence and AI-powered features.
+4. **Recipe Sources**: Starting with publicly available Ottolenghi recipes as primary source.
+5. **Deployment**: Multi-tenant SaaS tool with monthly subscription model.
+6. **UI**: Web-based with mobile-first approach. Optional CLI for power users.
+7. **Cost Model**: Users pay Knuspr delivery fees directly through the Knuspr app. System only adds items to user's cart.
+8. **Scaling Requirements**: Initial target: 10 concurrent users. Performance monitoring setup required (Prometheus) for future scaling analysis.
