@@ -13,6 +13,12 @@ from app.models.ingredient import (
     IngredientAllergen,
     SubstitutionRule,
 )
+from app.models.meal_plan import (
+    MealPlan,
+    MealPlanRecipe,
+    GroceryCart,
+    CartItem,
+)
 
 __all__ = [
     "User",
@@ -22,4 +28,8 @@ __all__ = [
     "Ingredient",
     "IngredientAllergen",
     "SubstitutionRule",
+    "MealPlan",
+    "MealPlanRecipe",
+    "GroceryCart",
+    "CartItem",
 ]

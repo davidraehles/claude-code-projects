@@ -78,8 +78,7 @@ class Recipe(Base):
         "Recipe",
         remote_side=[id],
         foreign_keys=[duplicate_of_id],
-        backref="parent_recipe",
-        cascade="all, delete-orphan"
+        backref="parent_recipe"
     )
 
     # Timestamps
