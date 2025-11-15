@@ -1,7 +1,7 @@
 """Create recipes table.
 
 Revision ID: 001
-Revises:
+Revises: 000
 Create Date: 2025-11-14 10:30:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = "001"
-down_revision = None
+down_revision = "000"
 branch_labels = None
 depends_on = None
 
@@ -22,7 +22,8 @@ def upgrade() -> None:
     # Create recipes table
     op.create_table(
         "recipes",
-        sa.Column("id", sa.Integer(), nullable=False),
+        sa.Column("id", sa.BigInteger(), nullable=False, autoincrement=True),
+        sa.Column("user_id", sa.BigInteger(), nullable=False),
         sa.Column("title", sa.String(length=255), nullable=False),
         sa.Column("ingredients", postgresql.JSON(astext_type=sa.Text()), nullable=False),
         sa.Column("instructions", sa.Text(), nullable=False),
@@ -32,15 +33,22 @@ def upgrade() -> None:
         sa.Column("nutrition", postgresql.JSON(astext_type=sa.Text()), nullable=True),
         sa.Column("source_url", sa.String(length=2000), nullable=False),
         sa.Column("source_type", sa.String(length=50), nullable=False),
-        sa.Column("duplicate_of_id", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(), nullable=False),
-        sa.Column("last_updated", sa.DateTime(), nullable=False),
+        sa.Column("duplicate_of_id", sa.BigInteger(), nullable=True),
+        sa.Column("created_at", sa.DateTime(), nullable=False, server_default=sa.text("NOW()")),
+        sa.Column("last_updated", sa.DateTime(), nullable=False, server_default=sa.text("NOW()")),
+        sa.ForeignKeyConstraint(["user_id"], ["users.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["duplicate_of_id"], ["recipes.id"], ),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("source_url"),
     )
 
     # Create indexes
+    op.create_index(
+        "ix_recipes_user_id",
+        "recipes",
+        ["user_id"],
+        unique=False
+    )
     op.create_index(
         "ix_recipes_source_url",
         "recipes",
@@ -89,6 +97,7 @@ def downgrade() -> None:
     op.drop_index("ix_recipes_created_at", table_name="recipes")
     op.drop_index("ix_recipes_source_type", table_name="recipes")
     op.drop_index("ix_recipes_source_url", table_name="recipes")
+    op.drop_index("ix_recipes_user_id", table_name="recipes")
 
     # Drop table
     op.drop_table("recipes")
