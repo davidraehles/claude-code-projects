@@ -142,6 +142,69 @@ class RecipeListResponse(BaseModel):
         }
 
 
+class RecipeHarvestRequest(BaseModel):
+    """Schema for requesting recipe harvest from a URL."""
+
+    url: str = Field(..., description="URL to harvest recipe from")
+    source_type: Optional[str] = Field(
+        "html",
+        description="Type of source (html, api, rss). Auto-detected if not provided."
+    )
+
+    @validator("source_type")
+    def validate_source_type(cls, v):
+        """Ensure source_type is valid."""
+        if v is None:
+            return "html"  # Default to HTML
+        valid_types = {"html", "api", "rss"}
+        if v.lower() not in valid_types:
+            raise ValueError(f"source_type must be one of {valid_types}")
+        return v.lower()
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "url": "https://ottolenghi.co.uk/recipes/pasta-carbonara",
+                "source_type": "html"
+            }
+        }
+
+
+class RecipeHarvestResponse(BaseModel):
+    """Schema for recipe harvest response."""
+
+    success: bool = Field(..., description="Whether harvest was successful")
+    message: str = Field(..., description="Status message")
+    recipe: Optional[RecipeResponse] = Field(None, description="Harvested recipe if successful")
+    is_duplicate: bool = Field(False, description="Whether this recipe is a duplicate")
+    duplicate_of_id: Optional[int] = Field(None, description="ID of original recipe if duplicate")
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "success": True,
+                "message": "Recipe harvested successfully",
+                "recipe": {
+                    "id": 1,
+                    "title": "Pasta Carbonara",
+                    "ingredients": ["400g spaghetti", "200g pancetta"],
+                    "instructions": "Cook pasta. Fry pancetta. Toss with eggs and cheese.",
+                    "prep_time": 10,
+                    "cook_time": 20,
+                    "servings": 4,
+                    "nutrition": None,
+                    "source_url": "https://example.com/recipes/pasta-carbonara",
+                    "source_type": "html",
+                    "duplicate_of_id": None,
+                    "created_at": "2025-11-14T10:30:00",
+                    "last_updated": "2025-11-14T10:30:00",
+                },
+                "is_duplicate": False,
+                "duplicate_of_id": None
+            }
+        }
+
+
 class ErrorResponse(BaseModel):
     """Schema for error responses."""
 
