@@ -6,11 +6,10 @@ for efficient querying.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, ForeignKey, Index, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, ForeignKey, Index, UniqueConstraint, BigInteger
 from sqlalchemy.orm import relationship
 
-Base = declarative_base()
+from app.database import Base
 
 
 class Recipe(Base):
@@ -19,6 +18,7 @@ class Recipe(Base):
 
     Attributes:
         id: Primary key
+        user_id: Foreign key to users table
         title: Recipe title (unique per source)
         ingredients: JSON array of ingredients
         instructions: Recipe instructions
@@ -36,7 +36,10 @@ class Recipe(Base):
     __tablename__ = "recipes"
 
     # Primary key
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(BigInteger, primary_key=True, autoincrement=True)
+
+    # Foreign key to users table
+    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
 
     # Core recipe data
     title = Column(String(255), nullable=False, index=True)
@@ -69,6 +72,8 @@ class Recipe(Base):
     )
 
     # Relationships
+    user = relationship("User", back_populates="recipes")
+
     duplicates = relationship(
         "Recipe",
         remote_side=[id],
@@ -88,6 +93,7 @@ class Recipe(Base):
         """Convert recipe to dictionary."""
         return {
             "id": self.id,
+            "user_id": self.user_id,
             "title": self.title,
             "ingredients": self.ingredients,
             "instructions": self.instructions,
