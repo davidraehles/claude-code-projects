@@ -5,11 +5,28 @@ Defines the database schema for users with authentication and preferences.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, String, DateTime, Index
+from sqlalchemy import Column, BigInteger, String, DateTime, Index, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
+from sqlalchemy.ext.compiler import compiles
+from sqlalchemy.types import TypeDecorator
 
 from app.database import Base
+
+
+# Database-agnostic JSON type (JSONB for PostgreSQL, JSON for others)
+class JSONType(TypeDecorator):
+    """
+    JSON type that uses JSONB for PostgreSQL and JSON for other databases.
+    """
+    impl = JSON
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(JSONB())
+        else:
+            return dialect.type_descriptor(JSON())
 
 
 class User(Base):
@@ -48,9 +65,9 @@ class User(Base):
     )
     subscription_expires_at = Column(DateTime, nullable=True, index=True)
 
-    # User preferences (flexible JSONB field)
+    # User preferences (flexible JSON field)
     preferences = Column(
-        JSONB,
+        JSONType,
         nullable=True,
         comment="User preferences: language, theme, dietary preferences, etc."
     )
