@@ -1,0 +1,75 @@
+{
+  "dashboard": {
+    "title": "Business Metrics Dashboard",
+    "tags": ["recipe-api", "business"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Recipes Harvested per Hour",
+        "targets": [
+          {
+            "expr": "rate(recipes_harvested_total[1h])",
+            "legendFormat": "{{source_type}} - {{status}}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 2,
+        "title": "Harvest Success Rate",
+        "targets": [
+          {
+            "expr": "rate(recipes_harvested_total{status=\"success\"}[1h]) / rate(recipes_harvested_total[1h])",
+            "legendFormat": "{{source_type}}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 3,
+        "title": "Total Recipes in Database",
+        "targets": [
+          {
+            "expr": "recipes_total",
+            "legendFormat": "user_{{user_id}}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 4,
+        "title": "Duplicate Detection Rate",
+        "targets": [
+          {
+            "expr": "rate(recipes_duplicates_detected_total[1h])",
+            "legendFormat": "Duplicates Detected"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 5,
+        "title": "Ingredient Classifications",
+        "targets": [
+          {
+            "expr": "rate(ingredients_classified_total[1h])",
+            "legendFormat": "{{found}}"
+          }
+        ],
+        "type": "graph"
+      },
+      {
+        "id": 6,
+        "title": "Allergen Checks",
+        "targets": [
+          {
+            "expr": "rate(allergen_checks_total[1h])",
+            "legendFormat": "allergens_{{allergens_found}}"
+          }
+        ],
+        "type": "graph"
+      }
+    ]
+  }
+}

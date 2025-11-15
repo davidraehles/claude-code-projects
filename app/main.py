@@ -88,6 +88,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prometheus metrics middleware
+from app.monitoring.middleware import PrometheusMiddleware
+app.add_middleware(PrometheusMiddleware)
+
+
+# Prometheus metrics endpoint
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from fastapi import Response
+
+@app.get("/metrics", tags=["System"])
+async def metrics():
+    """
+    Prometheus metrics endpoint.
+
+    Returns:
+        Metrics in Prometheus format
+    """
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 # Health check endpoint
 @app.get("/health", tags=["System"])
