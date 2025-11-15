@@ -88,6 +88,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Prometheus metrics middleware
+from app.monitoring.middleware import PrometheusMiddleware
+app.add_middleware(PrometheusMiddleware)
+
+
+# Prometheus metrics endpoint
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
+from fastapi import Response
+
+@app.get("/metrics", tags=["System"])
+async def metrics():
+    """
+    Prometheus metrics endpoint.
+
+    Returns:
+        Metrics in Prometheus format
+    """
+    return Response(generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 # Health check endpoint
 @app.get("/health", tags=["System"])
@@ -148,14 +167,16 @@ async def global_exception_handler(request, exc):
 
 
 # Import and include routers
-from app.api.v1 import recipes
+from app.api.v1 import recipes, ingredients, users, meal_plans
 
 app.include_router(recipes.router, prefix="/api/v1/recipes", tags=["Recipes"])
+app.include_router(ingredients.router, prefix="/api/v1/ingredients", tags=["Ingredients"])
+app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
+app.include_router(meal_plans.router, prefix="/api/v1/meal-plans", tags=["Meal Plans"])
 
-# TODO: Add these routers when implemented
-# from app.api.v1 import auth, meal_plans
+# TODO: Add auth router when implemented
+# from app.api.v1 import auth
 # app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
-# app.include_router(meal_plans.router, prefix="/api/v1/meal-plans", tags=["Meal Plans"])
 
 
 if __name__ == "__main__":
