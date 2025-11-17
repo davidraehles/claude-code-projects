@@ -28,15 +28,17 @@ class MealArchitectAgent:
     - Ensure ingredient availability
     """
 
-    def __init__(self, db_session: Session):
+    def __init__(self, db_session: Session, use_workflow: bool = True):
         """
         Initialize Meal Architect Agent.
 
         Args:
             db_session: Database session
+            use_workflow: Whether to use LangGraph workflow (default: True)
         """
         self.db = db_session
         self.ingredient_agent = IngredientIntelligenceAgent(db_session)
+        self.use_workflow = use_workflow
 
     def generate_meal_plan(
         self,
@@ -54,6 +56,9 @@ class MealArchitectAgent:
         """
         Generate an optimized meal plan.
 
+        Routes to either workflow-based generation (Phase 2C) or
+        direct generation (Phase 2A fallback).
+
         Args:
             user_id: User ID
             start_date: Start date
@@ -65,6 +70,113 @@ class MealArchitectAgent:
             target_budget: Target budget
             preferred_cuisines: List of preferred cuisines
             meals_per_day: Meals per day (default: 3)
+
+        Returns:
+            Generated MealPlan
+        """
+        # Route to workflow or direct implementation
+        if self.use_workflow:
+            return self._generate_with_workflow(
+                user_id=user_id,
+                start_date=start_date,
+                num_days=num_days,
+                num_people=num_people,
+                dietary_restrictions=dietary_restrictions,
+                excluded_ingredients=excluded_ingredients,
+                target_calories_per_day=target_calories_per_day,
+                target_budget=target_budget,
+                preferred_cuisines=preferred_cuisines,
+                meals_per_day=meals_per_day
+            )
+        else:
+            return self._generate_direct(
+                user_id=user_id,
+                start_date=start_date,
+                num_days=num_days,
+                num_people=num_people,
+                dietary_restrictions=dietary_restrictions,
+                excluded_ingredients=excluded_ingredients,
+                target_calories_per_day=target_calories_per_day,
+                target_budget=target_budget,
+                preferred_cuisines=preferred_cuisines,
+                meals_per_day=meals_per_day
+            )
+
+    def _generate_with_workflow(
+        self,
+        user_id: int,
+        start_date: date,
+        num_days: int,
+        num_people: int,
+        dietary_restrictions: Optional[List[str]],
+        excluded_ingredients: Optional[List[str]],
+        target_calories_per_day: Optional[int],
+        target_budget: Optional[float],
+        preferred_cuisines: Optional[List[str]],
+        meals_per_day: int
+    ) -> MealPlan:
+        """
+        Generate meal plan using LangGraph workflow (Phase 2C).
+
+        Args:
+            (same as generate_meal_plan)
+
+        Returns:
+            Generated MealPlan
+
+        Raises:
+            Exception: If workflow execution fails
+        """
+        from app.workflows.meal_planning_workflow import invoke_meal_planning_workflow
+
+        # Run workflow
+        result = invoke_meal_planning_workflow(
+            user_id=user_id,
+            start_date=start_date,
+            num_days=num_days,
+            num_people=num_people,
+            meals_per_day=meals_per_day,
+            dietary_restrictions=dietary_restrictions,
+            excluded_ingredients=excluded_ingredients,
+            target_calories_per_day=target_calories_per_day,
+            target_budget=target_budget,
+            preferred_cuisines=preferred_cuisines
+        )
+
+        # Check if workflow succeeded
+        if not result.get("success"):
+            error_msg = result.get("failure_reason", "Unknown error")
+            raise Exception(f"Meal plan generation failed: {error_msg}")
+
+        # Retrieve and return meal plan
+        meal_plan_id = result["meal_plan_id"]
+        meal_plan = self.db.query(MealPlan).get(meal_plan_id)
+
+        if not meal_plan:
+            raise Exception(f"Meal plan {meal_plan_id} not found after generation")
+
+        return meal_plan
+
+    def _generate_direct(
+        self,
+        user_id: int,
+        start_date: date,
+        num_days: int,
+        num_people: int,
+        dietary_restrictions: Optional[List[str]],
+        excluded_ingredients: Optional[List[str]],
+        target_calories_per_day: Optional[int],
+        target_budget: Optional[float],
+        preferred_cuisines: Optional[List[str]],
+        meals_per_day: int
+    ) -> MealPlan:
+        """
+        Generate meal plan using direct method (Phase 2A fallback).
+
+        This is the original implementation without LangGraph orchestration.
+
+        Args:
+            (same as generate_meal_plan)
 
         Returns:
             Generated MealPlan
