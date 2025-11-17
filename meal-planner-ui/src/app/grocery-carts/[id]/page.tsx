@@ -9,6 +9,7 @@ import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
@@ -140,41 +141,9 @@ export default function GroceryCartPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 print:hidden">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Link href="/" className="flex items-center space-x-2">
-                <span className="text-3xl">🍽️</span>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  MealPlannerAI
-                </span>
-              </Link>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              {userEmail && (
-                <span className="text-sm text-gray-600">👤 {userEmail}</span>
-              )}
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  Recipes
-                </Button>
-              </Link>
-              <Link href="/meal-plans">
-                <Button variant="ghost" size="sm">
-                  Meal Plans
-                </Button>
-              </Link>
-              <Link href="/generate">
-                <Button variant="primary" size="sm">
-                  Generate Plan
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <div className="print:hidden">
+        <Header userEmail={userEmail} />
+      </div>
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-5xl">
@@ -186,18 +155,18 @@ export default function GroceryCartPage() {
           >
             ← Back to Meal Plan
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2 print:text-3xl">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2 print:text-3xl">
             Grocery List
           </h1>
-          <p className="text-gray-600 print:text-sm">
+          <p className="text-sm sm:text-base text-gray-600 print:text-sm">
             Shopping list for Meal Plan #{cart.meal_plan_id}
           </p>
         </div>
 
         {/* Actions Bar */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8 print:hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-8 print:hidden">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-            <div>
+            <div className="w-full sm:w-auto">
               <div className="flex items-center space-x-2 mb-1">
                 <span className="text-2xl">✓</span>
                 <h3 className="font-semibold text-gray-900">
@@ -211,12 +180,12 @@ export default function GroceryCartPage() {
                 />
               </div>
             </div>
-            <div className="flex gap-3">
-              <Button variant="outline" onClick={handleExport}>
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
                 <span className="mr-2">📄</span>
                 Export TXT
               </Button>
-              <Button variant="primary" onClick={handlePrint}>
+              <Button variant="primary" onClick={handlePrint} className="w-full sm:w-auto">
                 <span className="mr-2">🖨️</span>
                 Print List
               </Button>
