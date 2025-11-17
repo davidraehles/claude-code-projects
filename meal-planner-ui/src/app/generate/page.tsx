@@ -5,10 +5,10 @@
  * Refactored to use Auth Context, React Query hooks, and Action/Intent Layer (ARCH-004).
  */
 
-import { useReducer } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCreateMealPlan } from '@/hooks/queries/useMealPlans'
+import { useReducerWithDevTools } from '@/hooks/useReducerWithDevTools'
 import {
   mealPlanFormReducer,
   getInitialState,
@@ -43,8 +43,12 @@ export default function GeneratePage() {
   // Create meal plan mutation
   const createMealPlan = useCreateMealPlan()
 
-  // Form state - Single useReducer replaces 6 useState calls (ARCH-004)
-  const [formState, dispatch] = useReducer(mealPlanFormReducer, null, getInitialState)
+  // Form state - useReducer with DevTools integration (ARCH-004 + ARCH-011)
+  const [formState, dispatch] = useReducerWithDevTools(
+    mealPlanFormReducer,
+    getInitialState(),
+    'MealPlanForm'
+  )
 
   // Derived state
   const generating = createMealPlan.isPending
