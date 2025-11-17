@@ -5,16 +5,17 @@
  * Refactored to use Auth Context, React Query hooks, and Action/Intent Layer (ARCH-004).
  */
 
-import { useReducer } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGroceryCart } from '@/hooks/queries/useGroceryCarts'
+import { usePersistedReducer } from '@/hooks/usePersistedReducer'
 import {
   groceryCartReducer,
   getInitialCartState,
   selectCheckedCount,
   selectIsItemChecked,
+  type GroceryCartState,
 } from '@/reducers/groceryCartReducer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
@@ -32,8 +33,34 @@ export default function GroceryCartPage() {
   // Data fetching with React Query
   const { data: cart, isLoading: cartLoading, error: cartError } = useGroceryCart(cartId)
 
-  // Local UI state - Single useReducer replaces useState (ARCH-004)
-  const [cartState, dispatch] = useReducer(groceryCartReducer, null, getInitialCartState)
+  // Local UI state - Persisted reducer (ARCH-004 + ARCH-010)
+  const [cartState, dispatch] = usePersistedReducer(groceryCartReducer, {
+    key: `grocery-cart-${cartId}`,
+    initialState: getInitialCartState(),
+    version: 1,
+    // Custom serialization for Set
+    serialize: (persisted) => {
+      const serializable = {
+        checkedItems: Array.from(persisted.checkedItems),
+      }
+      return JSON.stringify(serializable)
+    },
+    // Custom deserialization for Set
+    deserialize: (json): GroceryCartState => {
+      const parsed = JSON.parse(json)
+      return {
+        checkedItems: new Set<string>(parsed.checkedItems || []),
+      }
+    },
+    validate: (state): state is GroceryCartState => {
+      return (
+        state !== null &&
+        typeof state === 'object' &&
+        'checkedItems' in state &&
+        state.checkedItems instanceof Set
+      )
+    },
+  })
 
   // Derived state
   const loading = cartLoading
