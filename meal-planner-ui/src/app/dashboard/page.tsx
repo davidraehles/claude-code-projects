@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { RecipeCard } from '@/components/recipe/RecipeCard'
@@ -102,56 +103,20 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Link href="/" className="flex items-center space-x-2">
-                <span className="text-3xl">🍽️</span>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  MealPlannerAI
-                </span>
-              </Link>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              {userEmail && (
-                <span className="text-sm text-gray-600">
-                  👤 {userEmail}
-                </span>
-              )}
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  Recipes
-                </Button>
-              </Link>
-              <Link href="/meal-plans">
-                <Button variant="ghost" size="sm">
-                  Meal Plans
-                </Button>
-              </Link>
-              <Link href="/generate">
-                <Button variant="primary" size="sm">
-                  Generate Plan
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header userEmail={userEmail} />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Recipe Library</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Recipe Library</h1>
+          <p className="text-sm sm:text-base text-gray-600">
             Browse your recipes or import new ones to start meal planning
           </p>
         </div>
 
         {/* Search and Actions Bar */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 mb-8">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
               <Input
@@ -176,17 +141,19 @@ export default function DashboardPage() {
                 }
               />
             </div>
-            <div className="flex gap-3">
-              <Link href="/import">
-                <Button variant="outline">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Link href="/import" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-full sm:w-auto">
                   <span className="mr-2">🔗</span>
-                  Import from URL
+                  <span className="hidden sm:inline">Import from URL</span>
+                  <span className="sm:hidden">Import</span>
                 </Button>
               </Link>
-              <Link href="/create">
-                <Button variant="primary">
+              <Link href="/create" className="w-full sm:w-auto">
+                <Button variant="primary" className="w-full sm:w-auto">
                   <span className="mr-2">➕</span>
-                  Create Recipe
+                  <span className="hidden sm:inline">Create Recipe</span>
+                  <span className="sm:hidden">Create</span>
                 </Button>
               </Link>
             </div>

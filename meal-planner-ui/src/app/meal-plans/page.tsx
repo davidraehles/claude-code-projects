@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { api } from '@/lib/api'
 import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import type { MealPlan } from '@/lib/types'
@@ -73,48 +74,14 @@ export default function MealPlansPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <Link href="/" className="flex items-center space-x-2">
-                <span className="text-3xl">🍽️</span>
-                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  MealPlannerAI
-                </span>
-              </Link>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              {userEmail && (
-                <span className="text-sm text-gray-600">👤 {userEmail}</span>
-              )}
-              <Link href="/dashboard">
-                <Button variant="ghost" size="sm">
-                  Recipes
-                </Button>
-              </Link>
-              <Link href="/meal-plans">
-                <Button variant="ghost" size="sm">
-                  Meal Plans
-                </Button>
-              </Link>
-              <Link href="/generate">
-                <Button variant="primary" size="sm">
-                  Generate Plan
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header userEmail={userEmail} />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">My Meal Plans</h1>
-          <p className="text-gray-600">
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">My Meal Plans</h1>
+          <p className="text-sm sm:text-base text-gray-600">
             View and manage your generated meal plans
           </p>
         </div>
