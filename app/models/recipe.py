@@ -54,6 +54,9 @@ class Recipe(Base):
     # Nutrition information
     nutrition = Column(JSON, nullable=True, comment="Nutrition per serving")
 
+    # Dietary information
+    dietary_tags = Column(JSON, nullable=True, comment="Dietary tags: vegan, vegetarian, gluten_free, etc.")
+
     # Source tracking
     source_url = Column(String(2000), nullable=False, unique=True, index=True)
     source_type = Column(
@@ -100,6 +103,7 @@ class Recipe(Base):
             "cook_time": self.cook_time,
             "servings": self.servings,
             "nutrition": self.nutrition,
+            "dietary_tags": self.dietary_tags,
             "source_url": self.source_url,
             "source_type": self.source_type,
             "duplicate_of_id": self.duplicate_of_id,

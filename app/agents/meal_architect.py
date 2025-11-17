@@ -13,6 +13,7 @@ from z3 import *
 from app.models.recipe import Recipe
 from app.models.meal_plan import MealPlan, MealPlanRecipe
 from app.models.ingredient import Ingredient
+from app.agents.ingredient_intelligence import IngredientIntelligenceAgent
 
 
 class MealArchitectAgent:
@@ -35,6 +36,7 @@ class MealArchitectAgent:
             db_session: Database session
         """
         self.db = db_session
+        self.ingredient_agent = IngredientIntelligenceAgent(db_session)
 
     def generate_meal_plan(
         self,
@@ -178,25 +180,223 @@ class MealArchitectAgent:
 
         Args:
             user_id: User ID
-            dietary_restrictions: Dietary restrictions
+            dietary_restrictions: Dietary restrictions (e.g., ["vegan", "gluten_free"])
             excluded_ingredients: Excluded ingredients
             min_recipes: Minimum number of recipes needed
 
         Returns:
-            List of candidate recipes
+            List of candidate recipes matching all constraints
         """
-        # Get user's recipes (non-duplicates)
+        # Get recently used recipe IDs (last 14 days)
+        recently_used_ids = self._get_recently_used_recipe_ids(user_id, days=14)
+
+        # Get user's recipes (non-duplicates, excluding recently used)
         query = self.db.query(Recipe).filter(
             Recipe.user_id == user_id,
             Recipe.duplicate_of_id.is_(None)
         )
 
-        recipes = query.limit(min_recipes * 2).all()  # Get more than needed for variety
+        # Exclude recently used recipes for variety
+        if recently_used_ids:
+            query = query.filter(~Recipe.id.in_(recently_used_ids))
 
-        # Filter by dietary restrictions (simplified - would need ingredient analysis)
-        # For MVP, we'll accept all recipes and filter in production
+        # Get more than needed for filtering
+        recipes = query.limit(min_recipes * 3).all()
+
+        # Filter by dietary restrictions
+        if dietary_restrictions:
+            filtered_recipes = []
+
+            for recipe in recipes:
+                if self._matches_dietary_restrictions(recipe, dietary_restrictions):
+                    filtered_recipes.append(recipe)
+
+            recipes = filtered_recipes
+
+        # Filter by excluded ingredients
+        if excluded_ingredients:
+            filtered_recipes = []
+            excluded_set = set(ing.lower() for ing in excluded_ingredients)
+
+            for recipe in recipes:
+                if not self._contains_excluded_ingredients(recipe, excluded_set):
+                    filtered_recipes.append(recipe)
+
+            recipes = filtered_recipes
 
         return recipes[:min_recipes] if len(recipes) >= min_recipes else recipes
+
+    def _get_recently_used_recipe_ids(self, user_id: int, days: int = 14) -> List[int]:
+        """
+        Get recipe IDs used in recent meal plans for variety.
+
+        Args:
+            user_id: User ID
+            days: Number of days to look back (default: 14)
+
+        Returns:
+            List of recipe IDs used in recent meal plans
+        """
+        cutoff_date = date.today() - timedelta(days=days)
+
+        # Get recent meal plans
+        recent_meal_plans = self.db.query(MealPlan).filter(
+            MealPlan.user_id == user_id,
+            MealPlan.start_date >= cutoff_date,
+            MealPlan.status.in_(['ready', 'active', 'completed'])
+        ).all()
+
+        # Extract recipe IDs
+        recipe_ids = set()
+        for meal_plan in recent_meal_plans:
+            for meal_plan_recipe in meal_plan.recipes:
+                recipe_ids.add(meal_plan_recipe.recipe_id)
+
+        return list(recipe_ids)
+
+    def _matches_dietary_restrictions(self, recipe: Recipe, restrictions: List[str]) -> bool:
+        """
+        Check if recipe matches dietary restrictions.
+
+        Args:
+            recipe: Recipe to check
+            restrictions: List of dietary restrictions
+
+        Returns:
+            True if recipe matches all restrictions
+        """
+        # Check dietary tags on recipe first (fast path)
+        if recipe.dietary_tags:
+            recipe_tags_lower = [tag.lower() for tag in recipe.dietary_tags]
+
+            for restriction in restrictions:
+                restriction_lower = restriction.lower().replace('-', '_')
+
+                # Map common restriction names
+                if restriction_lower in ['vegan', 'is_vegan']:
+                    if 'vegan' not in recipe_tags_lower:
+                        return False
+                elif restriction_lower in ['vegetarian', 'is_vegetarian']:
+                    if 'vegetarian' not in recipe_tags_lower and 'vegan' not in recipe_tags_lower:
+                        return False
+                elif restriction_lower in ['gluten_free', 'gluten-free', 'is_gluten_free']:
+                    if 'gluten_free' not in recipe_tags_lower:
+                        return False
+                elif restriction_lower in ['dairy_free', 'dairy-free', 'is_dairy_free']:
+                    if 'dairy_free' not in recipe_tags_lower:
+                        return False
+        else:
+            # Fallback: Check ingredients using Ingredient Intelligence agent
+            if not recipe.ingredients:
+                return False
+
+            for restriction in restrictions:
+                restriction_lower = restriction.lower().replace('-', '_')
+
+                # For animal products, check if any ingredient violates the restriction
+                if restriction_lower in ['vegan', 'is_vegan']:
+                    if self._contains_animal_products(recipe.ingredients):
+                        return False
+                elif restriction_lower in ['vegetarian', 'is_vegetarian']:
+                    if self._contains_meat(recipe.ingredients):
+                        return False
+                elif restriction_lower in ['gluten_free', 'gluten-free', 'is_gluten_free']:
+                    if self._contains_gluten(recipe.ingredients):
+                        return False
+                elif restriction_lower in ['dairy_free', 'dairy-free', 'is_dairy_free']:
+                    if self._contains_dairy(recipe.ingredients):
+                        return False
+
+        return True
+
+    def _contains_excluded_ingredients(self, recipe: Recipe, excluded_set: set) -> bool:
+        """
+        Check if recipe contains any excluded ingredients.
+
+        Args:
+            recipe: Recipe to check
+            excluded_set: Set of lowercased excluded ingredient names
+
+        Returns:
+            True if recipe contains any excluded ingredient
+        """
+        if not recipe.ingredients:
+            return False
+
+        for ingredient in recipe.ingredients:
+            ingredient_lower = ingredient.lower()
+
+            # Check exact match
+            if ingredient_lower in excluded_set:
+                return True
+
+            # Check if any excluded ingredient is contained in this ingredient
+            for excluded in excluded_set:
+                if excluded in ingredient_lower:
+                    return True
+
+        return False
+
+    def _contains_animal_products(self, ingredients: List[str]) -> bool:
+        """Check if ingredients contain animal products (for vegan check)."""
+        animal_keywords = [
+            'meat', 'beef', 'pork', 'chicken', 'turkey', 'lamb', 'duck', 'fish',
+            'salmon', 'tuna', 'egg', 'milk', 'cheese', 'butter', 'cream', 'yogurt',
+            'honey', 'gelatin', 'lard'
+        ]
+
+        for ingredient in ingredients:
+            ingredient_lower = ingredient.lower()
+            for keyword in animal_keywords:
+                if keyword in ingredient_lower:
+                    return True
+
+        return False
+
+    def _contains_meat(self, ingredients: List[str]) -> bool:
+        """Check if ingredients contain meat (for vegetarian check)."""
+        meat_keywords = [
+            'meat', 'beef', 'pork', 'chicken', 'turkey', 'lamb', 'duck',
+            'fish', 'salmon', 'tuna', 'bacon', 'ham', 'sausage'
+        ]
+
+        for ingredient in ingredients:
+            ingredient_lower = ingredient.lower()
+            for keyword in meat_keywords:
+                if keyword in ingredient_lower:
+                    return True
+
+        return False
+
+    def _contains_gluten(self, ingredients: List[str]) -> bool:
+        """Check if ingredients contain gluten."""
+        gluten_keywords = [
+            'wheat', 'flour', 'bread', 'pasta', 'barley', 'rye',
+            'couscous', 'semolina', 'durum'
+        ]
+
+        for ingredient in ingredients:
+            ingredient_lower = ingredient.lower()
+            for keyword in gluten_keywords:
+                if keyword in ingredient_lower:
+                    return True
+
+        return False
+
+    def _contains_dairy(self, ingredients: List[str]) -> bool:
+        """Check if ingredients contain dairy."""
+        dairy_keywords = [
+            'milk', 'cheese', 'butter', 'cream', 'yogurt', 'whey',
+            'casein', 'lactose', 'dairy'
+        ]
+
+        for ingredient in ingredients:
+            ingredient_lower = ingredient.lower()
+            for keyword in dairy_keywords:
+                if keyword in ingredient_lower:
+                    return True
+
+        return False
 
     def _solve_meal_optimization(
         self,
@@ -308,19 +508,60 @@ class MealArchitectAgent:
             servings: Number of servings
 
         Returns:
-            Total calories (estimated)
+            Total calories (calculated from ingredients or estimated)
         """
-        # Simplified for MVP: return estimated calories
-        # In production, calculate from ingredient nutrition data
+        # Priority 1: Use recipe nutrition data if available
         if recipe.nutrition and 'calories' in recipe.nutrition:
-            return int(recipe.nutrition['calories'] * servings / (recipe.servings or 1))
+            calories_per_serving = recipe.nutrition['calories']
+            recipe_servings = recipe.servings or 1
+            return int(calories_per_serving * servings / recipe_servings)
 
-        # Fallback: estimate based on meal type
-        return 600  # Average meal calories
+        # Priority 2: Calculate from ingredients using Ingredient Intelligence
+        if recipe.ingredients:
+            total_calories = 0
+            ingredients_found = 0
+
+            for ingredient_str in recipe.ingredients:
+                # Classify ingredient to get nutrition data
+                ingredient_info = self.ingredient_agent.classify_ingredient(ingredient_str)
+
+                if ingredient_info.get('found') and ingredient_info.get('nutrition_per_100g'):
+                    nutrition = ingredient_info['nutrition_per_100g']
+
+                    if isinstance(nutrition, dict) and 'calories' in nutrition:
+                        # Rough estimate: assume 100g per ingredient (can be improved with quantity parsing)
+                        total_calories += nutrition['calories']
+                        ingredients_found += 1
+
+            # If we found nutrition data for at least 50% of ingredients, use it
+            if ingredients_found >= len(recipe.ingredients) * 0.5:
+                # Adjust for servings
+                recipe_servings = recipe.servings or 2
+                return int(total_calories * servings / recipe_servings)
+
+        # Priority 3: Intelligent fallback based on recipe characteristics
+        # Estimate based on number of ingredients and recipe type
+        num_ingredients = len(recipe.ingredients) if recipe.ingredients else 5
+        estimated_calories_per_ingredient = 80  # Average per ingredient
+
+        base_calories = num_ingredients * estimated_calories_per_ingredient
+
+        # Adjust for servings
+        recipe_servings = recipe.servings or 2
+        total_calories = int(base_calories * servings / recipe_servings)
+
+        # Ensure reasonable bounds (300-1000 cal per serving)
+        calories_per_serving = total_calories // servings
+        if calories_per_serving < 300:
+            total_calories = 300 * servings
+        elif calories_per_serving > 1000:
+            total_calories = 1000 * servings
+
+        return total_calories
 
     def _estimate_recipe_cost(self, recipe: Recipe, servings: int) -> float:
         """
-        Estimate recipe cost.
+        Estimate recipe cost based on ingredients.
 
         Args:
             recipe: Recipe
@@ -329,8 +570,45 @@ class MealArchitectAgent:
         Returns:
             Estimated cost in EUR
         """
-        # Simplified for MVP: return estimated cost
-        # In production, calculate from ingredient prices
+        # Priority 1: Calculate from ingredient costs if available
+        if recipe.ingredients:
+            total_cost = 0.0
+            ingredients_with_cost = 0
+
+            for ingredient_str in recipe.ingredients:
+                # Classify ingredient
+                ingredient_info = self.ingredient_agent.classify_ingredient(ingredient_str)
+
+                if ingredient_info.get('found'):
+                    # Estimate cost based on ingredient category
+                    category = ingredient_info.get('category', 'other')
+
+                    # Cost estimates per 100g/100ml by category
+                    category_costs = {
+                        'Protein': 2.50,  # Meat, fish
+                        'Dairy': 1.20,    # Milk, cheese
+                        'Vegetables': 0.80,
+                        'Fruits': 1.00,
+                        'Grains': 0.50,
+                        'Spices': 0.30,
+                        'Oils': 1.50,
+                        'other': 1.00
+                    }
+
+                    cost = category_costs.get(category, 1.00)
+                    total_cost += cost
+                    ingredients_with_cost += 1
+                else:
+                    # Unknown ingredient: estimate €1
+                    total_cost += 1.00
+
+            # Adjust for servings
+            recipe_servings = recipe.servings or 2
+            cost = total_cost * servings / recipe_servings
+
+            return round(cost, 2)
+
+        # Priority 2: Fallback based on recipe complexity
         num_ingredients = len(recipe.ingredients) if recipe.ingredients else 5
 
         # Rough estimate: €1 per ingredient
