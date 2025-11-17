@@ -80,7 +80,9 @@ export interface MealPlan {
   name: string
   start_date: string
   end_date: string
+  num_days: number
   num_people: number
+  meals_per_day: number
   dietary_restrictions?: string[]
   excluded_ingredients?: string[]
   target_calories_per_day?: number
