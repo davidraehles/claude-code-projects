@@ -1,0 +1,25 @@
+{
+  // This is an example of local overrides for VSCode settings
+  // Copy this to settings.local.json (git ignored) for personal preferences
+
+  // Terminal
+  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.fontFamily": "Monaco, 'Courier New', monospace",
+
+  // Editor Font
+  "editor.fontSize": 14,
+  "editor.fontFamily": "Monaco, 'Courier New', monospace",
+
+  // Zoom
+  "window.zoomLevel": 0,
+
+  // Telemetry (Privacy)
+  "telemetry.telemetryLevel": "off",
+
+  // Git
+  "git.autofetch": true,
+  "git.confirmSync": false,
+
+  // Files Auto Save
+  "files.autoSave": "onFocusChange"
+}
