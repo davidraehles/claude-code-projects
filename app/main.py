@@ -167,16 +167,13 @@ async def global_exception_handler(request, exc):
 
 
 # Import and include routers
-from app.api.v1 import recipes, ingredients, users, meal_plans
+from app.api.v1 import recipes, ingredients, users, meal_plans, auth
 
 app.include_router(recipes.router, prefix="/api/v1/recipes", tags=["Recipes"])
 app.include_router(ingredients.router, prefix="/api/v1/ingredients", tags=["Ingredients"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(meal_plans.router, prefix="/api/v1/meal-plans", tags=["Meal Plans"])
-
-# TODO: Add auth router when implemented
-# from app.api.v1 import auth
-# app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 
 
 if __name__ == "__main__":

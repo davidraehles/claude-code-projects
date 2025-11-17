@@ -4,12 +4,20 @@ Shared dependencies for API endpoints.
 Provides reusable dependencies for database sessions, authentication, etc.
 """
 
-from typing import Generator
+import os
+from typing import Generator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+import jwt
 
 from app.database import get_db
+from app.models.user import User
+
+
+# JWT Configuration
+SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+ALGORITHM = "HS256"
 
 
 # Database session dependency (already defined in database.py, re-exported here)
@@ -25,6 +33,36 @@ def get_database() -> Generator[Session, None, None]:
 
 # Security scheme for JWT authentication
 security = HTTPBearer()
+
+
+def decode_token(token: str) -> dict:
+    """
+    Decode and validate a JWT token.
+
+    Args:
+        token: JWT token to decode
+
+    Returns:
+        Token payload
+
+    Raises:
+        HTTPException: If token is invalid or expired
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except jwt.JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
 async def get_current_user_id(
@@ -44,31 +82,50 @@ async def get_current_user_id(
     Raises:
         HTTPException: If token is invalid or user not found
     """
-    # TODO: Implement JWT token validation
-    # For now, return a placeholder user ID for development
-    # In production, this should:
-    # 1. Decode JWT token
-    # 2. Verify signature
-    # 3. Check expiration
-    # 4. Verify user exists in database
-    # 5. Return user_id from token payload
+    # Decode and validate token
+    payload = decode_token(credentials.credentials)
 
-    # Placeholder implementation:
-    token = credentials.credentials
-    if not token:
+    # Verify token type
+    if payload.get("type") != "access":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Invalid token type",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    # For development, accept any token and return user_id=1
-    # Replace this with actual JWT validation
-    return 1
+    # Get user ID from token
+    user_id_str = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user ID in token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Verify user exists and is not deleted
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user or user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or deleted",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user_id
 
 
 async def get_optional_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: Session = Depends(get_database)
 ) -> int | None:
     """
     Extract user ID from JWT token if present, otherwise return None.
@@ -77,6 +134,7 @@ async def get_optional_user_id(
 
     Args:
         credentials: HTTP Bearer token from Authorization header (optional)
+        db: Database session
 
     Returns:
         int | None: User ID if authenticated, None otherwise
@@ -85,7 +143,6 @@ async def get_optional_user_id(
         return None
 
     try:
-        # TODO: Implement JWT token validation (same as get_current_user_id)
-        return 1  # Placeholder
-    except Exception:
+        return await get_current_user_id(credentials, db)
+    except HTTPException:
         return None
