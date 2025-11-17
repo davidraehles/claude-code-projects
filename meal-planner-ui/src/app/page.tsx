@@ -447,7 +447,7 @@ export default function LandingPage() {
             Join thousands of users saving time and eating better with AI-powered meal plans
           </p>
           <Link href="/signup">
-            <Button variant="secondary" size="lg" className="bg-white text-blue-600 hover:bg-gray-100">
+            <Button variant="outline" size="lg" className="!bg-white !text-blue-600 hover:!bg-gray-50 !border-white shadow-lg hover:shadow-xl font-bold">
               Start Your Free Trial
             </Button>
           </Link>
