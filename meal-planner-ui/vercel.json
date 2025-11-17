@@ -3,15 +3,10 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
-  "env": {
-    "NEXT_PUBLIC_API_URL": "@api-url",
-    "NEXTAUTH_SECRET": "@nextauth-secret",
-    "NEXTAUTH_URL": "@nextauth-url"
-  },
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "${NEXT_PUBLIC_API_URL}/api/:path*"
+      "destination": "https://claude-code-projects-production.up.railway.app/api/:path*"
     }
   ]
 }
