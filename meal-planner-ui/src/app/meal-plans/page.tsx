@@ -2,63 +2,27 @@
 
 /**
  * Meal Plans list page - View all meal plans.
+ * Refactored to use Auth Context and React Query hooks.
  */
 
-import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { api } from '@/lib/api'
-import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { useMealPlans } from '@/hooks/queries/useMealPlans'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
-import type { MealPlan } from '@/lib/types'
 
 export default function MealPlansPage() {
-  const [mealPlans, setMealPlans] = useState<MealPlan[]>([])
-  const [loading, setLoading] = useState(true)
-  const [authLoading, setAuthLoading] = useState(true)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  // Auth state from context
+  const { user, isLoading: authLoading } = useAuth()
 
-  // Initialize authentication
-  useEffect(() => {
-    async function authenticate() {
-      try {
-        const restored = restoreAuth()
-        if (!restored) {
-          await initTestAuth()
-        }
-        setUserEmail(getCurrentUserEmail())
-        setAuthLoading(false)
-      } catch (err) {
-        console.error('Authentication failed:', err)
-        setError('Failed to authenticate. Please refresh the page.')
-        setAuthLoading(false)
-      }
-    }
-    authenticate()
-  }, [])
+  // Data fetching with React Query
+  const { data: mealPlansData, isLoading: mealPlansLoading, error: mealPlansError } = useMealPlans(1, 20)
 
-  // Load meal plans
-  useEffect(() => {
-    if (authLoading) return
-
-    async function loadMealPlans() {
-      try {
-        setLoading(true)
-        const response = await api.getMealPlans(1, 20)
-        setMealPlans(response.items)
-        setError(null)
-      } catch (err: any) {
-        console.error('Failed to load meal plans:', err)
-        setError(err.message || 'Failed to load meal plans')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadMealPlans()
-  }, [authLoading])
+  // Derived state
+  const mealPlans = mealPlansData?.items || []
+  const loading = mealPlansLoading
+  const error = mealPlansError?.message || null
 
   if (authLoading) {
     return (
@@ -74,7 +38,7 @@ export default function MealPlansPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header userEmail={userEmail} />
+      <Header userEmail={user?.email || null} />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">

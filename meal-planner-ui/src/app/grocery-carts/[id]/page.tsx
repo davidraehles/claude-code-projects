@@ -2,13 +2,14 @@
 
 /**
  * Grocery Cart detail page - Shopping list from meal plan.
+ * Refactored to use Auth Context and React Query hooks.
  */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
-import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { useGroceryCart } from '@/hooks/queries/useGroceryCarts'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -19,52 +20,18 @@ export default function GroceryCartPage() {
   const params = useParams()
   const cartId = parseInt(params.id as string)
 
-  const [cart, setCart] = useState<GroceryCart | null>(null)
+  // Auth state from context
+  const { user, isLoading: authLoading } = useAuth()
+
+  // Data fetching with React Query
+  const { data: cart, isLoading: cartLoading, error: cartError } = useGroceryCart(cartId)
+
+  // Local UI state
   const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
-  const [loading, setLoading] = useState(true)
-  const [authLoading, setAuthLoading] = useState(true)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
 
-  // Initialize authentication
-  useEffect(() => {
-    async function authenticate() {
-      try {
-        const restored = restoreAuth()
-        if (!restored) {
-          await initTestAuth()
-        }
-        setUserEmail(getCurrentUserEmail())
-        setAuthLoading(false)
-      } catch (err) {
-        console.error('Authentication failed:', err)
-        setError('Failed to authenticate. Please refresh the page.')
-        setAuthLoading(false)
-      }
-    }
-    authenticate()
-  }, [])
-
-  // Load grocery cart
-  useEffect(() => {
-    if (authLoading) return
-
-    async function loadCart() {
-      try {
-        setLoading(true)
-        const groceryCart = await api.getGroceryCart(cartId)
-        setCart(groceryCart)
-        setError(null)
-      } catch (err: any) {
-        console.error('Failed to load grocery cart:', err)
-        setError(err.message || 'Failed to load grocery cart')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadCart()
-  }, [authLoading, cartId])
+  // Derived state
+  const loading = cartLoading
+  const error = cartError?.message || null
 
   // Toggle item checked state
   const toggleItem = (ingredient: string) => {
@@ -142,7 +109,7 @@ export default function GroceryCartPage() {
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <div className="print:hidden">
-        <Header userEmail={userEmail} />
+        <Header userEmail={user?.email || null} />
       </div>
 
       {/* Main Content */}

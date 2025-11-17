@@ -2,83 +2,47 @@
 
 /**
  * Meal Plan detail page - View specific meal plan with recipes.
+ * Refactored to use Auth Context and React Query hooks.
  */
 
-import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/lib/api'
-import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { useMealPlan } from '@/hooks/queries/useMealPlans'
+import { useGenerateGroceryCart } from '@/hooks/queries/useGroceryCarts'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
-import type { MealPlanDetail } from '@/lib/types'
 
 export default function MealPlanDetailPage() {
   const params = useParams()
   const router = useRouter()
   const mealPlanId = parseInt(params.id as string)
 
-  const [mealPlan, setMealPlan] = useState<MealPlanDetail | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [authLoading, setAuthLoading] = useState(true)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [generatingCart, setGeneratingCart] = useState(false)
+  // Auth state from context
+  const { user, isLoading: authLoading } = useAuth()
 
-  // Initialize authentication
-  useEffect(() => {
-    async function authenticate() {
-      try {
-        const restored = restoreAuth()
-        if (!restored) {
-          await initTestAuth()
-        }
-        setUserEmail(getCurrentUserEmail())
-        setAuthLoading(false)
-      } catch (err) {
-        console.error('Authentication failed:', err)
-        setError('Failed to authenticate. Please refresh the page.')
-        setAuthLoading(false)
-      }
-    }
-    authenticate()
-  }, [])
+  // Data fetching with React Query
+  const { data: mealPlan, isLoading: mealPlanLoading, error: mealPlanError } = useMealPlan(mealPlanId)
 
-  // Load meal plan details
-  useEffect(() => {
-    if (authLoading) return
+  // Generate grocery cart mutation
+  const generateCart = useGenerateGroceryCart()
 
-    async function loadMealPlan() {
-      try {
-        setLoading(true)
-        const plan = await api.getMealPlan(mealPlanId)
-        setMealPlan(plan)
-        setError(null)
-      } catch (err: any) {
-        console.error('Failed to load meal plan:', err)
-        setError(err.message || 'Failed to load meal plan')
-      } finally {
-        setLoading(false)
-      }
-    }
+  // Derived state
+  const loading = mealPlanLoading
+  const error = mealPlanError?.message || generateCart.error?.message || null
+  const generatingCart = generateCart.isPending
 
-    loadMealPlan()
-  }, [authLoading, mealPlanId])
-
-  // Generate grocery cart
-  const handleGenerateCart = async () => {
-    setGeneratingCart(true)
-    setError(null)
-
-    try {
-      const cart = await api.generateGroceryCart(mealPlanId)
-      console.log('✅ Grocery cart generated:', cart)
-      router.push(`/grocery-carts/${cart.id}`)
-    } catch (err: any) {
-      console.error('Failed to generate grocery cart:', err)
-      setError(err.message || 'Failed to generate grocery cart')
-      setGeneratingCart(false)
-    }
+  // Generate grocery cart handler
+  const handleGenerateCart = () => {
+    generateCart.mutate(mealPlanId, {
+      onSuccess: (cart) => {
+        console.log('✅ Grocery cart generated:', cart)
+        router.push(`/grocery-carts/${cart.id}`)
+      },
+      onError: (err) => {
+        console.error('Failed to generate grocery cart:', err)
+      },
+    })
   }
 
   if (authLoading || loading) {
@@ -132,8 +96,8 @@ export default function MealPlanDetailPage() {
             </div>
 
             <div className="flex items-center space-x-4">
-              {userEmail && (
-                <span className="text-sm text-gray-600">👤 {userEmail}</span>
+              {user?.email && (
+                <span className="text-sm text-gray-600">👤 {user.email}</span>
               )}
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm">
