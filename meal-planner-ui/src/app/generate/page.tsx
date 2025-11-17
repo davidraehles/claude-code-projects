@@ -2,12 +2,13 @@
 
 /**
  * Meal Plan Generator page - Create personalized meal plans.
+ * Refactored to use Auth Context and React Query hooks.
  */
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { api } from '@/lib/api'
-import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { useCreateMealPlan } from '@/hooks/queries/useMealPlans'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -29,10 +30,12 @@ const COMMON_DIETARY_RESTRICTIONS = [
 
 export default function GeneratePage() {
   const router = useRouter()
-  const [authLoading, setAuthLoading] = useState(true)
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [generating, setGenerating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+
+  // Auth state from context
+  const { user, isLoading: authLoading } = useAuth()
+
+  // Create meal plan mutation
+  const createMealPlan = useCreateMealPlan()
 
   // Form state
   const [startDate, setStartDate] = useState('')
@@ -42,24 +45,9 @@ export default function GeneratePage() {
   const [selectedRestrictions, setSelectedRestrictions] = useState<string[]>([])
   const [excludedIngredients, setExcludedIngredients] = useState('')
 
-  // Initialize authentication
-  useEffect(() => {
-    async function authenticate() {
-      try {
-        const restored = restoreAuth()
-        if (!restored) {
-          await initTestAuth()
-        }
-        setUserEmail(getCurrentUserEmail())
-        setAuthLoading(false)
-      } catch (err) {
-        console.error('Authentication failed:', err)
-        setError('Failed to authenticate. Please refresh the page.')
-        setAuthLoading(false)
-      }
-    }
-    authenticate()
-  }, [])
+  // Derived state
+  const generating = createMealPlan.isPending
+  const error = createMealPlan.error?.message || null
 
   // Set default start date to tomorrow
   useEffect(() => {
@@ -80,35 +68,33 @@ export default function GeneratePage() {
   // Handle form submission
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-    setGenerating(true)
 
-    try {
-      // Parse excluded ingredients
-      const excludedList = excludedIngredients
-        .split(',')
-        .map((item) => item.trim())
-        .filter((item) => item.length > 0)
+    // Parse excluded ingredients
+    const excludedList = excludedIngredients
+      .split(',')
+      .map((item) => item.trim())
+      .filter((item) => item.length > 0)
 
-      // Create meal plan request
-      const mealPlan = await api.createMealPlan({
+    // Create meal plan using mutation
+    createMealPlan.mutate(
+      {
         start_date: startDate,
         num_days: numDays,
         num_people: numPeople,
         meals_per_day: mealsPerDay,
         dietary_restrictions: selectedRestrictions.length > 0 ? selectedRestrictions : undefined,
         excluded_ingredients: excludedList.length > 0 ? excludedList : undefined,
-      })
-
-      console.log('✅ Meal plan created:', mealPlan)
-
-      // Redirect to meal plan view
-      router.push(`/meal-plans/${mealPlan.id}`)
-    } catch (err: any) {
-      console.error('Failed to generate meal plan:', err)
-      setError(err.message || 'Failed to generate meal plan. Please try again.')
-      setGenerating(false)
-    }
+      },
+      {
+        onSuccess: (mealPlan) => {
+          console.log('✅ Meal plan created:', mealPlan)
+          router.push(`/meal-plans/${mealPlan.id}`)
+        },
+        onError: (err) => {
+          console.error('Failed to generate meal plan:', err)
+        },
+      }
+    )
   }
 
   if (authLoading) {
@@ -125,7 +111,7 @@ export default function GeneratePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header userEmail={userEmail} />
+      <Header userEmail={user?.email || null} />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8 max-w-4xl">

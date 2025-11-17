@@ -8,6 +8,7 @@
 import { ReactNode } from 'react'
 import { ErrorBoundary } from './ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { QueryProvider } from '@/providers/QueryProvider'
 
 interface ClientLayoutProps {
   children: ReactNode
@@ -22,9 +23,11 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <ErrorBoundary onError={handleError}>
-      <AuthProvider>
-        {children}
-      </AuthProvider>
+      <QueryProvider>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </QueryProvider>
     </ErrorBoundary>
   )
 }

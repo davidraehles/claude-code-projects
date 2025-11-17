@@ -2,12 +2,13 @@
 
 /**
  * Dashboard page - Recipe library with search and import.
+ * Refactored to use Auth Context and React Query hooks.
  */
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { api } from '@/lib/api'
-import { initTestAuth, restoreAuth, getCurrentUserEmail } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { useRecipes } from '@/hooks/queries/useRecipes'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -15,60 +16,20 @@ import { RecipeCard } from '@/components/recipe/RecipeCard'
 import type { Recipe } from '@/lib/types'
 
 export default function DashboardPage() {
-  const [recipes, setRecipes] = useState<Recipe[]>([])
-  const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([])
-  const [loading, setLoading] = useState(true)
-  const [authLoading, setAuthLoading] = useState(true)
+  // Auth state from context
+  const { user, isLoading: authLoading } = useAuth()
+
+  // Data fetching with React Query
+  const { data: recipesData, isLoading: recipesLoading, error: recipesError } = useRecipes(1, 50)
+
+  // Local UI state
   const [searchQuery, setSearchQuery] = useState('')
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([])
 
-  // Initialize authentication on component mount
-  useEffect(() => {
-    async function authenticate() {
-      try {
-        // Try to restore existing auth
-        const restored = restoreAuth()
-
-        if (!restored) {
-          // No existing auth, initialize test user
-          console.log('No existing auth, logging in with test user...')
-          await initTestAuth()
-        }
-
-        setUserEmail(getCurrentUserEmail())
-        setAuthLoading(false)
-      } catch (err) {
-        console.error('Authentication failed:', err)
-        setError('Failed to authenticate. Please refresh the page.')
-        setAuthLoading(false)
-      }
-    }
-
-    authenticate()
-  }, [])
-
-  // Load recipes after authentication
-  useEffect(() => {
-    if (authLoading) return
-
-    async function loadRecipes() {
-      try {
-        setLoading(true)
-        const response = await api.getRecipes(1, 50)
-        setRecipes(response.items)
-        setFilteredRecipes(response.items)
-        setError(null)
-      } catch (err: any) {
-        console.error('Failed to load recipes:', err)
-        setError(err.message || 'Failed to load recipes')
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadRecipes()
-  }, [authLoading])
+  // Derive state
+  const recipes = recipesData?.items || []
+  const loading = recipesLoading
+  const error = recipesError?.message || null
 
   // Filter recipes based on search query
   useEffect(() => {
@@ -103,7 +64,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <Header userEmail={userEmail} />
+      <Header userEmail={user?.email || null} />
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
