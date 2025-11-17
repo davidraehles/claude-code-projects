@@ -2,14 +2,20 @@
 
 /**
  * Grocery Cart detail page - Shopping list from meal plan.
- * Refactored to use Auth Context and React Query hooks.
+ * Refactored to use Auth Context, React Query hooks, and Action/Intent Layer (ARCH-004).
  */
 
-import { useState } from 'react'
+import { useReducer } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useGroceryCart } from '@/hooks/queries/useGroceryCarts'
+import {
+  groceryCartReducer,
+  getInitialCartState,
+  selectCheckedCount,
+  selectIsItemChecked,
+} from '@/reducers/groceryCartReducer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
@@ -26,25 +32,13 @@ export default function GroceryCartPage() {
   // Data fetching with React Query
   const { data: cart, isLoading: cartLoading, error: cartError } = useGroceryCart(cartId)
 
-  // Local UI state
-  const [checkedItems, setCheckedItems] = useState<Set<string>>(new Set())
+  // Local UI state - Single useReducer replaces useState (ARCH-004)
+  const [cartState, dispatch] = useReducer(groceryCartReducer, null, getInitialCartState)
 
   // Derived state
   const loading = cartLoading
   const error = cartError?.message || null
-
-  // Toggle item checked state
-  const toggleItem = (ingredient: string) => {
-    setCheckedItems((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(ingredient)) {
-        newSet.delete(ingredient)
-      } else {
-        newSet.add(ingredient)
-      }
-      return newSet
-    })
-  }
+  const checkedCount = selectCheckedCount(cartState)
 
   // Print grocery list
   const handlePrint = () => {
@@ -55,7 +49,7 @@ export default function GroceryCartPage() {
   const handleExport = () => {
     if (!cart) return
 
-    const text = generateTextExport(cart, checkedItems)
+    const text = generateTextExport(cart, cartState.checkedItems)
     const blob = new Blob([text], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -102,7 +96,6 @@ export default function GroceryCartPage() {
   // Group items by category
   const itemsByCategory = groupItemsByCategory(cart.items)
   const categories = Object.keys(itemsByCategory).sort()
-  const checkedCount = checkedItems.size
   const totalCount = cart.items.length
 
   return (
@@ -192,15 +185,15 @@ export default function GroceryCartPage() {
                       <div className="print:hidden">
                         <Checkbox
                           label=""
-                          checked={checkedItems.has(item.ingredient)}
-                          onChange={() => toggleItem(item.ingredient)}
+                          checked={selectIsItemChecked(cartState, item.ingredient)}
+                          onChange={() => dispatch({ type: 'USER_TOGGLED_ITEM', payload: item.ingredient })}
                         />
                       </div>
                       <div className="flex-1 print:flex print:justify-between">
                         <div className="flex items-baseline space-x-2">
                           <span
                             className={`font-medium ${
-                              checkedItems.has(item.ingredient)
+                              selectIsItemChecked(cartState, item.ingredient)
                                 ? 'line-through text-gray-400'
                                 : 'text-gray-900'
                             } print:text-black print:no-underline`}

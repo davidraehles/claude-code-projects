@@ -2,13 +2,19 @@
 
 /**
  * Meal Plan Generator page - Create personalized meal plans.
- * Refactored to use Auth Context and React Query hooks.
+ * Refactored to use Auth Context, React Query hooks, and Action/Intent Layer (ARCH-004).
  */
 
-import { useEffect, useState } from 'react'
+import { useReducer } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useCreateMealPlan } from '@/hooks/queries/useMealPlans'
+import {
+  mealPlanFormReducer,
+  getInitialState,
+  selectMealPlanRequest,
+  selectTotalMeals,
+} from '@/reducers/mealPlanFormReducer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -37,64 +43,31 @@ export default function GeneratePage() {
   // Create meal plan mutation
   const createMealPlan = useCreateMealPlan()
 
-  // Form state
-  const [startDate, setStartDate] = useState('')
-  const [numDays, setNumDays] = useState(7)
-  const [numPeople, setNumPeople] = useState(2)
-  const [mealsPerDay, setMealsPerDay] = useState(3)
-  const [selectedRestrictions, setSelectedRestrictions] = useState<string[]>([])
-  const [excludedIngredients, setExcludedIngredients] = useState('')
+  // Form state - Single useReducer replaces 6 useState calls (ARCH-004)
+  const [formState, dispatch] = useReducer(mealPlanFormReducer, null, getInitialState)
 
   // Derived state
   const generating = createMealPlan.isPending
   const error = createMealPlan.error?.message || null
+  const totalMeals = selectTotalMeals(formState)
 
-  // Set default start date to tomorrow
-  useEffect(() => {
-    const tomorrow = new Date()
-    tomorrow.setDate(tomorrow.getDate() + 1)
-    setStartDate(tomorrow.toISOString().split('T')[0])
-  }, [])
-
-  // Toggle dietary restriction
-  const toggleRestriction = (restriction: string) => {
-    setSelectedRestrictions((prev) =>
-      prev.includes(restriction)
-        ? prev.filter((r) => r !== restriction)
-        : [...prev, restriction]
-    )
-  }
-
-  // Handle form submission
+  // Handle form submission - Pure selector extracts request data (ARCH-004)
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Parse excluded ingredients
-    const excludedList = excludedIngredients
-      .split(',')
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0)
+    // Use selector to convert form state to API request
+    const requestData = selectMealPlanRequest(formState)
 
     // Create meal plan using mutation
-    createMealPlan.mutate(
-      {
-        start_date: startDate,
-        num_days: numDays,
-        num_people: numPeople,
-        meals_per_day: mealsPerDay,
-        dietary_restrictions: selectedRestrictions.length > 0 ? selectedRestrictions : undefined,
-        excluded_ingredients: excludedList.length > 0 ? excludedList : undefined,
+    createMealPlan.mutate(requestData, {
+      onSuccess: (mealPlan) => {
+        console.log('✅ Meal plan created:', mealPlan)
+        router.push(`/meal-plans/${mealPlan.id}`)
       },
-      {
-        onSuccess: (mealPlan) => {
-          console.log('✅ Meal plan created:', mealPlan)
-          router.push(`/meal-plans/${mealPlan.id}`)
-        },
-        onError: (err) => {
-          console.error('Failed to generate meal plan:', err)
-        },
-      }
-    )
+      onError: (err) => {
+        console.error('Failed to generate meal plan:', err)
+      },
+    })
   }
 
   if (authLoading) {
@@ -159,16 +132,16 @@ export default function GeneratePage() {
                   <Input
                     label="Start Date"
                     type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
+                    value={formState.startDate}
+                    onChange={(e) => dispatch({ type: 'USER_SET_START_DATE', payload: e.target.value })}
                     required
                     min={new Date().toISOString().split('T')[0]}
                   />
                   <Input
                     label="Number of Days"
                     type="number"
-                    value={numDays}
-                    onChange={(e) => setNumDays(parseInt(e.target.value))}
+                    value={formState.numDays}
+                    onChange={(e) => dispatch({ type: 'USER_CHANGED_NUM_DAYS', payload: parseInt(e.target.value) })}
                     required
                     min={1}
                     max={14}
@@ -176,8 +149,8 @@ export default function GeneratePage() {
                   <Input
                     label="Number of People"
                     type="number"
-                    value={numPeople}
-                    onChange={(e) => setNumPeople(parseInt(e.target.value))}
+                    value={formState.numPeople}
+                    onChange={(e) => dispatch({ type: 'USER_CHANGED_NUM_PEOPLE', payload: parseInt(e.target.value) })}
                     required
                     min={1}
                     max={10}
@@ -185,8 +158,8 @@ export default function GeneratePage() {
                   <Input
                     label="Meals per Day"
                     type="number"
-                    value={mealsPerDay}
-                    onChange={(e) => setMealsPerDay(parseInt(e.target.value))}
+                    value={formState.mealsPerDay}
+                    onChange={(e) => dispatch({ type: 'USER_CHANGED_MEALS_PER_DAY', payload: parseInt(e.target.value) })}
                     required
                     min={1}
                     max={5}
@@ -209,8 +182,8 @@ export default function GeneratePage() {
                     <Checkbox
                       key={restriction}
                       label={restriction.charAt(0).toUpperCase() + restriction.slice(1)}
-                      checked={selectedRestrictions.includes(restriction)}
-                      onChange={() => toggleRestriction(restriction)}
+                      checked={formState.selectedRestrictions.includes(restriction)}
+                      onChange={() => dispatch({ type: 'USER_TOGGLED_DIETARY_RESTRICTION', payload: restriction })}
                       disabled={generating}
                     />
                   ))}
@@ -229,8 +202,8 @@ export default function GeneratePage() {
               <CardContent>
                 <Input
                   placeholder="e.g., mushrooms, cilantro, bell peppers"
-                  value={excludedIngredients}
-                  onChange={(e) => setExcludedIngredients(e.target.value)}
+                  value={formState.excludedIngredients}
+                  onChange={(e) => dispatch({ type: 'USER_CHANGED_EXCLUDED_INGREDIENTS', payload: e.target.value })}
                   disabled={generating}
                 />
                 <p className="text-xs text-gray-500 mt-2">
@@ -248,27 +221,27 @@ export default function GeneratePage() {
                 <div className="space-y-2 text-sm mb-6">
                   <p>
                     <span className="font-semibold">📅 Duration:</span>{' '}
-                    {numDays} day{numDays !== 1 ? 's' : ''} starting {new Date(startDate).toLocaleDateString()}
+                    {formState.numDays} day{formState.numDays !== 1 ? 's' : ''} starting {new Date(formState.startDate).toLocaleDateString()}
                   </p>
                   <p>
                     <span className="font-semibold">👥 Household:</span>{' '}
-                    {numPeople} person{numPeople !== 1 ? 's' : ''},{' '}
-                    {mealsPerDay} meal{mealsPerDay !== 1 ? 's' : ''} per day
+                    {formState.numPeople} person{formState.numPeople !== 1 ? 's' : ''},{' '}
+                    {formState.mealsPerDay} meal{formState.mealsPerDay !== 1 ? 's' : ''} per day
                   </p>
                   <p>
                     <span className="font-semibold">🎯 Total Meals:</span>{' '}
-                    {numDays * mealsPerDay} meals
+                    {totalMeals} meals
                   </p>
-                  {selectedRestrictions.length > 0 && (
+                  {formState.selectedRestrictions.length > 0 && (
                     <p>
                       <span className="font-semibold">🥗 Dietary:</span>{' '}
-                      {selectedRestrictions.join(', ')}
+                      {formState.selectedRestrictions.join(', ')}
                     </p>
                   )}
-                  {excludedIngredients && (
+                  {formState.excludedIngredients && (
                     <p>
                       <span className="font-semibold">🚫 Excluding:</span>{' '}
-                      {excludedIngredients}
+                      {formState.excludedIngredients}
                     </p>
                   )}
                 </div>
