@@ -5,10 +5,11 @@
  * Refactored to use Auth Context and React Query hooks.
  */
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useRecipes } from '@/hooks/queries/useRecipes'
+import { useFilteredList } from '@/hooks/useFilteredList'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -24,31 +25,22 @@ export default function DashboardPage() {
 
   // Local UI state
   const [searchQuery, setSearchQuery] = useState('')
-  const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([])
 
   // Derive state
   const recipes = recipesData?.items || []
   const loading = recipesLoading
   const error = recipesError?.message || null
 
-  // Filter recipes based on search query
-  useEffect(() => {
-    if (!searchQuery.trim()) {
-      setFilteredRecipes(recipes)
-      return
-    }
-
-    const query = searchQuery.toLowerCase()
-    const filtered = recipes.filter((recipe) => {
-      return (
-        recipe.title.toLowerCase().includes(query) ||
-        recipe.ingredients.some((ing) => ing.toLowerCase().includes(query)) ||
-        recipe.dietary_tags?.some((tag) => tag.toLowerCase().includes(query))
-      )
-    })
-
-    setFilteredRecipes(filtered)
-  }, [searchQuery, recipes])
+  // Filter recipes using custom hook (ARCH-007)
+  const filteredRecipes = useFilteredList({
+    items: recipes,
+    query: searchQuery,
+    getSearchableText: (recipe) => [
+      recipe.title,
+      ...recipe.ingredients,
+      ...(recipe.dietary_tags || []),
+    ],
+  })
 
   if (authLoading) {
     return (
