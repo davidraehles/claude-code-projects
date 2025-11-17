@@ -1,67 +1,51 @@
 /**
- * Simple test authentication utility.
- * For development/testing only - replace with NextAuth later.
+ * Authentication utilities for managing user sessions.
+ * Refactored to work with immutable API client.
  */
 
 import { api } from './api'
+import type { LoginRequest } from './types'
 
-// Test user credentials
-export const TEST_USER = {
+const TEST_USER: LoginRequest = {
   email: 'test@example.com',
   password: 'testpassword123',
 }
 
 /**
- * Initialize test authentication by logging in with test credentials.
- * Call this on app startup for development.
+ * Initialize authentication with test user.
+ * Returns token instead of mutating API client.
  */
-export async function initTestAuth(): Promise<boolean> {
+export async function initTestAuth(): Promise<string | null> {
   try {
-    // Try to login with test credentials
     const response = await api.login(TEST_USER)
 
-    // Set the token in the API client
-    api.setToken(response.access_token)
-
-    // Store token in localStorage for persistence
+    // Persist to localStorage (for session restoration)
     if (typeof window !== 'undefined') {
       localStorage.setItem('auth_token', response.access_token)
       localStorage.setItem('user_email', TEST_USER.email)
     }
 
     console.log('✅ Test user authenticated:', TEST_USER.email)
-    return true
+    return response.access_token
   } catch (error) {
     console.error('❌ Test auth failed:', error)
-    return false
+    return null
   }
 }
 
 /**
- * Restore authentication from localStorage if available.
+ * Restore authentication from localStorage.
+ * Returns token instead of mutating API client.
  */
-export function restoreAuth(): boolean {
+export function restoreAuth(): string | null {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('auth_token')
     if (token) {
-      api.setToken(token)
       console.log('✅ Auth restored from localStorage')
-      return true
+      return token
     }
   }
-  return false
-}
-
-/**
- * Clear authentication.
- */
-export function clearAuth(): void {
-  api.clearToken()
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('auth_token')
-    localStorage.removeItem('user_email')
-  }
-  console.log('🚪 Logged out')
+  return null
 }
 
 /**
@@ -75,11 +59,29 @@ export function getCurrentUserEmail(): string | null {
 }
 
 /**
+ * Get current auth token from localStorage.
+ */
+export function getAuthToken(): string | null {
+  if (typeof window !== 'undefined') {
+    return localStorage.getItem('auth_token')
+  }
+  return null
+}
+
+/**
+ * Clear authentication data.
+ */
+export function clearAuth(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('auth_token')
+    localStorage.removeItem('user_email')
+    console.log('✅ Auth cleared')
+  }
+}
+
+/**
  * Check if user is authenticated.
  */
 export function isAuthenticated(): boolean {
-  if (typeof window !== 'undefined') {
-    return !!localStorage.getItem('auth_token')
-  }
-  return false
+  return getAuthToken() !== null
 }
