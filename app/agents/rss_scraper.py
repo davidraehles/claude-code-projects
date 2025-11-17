@@ -14,7 +14,7 @@ Features:
 
 import logging
 import asyncio
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, Any
 from datetime import datetime
 from urllib.parse import urljoin
 
@@ -132,7 +132,7 @@ class RSSRecipeScraper(RecipeScraper):
                 raise
 
     async def _extract_recipes_from_entry(
-        self, entry: feedparser.munch.Munch, base_url: str
+        self, entry: Any, base_url: str
     ) -> list[RecipeScrapeResult]:
         """
         Extract recipes from a single feed entry.
@@ -177,7 +177,7 @@ class RSSRecipeScraper(RecipeScraper):
 
         return recipes
 
-    def _is_recipe_entry(self, entry: feedparser.munch.Munch) -> bool:
+    def _is_recipe_entry(self, entry: Any) -> bool:
         """
         Heuristically detect if feed entry is about a recipe.
 
