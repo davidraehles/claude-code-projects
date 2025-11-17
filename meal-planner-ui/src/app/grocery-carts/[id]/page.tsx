@@ -33,11 +33,12 @@ export default function GroceryCartPage() {
   // Data fetching with React Query
   const { data: cart, isLoading: cartLoading, error: cartError } = useGroceryCart(cartId)
 
-  // Local UI state - Persisted reducer (ARCH-004 + ARCH-010)
+  // Local UI state - Persisted reducer with DevTools (ARCH-004 + ARCH-010 + ARCH-011)
   const [cartState, dispatch] = usePersistedReducer(groceryCartReducer, {
     key: `grocery-cart-${cartId}`,
     initialState: getInitialCartState(),
     version: 1,
+    devToolsName: `GroceryCart-${cartId}`, // Enable Redux DevTools
     // Custom serialization for Set
     serialize: (persisted) => {
       const serializable = {

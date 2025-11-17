@@ -4,7 +4,7 @@
  * Implements ARCH-010: State persistence layer
  */
 
-import { useReducer, useEffect, useCallback, Reducer } from 'react'
+import { useReducer, useEffect, useCallback, Reducer, useRef } from 'react'
 
 interface PersistedReducerOptions<S> {
   /** LocalStorage key for persisting state */
@@ -19,11 +19,31 @@ interface PersistedReducerOptions<S> {
   deserialize?: (json: string) => S
   /** Optional: validation function to check if persisted state is valid */
   validate?: (state: unknown) => state is S
+  /** Optional: name for Redux DevTools (enables DevTools integration) */
+  devToolsName?: string
 }
 
 interface PersistedState<S> {
   version: number
   state: S
+}
+
+// Redux DevTools Extension API types
+interface ReduxDevToolsExtension {
+  connect(options?: any): DevToolsConnection
+}
+
+interface DevToolsConnection {
+  subscribe(listener: (message: any) => void): () => void
+  unsubscribe(): void
+  send(action: any, state: any): void
+  init(state: any): void
+}
+
+declare global {
+  interface Window {
+    __REDUX_DEVTOOLS_EXTENSION__?: ReduxDevToolsExtension
+  }
 }
 
 /**
@@ -55,7 +75,11 @@ export function usePersistedReducer<S, A>(
     serialize = JSON.stringify,
     deserialize = JSON.parse,
     validate,
+    devToolsName,
   } = options
+
+  const devToolsRef = useRef<DevToolsConnection | null>(null)
+  const isTimeTravel = useRef(false)
 
   // Load initial state from localStorage
   const loadPersistedState = useCallback((): S => {
@@ -100,6 +124,59 @@ export function usePersistedReducer<S, A>(
   // Initialize reducer with persisted state
   const [state, dispatch] = useReducer(reducer, initialState, loadPersistedState)
 
+  // Connect to Redux DevTools (ARCH-011)
+  useEffect(() => {
+    if (
+      !devToolsName ||
+      process.env.NODE_ENV !== 'development' ||
+      typeof window === 'undefined' ||
+      !window.__REDUX_DEVTOOLS_EXTENSION__
+    ) {
+      return
+    }
+
+    try {
+      const devTools = window.__REDUX_DEVTOOLS_EXTENSION__.connect({
+        name: devToolsName,
+        features: {
+          pause: true,
+          lock: true,
+          persist: true,
+          export: true,
+          import: 'custom',
+          jump: true,
+          skip: true,
+          reorder: true,
+          dispatch: true,
+        },
+      })
+
+      devToolsRef.current = devTools
+      devTools.init(state)
+
+      const unsubscribe = devTools.subscribe((message) => {
+        if (message.type === 'DISPATCH') {
+          isTimeTravel.current = true
+        }
+      })
+
+      return () => {
+        unsubscribe()
+        devTools.unsubscribe()
+      }
+    } catch (error) {
+      console.warn(`[usePersistedReducer] Error connecting to DevTools:`, error)
+    }
+  }, [devToolsName])
+
+  // Send updates to DevTools
+  useEffect(() => {
+    if (devToolsRef.current && !isTimeTravel.current) {
+      devToolsRef.current.send({ type: '@@STATE_UPDATE' }, state)
+    }
+    isTimeTravel.current = false
+  }, [state])
+
   // Persist state to localStorage whenever it changes
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -120,7 +197,18 @@ export function usePersistedReducer<S, A>(
     }
   }, [key, state, version, serialize])
 
-  return [state, dispatch]
+  // Wrap dispatch to send actions to DevTools
+  const enhancedDispatch = useCallback(
+    (action: A) => {
+      if (devToolsRef.current) {
+        devToolsRef.current.send(action, state)
+      }
+      dispatch(action)
+    },
+    [state]
+  )
+
+  return [state, devToolsName ? enhancedDispatch : dispatch]
 }
 
 /**
