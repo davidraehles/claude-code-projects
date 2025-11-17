@@ -72,7 +72,9 @@ class UserResponse(BaseModel):
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
-    return bcrypt.hash(password)
+    # Truncate to 72 bytes as required by bcrypt
+    password_bytes = password.encode('utf-8')[:72]
+    return bcrypt.hash(password_bytes.decode('utf-8'))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
