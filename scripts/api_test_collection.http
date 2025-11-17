@@ -1,0 +1,280 @@
+### API Test Collection for Phase 2 Enhancements
+### Use with VS Code REST Client extension or similar tools
+###
+### Instructions:
+### 1. Replace {{token}} with your actual JWT token
+### 2. Replace {{base_url}} with your API URL (http://localhost:8000)
+### 3. Run tests in order
+
+@base_url = http://localhost:8000
+@token = YOUR_TOKEN_HERE
+
+### SETUP: Health Check
+GET {{base_url}}/health
+
+### SETUP: Create Test User
+POST {{base_url}}/api/v1/auth/signup
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "password": "password123",
+  "country": "DE"
+}
+
+### Save the token from response and update @token above
+
+### ========================================
+### TEST 1: Create Vegan Recipe
+### ========================================
+
+POST {{base_url}}/api/v1/recipes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Vegan Buddha Bowl",
+  "ingredients": ["quinoa", "chickpeas", "kale", "tahini", "lemon"],
+  "instructions": "Cook quinoa. Mix with chickpeas, kale, and tahini dressing.",
+  "prep_time": 15,
+  "cook_time": 25,
+  "servings": 2,
+  "dietary_tags": ["vegan", "gluten_free"],
+  "nutrition": {"calories": 450},
+  "source_url": "https://test.com/vegan-bowl-1"
+}
+
+### ========================================
+### TEST 2: Create Vegetarian Recipe
+### ========================================
+
+POST {{base_url}}/api/v1/recipes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Vegetarian Pizza",
+  "ingredients": ["pizza dough", "mozzarella", "mushrooms", "bell peppers"],
+  "instructions": "Top dough with cheese and vegetables. Bake.",
+  "prep_time": 15,
+  "cook_time": 20,
+  "servings": 2,
+  "dietary_tags": ["vegetarian"],
+  "nutrition": {"calories": 520},
+  "source_url": "https://test.com/veggie-pizza-1"
+}
+
+### ========================================
+### TEST 3: Create Regular Recipe with Meat
+### ========================================
+
+POST {{base_url}}/api/v1/recipes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "title": "Chicken Salad",
+  "ingredients": ["chicken breast", "lettuce", "tomatoes", "ranch"],
+  "instructions": "Grill chicken. Toss with salad.",
+  "prep_time": 10,
+  "cook_time": 15,
+  "servings": 2,
+  "dietary_tags": [],
+  "nutrition": {"calories": 350},
+  "source_url": "https://test.com/chicken-salad-1"
+}
+
+### ========================================
+### TEST 4: Create Meal Plan with Vegan Filter
+### ========================================
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-11-25",
+  "num_days": 3,
+  "num_people": 2,
+  "dietary_restrictions": ["vegan"],
+  "meals_per_day": 3
+}
+
+### Expected: Only vegan recipes in response
+### Verify: Check that all recipes have "vegan" in dietary_tags
+
+### ========================================
+### TEST 5: Create Meal Plan with Vegetarian Filter
+### ========================================
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-11-26",
+  "num_days": 3,
+  "num_people": 2,
+  "dietary_restrictions": ["vegetarian"],
+  "meals_per_day": 3
+}
+
+### Expected: Vegetarian AND vegan recipes (vegan is subset of vegetarian)
+### Verify: No meat recipes
+
+### ========================================
+### TEST 6: Create Meal Plan with Multiple Restrictions
+### ========================================
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-11-27",
+  "num_days": 3,
+  "num_people": 2,
+  "dietary_restrictions": ["vegan", "gluten_free"],
+  "meals_per_day": 3
+}
+
+### Expected: Only recipes with BOTH vegan AND gluten_free tags
+### Verify: All recipes are vegan AND gluten-free
+
+### ========================================
+### TEST 7: Create Meal Plan with Excluded Ingredient
+### ========================================
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-11-28",
+  "num_days": 3,
+  "num_people": 2,
+  "excluded_ingredients": ["chicken"],
+  "meals_per_day": 3
+}
+
+### Expected: No recipes containing "chicken" in ingredients
+### Verify: Check ingredients array in each recipe
+
+### ========================================
+### TEST 8: Create Meal Plan with Calorie Target
+### ========================================
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-11-29",
+  "num_days": 3,
+  "num_people": 2,
+  "target_calories_per_day": 2000,
+  "meals_per_day": 3
+}
+
+### Expected: total_calories should be around 6000 (3 days * 2000 cal/day)
+### Verify: Check total_calories in response
+
+### ========================================
+### TEST 9: Create Second Meal Plan (Variety Test)
+### ========================================
+### Create this AFTER Test 8 to verify variety feature
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-12-02",
+  "num_days": 3,
+  "num_people": 2,
+  "meals_per_day": 3
+}
+
+### Expected: Different recipes than Test 8 (variety feature)
+### Verify: Compare recipe IDs with previous meal plan
+
+### ========================================
+### TEST 10: Get Meal Plan Details
+### ========================================
+### Replace {id} with meal plan ID from previous response
+
+GET {{base_url}}/api/v1/meal-plans/{id}
+Authorization: Bearer {{token}}
+
+### Expected: Detailed view with days, meals, and statistics
+### Verify: days array, statistics object
+
+### ========================================
+### TEST 11: List All Meal Plans
+### ========================================
+
+GET {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+
+### Expected: Array of all meal plans for user
+### Verify: Multiple plans visible
+
+### ========================================
+### TEST 12: Generate Grocery Cart
+### ========================================
+### Replace {id} with meal plan ID
+
+POST {{base_url}}/api/v1/meal-plans/{id}/grocery-cart
+Authorization: Bearer {{token}}
+
+### Expected: Grocery cart with aggregated ingredients
+### Verify: total_items > 0, status = "active"
+
+### ========================================
+### TEST 13: Delete Meal Plan
+### ========================================
+### Replace {id} with meal plan ID
+
+DELETE {{base_url}}/api/v1/meal-plans/{id}
+Authorization: Bearer {{token}}
+
+### Expected: 204 No Content
+### Verify: Plan is deleted
+
+### ========================================
+### TEST 14: Error Case - Impossible Constraints
+### ========================================
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-12-01",
+  "num_days": 30,
+  "num_people": 2,
+  "dietary_restrictions": ["vegan"],
+  "excluded_ingredients": ["beans", "lentils", "tofu", "quinoa", "rice"],
+  "meals_per_day": 3
+}
+
+### Expected: 500 error "No suitable recipes found"
+### Verify: Error message is clear
+
+### ========================================
+### TEST 15: Invalid Days (Validation Error)
+### ========================================
+
+POST {{base_url}}/api/v1/meal-plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "start_date": "2025-12-01",
+  "num_days": 50,
+  "num_people": 2,
+  "meals_per_day": 3
+}
+
+### Expected: 422 Validation Error (max days is 30)
+### Verify: Error details
