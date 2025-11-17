@@ -75,3 +75,8 @@ logs/
 # Keep migration files but ignore generated artifacts
 migrations/__pycache__/
 migrations/versions/__pycache__/
+
+# Node.js (root level - actual project is in meal-planner-ui/)
+node_modules/
+package-lock.json
+package.json
