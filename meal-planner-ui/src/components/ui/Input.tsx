@@ -17,7 +17,7 @@ export function Input({
   className = '',
   ...props
 }: InputProps) {
-  const baseStyles = 'w-full px-4 py-2.5 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const baseStyles = 'w-full px-4 py-2.5 border rounded-lg transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 placeholder:text-gray-400 bg-white'
   const errorStyles = error ? 'border-red-500' : 'border-gray-300'
   const iconPadding = icon ? 'pl-10' : ''
 
