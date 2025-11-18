@@ -420,8 +420,9 @@ async def upload_recipe_file(
             user_id=user_id,
             payload=RecipeHarvestCompletedEvent(
                 recipe_id=recipe.id,
-                recipe_title=recipe.title,
-                user_id=user_id
+                title=recipe.title,
+                source_url=recipe.source_url,
+                is_duplicate=False
             ).model_dump()
         ))
 
