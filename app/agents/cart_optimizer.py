@@ -60,6 +60,8 @@ class CartOptimizerAgent:
         self,
         meal_plan_id: str,
         user_id: str,
+        db,
+        credential_manager,
         delivery_preferences: Optional[Dict] = None
     ) -> Dict[str, Any]:
         """
