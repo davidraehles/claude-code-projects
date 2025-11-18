@@ -72,12 +72,17 @@ class UserResponse(BaseModel):
 
 def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
-    # Bcrypt has a 72-byte limit. Truncate and handle gracefully.
-    # Encode to bytes, truncate, then decode back to string.
-    # Use 'ignore' to handle potential partial UTF-8 characters at boundary.
-    password_bytes = password.encode('utf-8')[:72]
-    truncated_password = password_bytes.decode('utf-8', errors='ignore')
-    return bcrypt.hash(truncated_password)
+    import hashlib
+
+    # bcrypt has a 72-byte limit on password length
+    # For passwords exceeding this, pre-hash with SHA-256
+    password_bytes = password.encode('utf-8')
+
+    if len(password_bytes) > 72:
+        # Use SHA-256 to create a fixed-length hash that's under 72 bytes
+        password = hashlib.sha256(password_bytes).hexdigest()
+
+    return bcrypt.hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
