@@ -6,10 +6,12 @@ and management.
 """
 
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 import uuid
+import tempfile
+import os
 
 from app.api.dependencies import get_database, get_current_user_id
 from app.models.recipe import Recipe
@@ -25,6 +27,7 @@ from app.schemas.recipe import (
 from app.agents.html_scraper import HTMLRecipeScraper
 from app.agents.api_scraper import APIRecipeScraper
 from app.agents.rss_scraper import RSSRecipeScraper
+from app.agents.file_parser import FileRecipeParser
 from app.events import (
     Event,
     EventType,
@@ -320,6 +323,125 @@ async def harvest_recipe(
         is_duplicate=False,
         duplicate_of_id=None
     )
+
+
+@router.post("/upload", response_model=RecipeHarvestResponse, status_code=status.HTTP_202_ACCEPTED)
+async def upload_recipe_file(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_database),
+    user_id: int = Depends(get_current_user_id),
+):
+    """
+    Import a recipe from an uploaded file (HTML or PDF).
+
+    Supports:
+    - HTML files (.html, .htm)
+    - PDF files (.pdf)
+
+    Args:
+        file: The recipe file to upload
+        db: Database session
+        user_id: Current user ID from JWT token
+
+    Returns:
+        RecipeHarvestResponse: Status of import request
+
+    Raises:
+        HTTPException 400: Invalid file type or format
+    """
+    # Validate file type
+    allowed_extensions = {'.html', '.htm', '.pdf'}
+    file_ext = os.path.splitext(file.filename)[1].lower()
+
+    if file_ext not in allowed_extensions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unsupported file type: {file_ext}. Supported: {', '.join(allowed_extensions)}"
+        )
+
+    try:
+        # Read file content
+        content = await file.read()
+
+        # Parse recipe based on file type
+        if file_ext in ['.html', '.htm']:
+            parsed_recipe = FileRecipeParser.parse_html_file(content.decode('utf-8'))
+        else:  # PDF
+            # Save to temp file for PDF processing
+            with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp:
+                tmp.write(content)
+                tmp_path = tmp.name
+
+            try:
+                parsed_recipe = FileRecipeParser.parse_pdf_file(tmp_path)
+            finally:
+                os.unlink(tmp_path)
+
+        # Check for duplicates
+        is_duplicate, duplicate_of = find_duplicate_recipe(
+            parsed_recipe['title'],
+            parsed_recipe['ingredients'],
+            db,
+            user_id
+        )
+
+        if is_duplicate:
+            return RecipeHarvestResponse(
+                success=False,
+                message=f"Recipe '{parsed_recipe['title']}' already exists in your library",
+                recipe=None,
+                is_duplicate=True,
+                duplicate_of_id=duplicate_of
+            )
+
+        # Create recipe in database
+        recipe = Recipe(
+            user_id=user_id,
+            title=parsed_recipe['title'],
+            ingredients=parsed_recipe['ingredients'],
+            instructions=parsed_recipe['instructions'],
+            prep_time=parsed_recipe.get('prep_time'),
+            cook_time=parsed_recipe.get('cook_time'),
+            servings=parsed_recipe.get('servings', 4),
+            source_type='file_upload',
+            source_url=f"file://{file.filename}",
+        )
+
+        db.add(recipe)
+        db.commit()
+        db.refresh(recipe)
+
+        # Publish success event
+        event_bus = get_event_bus()
+        await event_bus.publish(Event(
+            event_type=EventType.RECIPE_HARVEST_COMPLETED,
+            correlation_id=str(uuid.uuid4()),
+            user_id=user_id,
+            payload=RecipeHarvestCompletedEvent(
+                recipe_id=recipe.id,
+                recipe_title=recipe.title,
+                user_id=user_id
+            ).model_dump()
+        ))
+
+        return RecipeHarvestResponse(
+            success=True,
+            message=f"Recipe '{parsed_recipe['title']}' successfully imported from file",
+            recipe=RecipeResponse.from_orm(recipe),
+            is_duplicate=False,
+            duplicate_of_id=None
+        )
+
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process file: {str(e)}"
+        )
 
 
 @router.get("", response_model=RecipeListResponse)

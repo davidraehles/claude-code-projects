@@ -5,11 +5,12 @@
  * Supports: HTML (Ottolenghi, BBC), API (Spoonacular), RSS feeds
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useImportRecipe } from '@/hooks/queries/useRecipes'
+import { useFileUpload } from '@/hooks/queries/useFileUpload'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -25,10 +26,14 @@ export default function ImportPage() {
   const router = useRouter()
   const { user, isLoading: authLoading, token } = useAuth()
   const { mutate: importRecipe, isPending, error } = useImportRecipe()
+  const { mutate: uploadFile, isPending: isUploading, error: uploadError } = useFileUpload()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [url, setUrl] = useState('')
   const [sourceType, setSourceType] = useState<'html' | 'api' | 'rss'>('html')
   const [success, setSuccess] = useState(false)
+  const [uploadSuccess, setUploadSuccess] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
   // Debug: Log auth state
   useEffect(() => {
@@ -63,6 +68,31 @@ export default function ImportPage() {
         },
       }
     )
+  }
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+    }
+  }
+
+  const handleFileUpload = () => {
+    if (!selectedFile) return
+
+    uploadFile(selectedFile, {
+      onSuccess: () => {
+        setUploadSuccess(true)
+        setSelectedFile(null)
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''
+        }
+        // Redirect to dashboard after 2 seconds
+        setTimeout(() => {
+          router.push('/dashboard')
+        }, 2000)
+      },
+    })
   }
 
   return (
@@ -177,6 +207,94 @@ export default function ImportPage() {
                 )}
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        {/* File Upload Card */}
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Or Upload a File</CardTitle>
+            <CardDescription>Import recipes from HTML or PDF files</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {uploadSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <span className="text-2xl mr-3">✅</span>
+                  <div>
+                    <h3 className="text-green-900 font-semibold mb-1">Recipe imported successfully!</h3>
+                    <p className="text-green-700">Redirecting to dashboard...</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {uploadError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                <div className="flex items-start">
+                  <span className="text-2xl mr-3">❌</span>
+                  <div>
+                    <h3 className="text-red-900 font-semibold mb-1">Failed to import recipe</h3>
+                    <p className="text-red-700">{uploadError.message}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="space-y-4">
+              {/* File Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select File
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".html,.htm,.pdf"
+                  onChange={handleFileChange}
+                  disabled={isUploading}
+                  className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100
+                    disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 mt-2">
+                  Supported formats: HTML (.html, .htm), PDF (.pdf) • Max size: 10MB
+                </p>
+              </div>
+
+              {selectedFile && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-gray-700">
+                    <strong>Selected:</strong> {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                  </p>
+                </div>
+              )}
+
+              {/* Upload Button */}
+              <Button
+                type="button"
+                variant="primary"
+                className="w-full"
+                disabled={isUploading || !selectedFile}
+                onClick={handleFileUpload}
+              >
+                {isUploading ? (
+                  <span className="flex items-center justify-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                    Uploading...
+                  </span>
+                ) : (
+                  '📄 Upload File'
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
