@@ -18,17 +18,33 @@ import type { Recipe } from '@/lib/types'
 
 export default function DashboardPage() {
   // Auth state from context
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, refreshToken } = useAuth()
 
   // Data fetching with React Query
-  const { data: recipesData, isLoading: recipesLoading, error: recipesError } = useRecipes(0, 50)
+  const { data: recipesData, isLoading: recipesLoading, error: recipesError, refetch: refetchRecipes } = useRecipes(0, 50)
 
   // Local UI state
   const [searchQuery, setSearchQuery] = useState('')
+  const [isRefreshingAuth, setIsRefreshingAuth] = useState(false)
+
+  // Handle token expiration
+  const handleTokenExpired = async () => {
+    setIsRefreshingAuth(true)
+    try {
+      await refreshToken()
+      // Refetch recipes after token refresh
+      await refetchRecipes()
+    } catch (error) {
+      console.error('Failed to refresh token:', error)
+    } finally {
+      setIsRefreshingAuth(false)
+    }
+  }
 
   // Derive state
   const recipes = recipesData?.items || []
   const loading = recipesLoading
+  const isTokenError = recipesError?.message?.includes('Not authenticated') || recipesError?.message?.includes('Token')
   const error = recipesError?.message || null
 
   // Filter recipes using custom hook (ARCH-007)
@@ -121,15 +137,36 @@ export default function DashboardPage() {
         {/* Error State */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
-            <div className="flex items-start">
-              <span className="text-2xl mr-3">⚠️</span>
-              <div>
-                <h3 className="text-red-900 font-semibold mb-1">Error loading recipes</h3>
-                <p className="text-red-700">{error}</p>
-                <p className="text-sm text-red-600 mt-2">
-                  Make sure the backend API is running at {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}
-                </p>
+            <div className="flex items-start justify-between">
+              <div className="flex items-start flex-1">
+                <span className="text-2xl mr-3">⚠️</span>
+                <div>
+                  <h3 className="text-red-900 font-semibold mb-1">Error loading recipes</h3>
+                  <p className="text-red-700">{error}</p>
+                  <p className="text-sm text-red-600 mt-2">
+                    {isTokenError ? (
+                      <>
+                        Your authentication session may have expired. Try refreshing your session.
+                      </>
+                    ) : (
+                      <>
+                        Make sure the backend API is running at {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}
+                      </>
+                    )}
+                  </p>
+                </div>
               </div>
+              {isTokenError && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleTokenExpired}
+                  disabled={isRefreshingAuth}
+                  className="ml-4 flex-shrink-0"
+                >
+                  {isRefreshingAuth ? 'Refreshing...' : 'Refresh Session'}
+                </Button>
+              )}
             </div>
           </div>
         )}
