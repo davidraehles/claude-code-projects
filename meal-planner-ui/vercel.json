@@ -5,8 +5,8 @@
   "framework": "nextjs",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "https://claude-code-projects-production.up.railway.app/api/:path*"
+      "source": "/api/v1/:path*",
+      "destination": "https://claude-code-projects-production.up.railway.app/api/v1/:path*"
     }
   ]
 }
