@@ -27,7 +27,7 @@ def seed_test_data():
         if not test_user:
             test_user = User(
                 email="test@example.com",
-                password_hash="$2b$12$test",  # Hashed "password123"
+                password_hash="$2b$12$8f0QVzCUAl4qwj8w1t7iMeD9prXxEZ6.nokFBxRKRnEU.gLY84YpO",  # Hashed "testpassword123"
                 country="DE"
             )
             db.add(test_user)
