@@ -1,50 +1,49 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# claude-code-projects Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Test-First Development (NON-NEGOTIABLE)
+Tests MUST be written and approved before implementation begins. Use Playwright for all end-to-end and integration testing. TDD cycle enforced: Tests fail → Implementation → Tests pass → Refactor. Every feature must have corresponding test coverage. Test results must pass before any commit can be pushed.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Frequent Test-Commit-Push Workflow
+Changes MUST follow the test-commit-push cadence: write/modify code → run tests locally → commit with descriptive message → push to remote. Commits should be logical, atomic units of work with clear commit messages following conventional commits. Push frequently to avoid long-lived branches and reduce integration risk.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. MCP Tool Extensibility
+The project embraces Claude Code MCP tools and skills as first-class integrations. Currently active: Playwright testing. Future integrations planned: GitHub (PR/issue management), Serena (additional testing/validation), PydanticAI (model-driven development). All new tools MUST be documented in tool setup guides and integrated into CI/CD workflow when applicable.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Spec-Driven Development
+All features MUST start with a specification (spec.md) before implementation. Specifications define requirements, scope, acceptance criteria, and design decisions. Implementations MUST align with approved specs. Breaking changes to specs require amendment documentation and stakeholder sign-off.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Integration & Contract Testing
+Integration tests MUST cover inter-service communication, shared schemas, and contract boundaries. Playwright tests MUST validate end-to-end workflows. Breaking changes require comprehensive test updates before deployment.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Technology Stack
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+- **Frontend/Testing**: Playwright (`@playwright/test` ^1.56.1) for all E2E and integration testing
+- **Runtime**: Node.js (types via `@types/node` ^24.10.1)
+- **Version Control**: Git with conventional commits
+- **Deployment**: Vercel (supported via deployment scripts)
+- **Future Integrations**: GitHub MCP, Serena framework, PydanticAI
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+## Development Workflow
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+1. **Planning Phase**: Create or review spec.md with acceptance criteria
+2. **Testing Phase**: Write Playwright tests for new features; verify tests fail initially
+3. **Implementation Phase**: Develop feature until tests pass
+4. **Quality Phase**: Run full test suite; ensure no regressions
+5. **Commit Phase**: Commit changes with conventional commit message
+6. **Push Phase**: Push to remote branch; create/update PR if needed
+7. **Integration Phase**: Ensure CI passes; merge only after approval
+
+All steps MUST be completed before moving to the next feature. Skipping the test or commit-push cycle is prohibited.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+- This Constitution supersedes all other practices and guidelines
+- All contributors MUST comply with core principles, especially Test-First Development
+- Amendments require: (1) Clear rationale, (2) Documentation, (3) Affected template updates
+- Constitution version bumps follow semantic versioning: MAJOR (principle removal/redefinition), MINOR (new principle/guidance), PATCH (clarifications/typos)
+- PR reviews MUST verify test coverage and compliance with principles before merge
+- Breaking changes to specs, APIs, or tool integrations MUST be captured in amendment documentation
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2025-11-18 | **Last Amended**: 2025-11-18
