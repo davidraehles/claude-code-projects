@@ -5,7 +5,7 @@
  * Supports: HTML (Ottolenghi, BBC), API (Spoonacular), RSS feeds
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -23,12 +23,17 @@ const SUPPORTED_SOURCES = [
 
 export default function ImportPage() {
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, token } = useAuth()
   const { mutate: importRecipe, isPending, error } = useImportRecipe()
 
   const [url, setUrl] = useState('')
   const [sourceType, setSourceType] = useState<'html' | 'api' | 'rss'>('html')
   const [success, setSuccess] = useState(false)
+
+  // Debug: Log auth state
+  useEffect(() => {
+    console.log('[ImportPage] Auth state:', { token: !!token, user: user?.email, authLoading })
+  }, [token, user, authLoading])
 
   if (authLoading) {
     return (
