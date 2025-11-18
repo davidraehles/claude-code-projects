@@ -71,31 +71,19 @@ class UserResponse(BaseModel):
 # Helper Functions
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt."""
+    """Hash a password using bcrypt with explicit variant."""
     import hashlib
-
-    # DEBUG: Log what we're receiving
-    print(f"[DEBUG hash_password] Received password type: {type(password)}")
-    print(f"[DEBUG hash_password] Password length: {len(password)} chars")
 
     # bcrypt has a 72-byte limit on password length
     # For passwords exceeding this, pre-hash with SHA-256
     password_bytes = password.encode('utf-8')
-    print(f"[DEBUG hash_password] Encoded bytes length: {len(password_bytes)}")
 
     if len(password_bytes) > 72:
         # Use SHA-256 to create a fixed-length hash that's under 72 bytes
         password = hashlib.sha256(password_bytes).hexdigest()
-        print(f"[DEBUG hash_password] Pre-hashed with SHA-256")
 
-    print(f"[DEBUG hash_password] About to call bcrypt.hash()")
-    try:
-        result = bcrypt.hash(password)
-        print(f"[DEBUG hash_password] bcrypt.hash() succeeded")
-        return result
-    except Exception as e:
-        print(f"[DEBUG hash_password] bcrypt.hash() failed: {type(e).__name__}: {e}")
-        raise
+    # Use explicit bcrypt configuration with variant 2b and 12 rounds
+    return bcrypt.using(ident="2b", rounds=12).hash(password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
