@@ -13,7 +13,8 @@
       "Bash(chmod:*)",
       "Bash(/home/darae/claude-code-projects/scripts/generate_secrets.sh:*)",
       "Bash(/home/darae/claude-code-projects/scripts/watch_deployment.sh:*)",
-      "Bash(vercel ls:*)"
+      "Bash(vercel ls:*)",
+      "Bash(vercel:*)"
     ],
     "deny": [],
     "ask": []
