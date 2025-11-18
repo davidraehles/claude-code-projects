@@ -74,7 +74,7 @@ def hash_password(password: str) -> str:
     """Hash a password using bcrypt."""
     # Truncate to 72 bytes as required by bcrypt
     password_bytes = password.encode('utf-8')[:72]
-    return bcrypt.hash(password_bytes.decode('utf-8'))
+    return bcrypt.hash(password_bytes)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
