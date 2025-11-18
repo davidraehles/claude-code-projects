@@ -155,6 +155,34 @@ class ApiClient {
     )
   }
 
+  async uploadRecipeFile(file: File, token?: string | null): Promise<any> {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    const url = `${this.baseURL}/api/v1/recipes/upload`
+    const headers: Record<string, string> = {}
+
+    // Add Authorization header if token provided
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({
+        detail: response.statusText,
+      }))
+      throw new Error(error.detail || "Failed to upload file")
+    }
+
+    return response.json()
+  }
+
   // ===== Meal Plan Endpoints (token required) =====
 
   async getMealPlans(
