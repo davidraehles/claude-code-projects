@@ -239,6 +239,188 @@ def seed_test_data():
                 "prep_time": 10,
                 "cook_time": 25
             },
+
+            # Additional recipes for better variety
+            {
+                "title": "Grilled Chicken Breast with Sweet Potato",
+                "ingredients": ["chicken breast", "sweet potato", "olive oil", "rosemary", "garlic"],
+                "instructions": "Grill chicken and roast sweet potatoes with herbs.",
+                "dietary_tags": ["gluten_free"],
+                "nutrition": {"calories": 520, "protein": 42, "carbs": 48, "fat": 12},
+                "prep_time": 15,
+                "cook_time": 30
+            },
+            {
+                "title": "Tofu Scramble with Vegetables",
+                "ingredients": ["firm tofu", "turmeric", "nutritional yeast", "spinach", "tomatoes"],
+                "instructions": "Crumble and pan-fry tofu with turmeric and vegetables.",
+                "dietary_tags": ["vegan", "gluten_free"],
+                "nutrition": {"calories": 240, "protein": 18, "carbs": 12, "fat": 14},
+                "prep_time": 10,
+                "cook_time": 15
+            },
+            {
+                "title": "Tuna Salad",
+                "ingredients": ["canned tuna", "mixed greens", "cherry tomatoes", "cucumber", "olive oil"],
+                "instructions": "Mix tuna with fresh greens and vegetables.",
+                "dietary_tags": ["gluten_free"],
+                "nutrition": {"calories": 320, "protein": 32, "carbs": 15, "fat": 14},
+                "prep_time": 10,
+                "cook_time": 0
+            },
+            {
+                "title": "Vegetarian Chili",
+                "ingredients": ["kidney beans", "black beans", "tomatoes", "bell peppers", "onion"],
+                "instructions": "Simmer beans and vegetables in spiced tomato sauce.",
+                "dietary_tags": ["vegan", "gluten_free"],
+                "nutrition": {"calories": 380, "protein": 18, "carbs": 62, "fat": 6},
+                "prep_time": 15,
+                "cook_time": 40
+            },
+            {
+                "title": "Teriyaki Salmon Bowl",
+                "ingredients": ["salmon fillet", "brown rice", "broccoli", "teriyaki sauce", "sesame"],
+                "instructions": "Bake salmon with teriyaki glaze. Serve over rice with broccoli.",
+                "dietary_tags": ["gluten_free"],
+                "nutrition": {"calories": 580, "protein": 38, "carbs": 48, "fat": 24},
+                "prep_time": 15,
+                "cook_time": 25
+            },
+            {
+                "title": "Falafel Wrap",
+                "ingredients": ["chickpeas", "whole wheat wrap", "tahini sauce", "lettuce", "tomatoes"],
+                "instructions": "Make falafel patties. Serve in wrap with tahini sauce and veggies.",
+                "dietary_tags": ["vegan"],
+                "nutrition": {"calories": 450, "protein": 16, "carbs": 58, "fat": 18},
+                "prep_time": 20,
+                "cook_time": 20
+            },
+            {
+                "title": "Egg White Omelet with Mushrooms",
+                "ingredients": ["egg whites", "mushrooms", "spinach", "low-fat cheese", "olive oil"],
+                "instructions": "Whisk egg whites. Cook with mushrooms and spinach.",
+                "dietary_tags": ["gluten_free"],
+                "nutrition": {"calories": 180, "protein": 24, "carbs": 8, "fat": 6},
+                "prep_time": 10,
+                "cook_time": 10
+            },
+            {
+                "title": "Pad Thai (Vegetarian)",
+                "ingredients": ["rice noodles", "peanut sauce", "tofu", "bell peppers", "peanuts"],
+                "instructions": "Stir-fry noodles with peanut sauce and vegetables.",
+                "dietary_tags": ["vegan"],
+                "nutrition": {"calories": 520, "protein": 16, "carbs": 72, "fat": 16},
+                "prep_time": 15,
+                "cook_time": 20
+            },
+            {
+                "title": "Baked Cod with Asparagus",
+                "ingredients": ["cod fillet", "asparagus", "lemon", "garlic", "olive oil"],
+                "instructions": "Bake cod and asparagus together with lemon and garlic.",
+                "dietary_tags": ["gluten_free"],
+                "nutrition": {"calories": 340, "protein": 40, "carbs": 12, "fat": 14},
+                "prep_time": 10,
+                "cook_time": 20
+            },
+            {
+                "title": "Spinach and Feta Pie",
+                "ingredients": ["spinach", "feta cheese", "phyllo dough", "olive oil", "dill"],
+                "instructions": "Layer spinach and feta between phyllo sheets. Bake until crispy.",
+                "dietary_tags": ["vegetarian"],
+                "nutrition": {"calories": 480, "protein": 16, "carbs": 42, "fat": 28},
+                "prep_time": 20,
+                "cook_time": 35
+            },
+            {
+                "title": "Vegetable Soup",
+                "ingredients": ["mixed vegetables", "vegetable broth", "tomatoes", "herbs", "olive oil"],
+                "instructions": "Simmer vegetables in broth with herbs.",
+                "dietary_tags": ["vegan", "gluten_free"],
+                "nutrition": {"calories": 180, "protein": 6, "carbs": 36, "fat": 4},
+                "prep_time": 15,
+                "cook_time": 30
+            },
+            {
+                "title": "Quinoa Stuffed Bell Peppers",
+                "ingredients": ["bell peppers", "quinoa", "black beans", "corn", "cheese"],
+                "instructions": "Stuff peppers with quinoa mixture. Bake until tender.",
+                "dietary_tags": ["vegetarian", "gluten_free"],
+                "nutrition": {"calories": 420, "protein": 16, "carbs": 58, "fat": 14},
+                "prep_time": 15,
+                "cook_time": 30
+            },
+            {
+                "title": "Seared Scallops with Risotto",
+                "ingredients": ["scallops", "arborio rice", "white wine", "parmesan", "butter"],
+                "instructions": "Make risotto. Sear scallops and serve on top.",
+                "dietary_tags": ["gluten_free"],
+                "nutrition": {"calories": 620, "protein": 32, "carbs": 62, "fat": 24},
+                "prep_time": 15,
+                "cook_time": 40
+            },
+            {
+                "title": "Black Bean and Sweet Potato Tacos",
+                "ingredients": ["black beans", "sweet potato", "corn tortillas", "avocado", "salsa"],
+                "instructions": "Roast sweet potatoes. Assemble tacos with beans and toppings.",
+                "dietary_tags": ["vegan", "gluten_free"],
+                "nutrition": {"calories": 420, "protein": 12, "carbs": 68, "fat": 12},
+                "prep_time": 15,
+                "cook_time": 25
+            },
+            {
+                "title": "Shrimp Scampi Pasta",
+                "ingredients": ["shrimp", "pasta", "garlic", "white wine", "olive oil"],
+                "instructions": "Cook pasta. Sauté shrimp in garlic and wine sauce.",
+                "dietary_tags": [],
+                "nutrition": {"calories": 520, "protein": 32, "carbs": 68, "fat": 12},
+                "prep_time": 15,
+                "cook_time": 20
+            },
+            {
+                "title": "Miso Soup with Tofu",
+                "ingredients": ["miso paste", "tofu", "seaweed", "green onions", "dashi"],
+                "instructions": "Heat dashi. Add miso and tofu. Serve with seaweed.",
+                "dietary_tags": ["vegan", "gluten_free"],
+                "nutrition": {"calories": 140, "protein": 12, "carbs": 10, "fat": 6},
+                "prep_time": 10,
+                "cook_time": 10
+            },
+            {
+                "title": "Vegetable Frittata",
+                "ingredients": ["eggs", "spinach", "mushrooms", "bell peppers", "cheese"],
+                "instructions": "Beat eggs with vegetables. Cook in skillet until set.",
+                "dietary_tags": ["vegetarian", "gluten_free"],
+                "nutrition": {"calories": 320, "protein": 28, "carbs": 8, "fat": 20},
+                "prep_time": 10,
+                "cook_time": 20
+            },
+            {
+                "title": "Coconut Curry Noodle Soup",
+                "ingredients": ["rice noodles", "coconut milk", "curry paste", "vegetables", "basil"],
+                "instructions": "Simmer noodles in coconut curry broth.",
+                "dietary_tags": ["vegan", "gluten_free"],
+                "nutrition": {"calories": 380, "protein": 10, "carbs": 52, "fat": 16},
+                "prep_time": 10,
+                "cook_time": 20
+            },
+            {
+                "title": "Herb-Roasted Turkey Breast",
+                "ingredients": ["turkey breast", "rosemary", "thyme", "olive oil", "garlic"],
+                "instructions": "Roast turkey breast with fresh herbs.",
+                "dietary_tags": ["gluten_free"],
+                "nutrition": {"calories": 380, "protein": 52, "carbs": 0, "fat": 18},
+                "prep_time": 10,
+                "cook_time": 45
+            },
+            {
+                "title": "Vegan Chocolate Avocado Mousse",
+                "ingredients": ["avocado", "cocoa powder", "maple syrup", "almond milk", "vanilla"],
+                "instructions": "Blend avocado with cocoa and almond milk for dessert.",
+                "dietary_tags": ["vegan", "gluten_free"],
+                "nutrition": {"calories": 280, "protein": 4, "carbs": 28, "fat": 18},
+                "prep_time": 10,
+                "cook_time": 0
+            },
         ]
 
         # Create recipes

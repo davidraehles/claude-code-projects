@@ -15,6 +15,9 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy.orm import Session
+
+from app.api.dependencies import get_database, get_current_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -97,8 +100,8 @@ class CheckoutRequest(BaseModel):
 @router.post("/", response_model=GroceryCartResponse)
 async def create_grocery_cart(
     request: CreateGroceryCartRequest,
-    # current_user = Depends(get_current_user),  # TODO: Add auth
-    # cart_optimizer = Depends(get_cart_optimizer),  # TODO: Inject agent
+    db: Session = Depends(get_database),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Create Knuspr shopping cart from meal plan.
