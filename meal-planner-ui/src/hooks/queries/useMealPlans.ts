@@ -15,7 +15,7 @@ import type { MealPlan, MealPlanDetail, MealPlanCreateRequest } from '@/lib/type
 export const mealPlanKeys = {
   all: ['mealPlans'] as const,
   lists: () => [...mealPlanKeys.all, 'list'] as const,
-  list: (page: number, size: number) => [...mealPlanKeys.lists(), { page, size }] as const,
+  list: (skip: number, limit: number) => [...mealPlanKeys.lists(), { skip, limit }] as const,
   details: () => [...mealPlanKeys.all, 'detail'] as const,
   detail: (id: number) => [...mealPlanKeys.details(), id] as const,
 }
@@ -24,16 +24,16 @@ export const mealPlanKeys = {
  * Hook to fetch paginated meal plans.
  * Automatically handles auth token and provides loading/error states.
  */
-export function useMealPlans(page: number = 1, size: number = 20) {
+export function useMealPlans(skip: number = 0, limit: number = 20) {
   const token = useAuthToken()
 
   return useQuery({
-    queryKey: mealPlanKeys.list(page, size),
+    queryKey: mealPlanKeys.list(skip, limit),
     queryFn: async () => {
       if (!token) {
         throw new Error('Not authenticated')
       }
-      return api.getMealPlans(page, size, token)
+      return api.getMealPlans(skip, limit, token)
     },
     enabled: !!token,
   })
