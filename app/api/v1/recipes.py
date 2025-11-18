@@ -378,20 +378,21 @@ async def upload_recipe_file(
                 os.unlink(tmp_path)
 
         # Check for duplicates
-        is_duplicate, duplicate_of = find_duplicate_recipe(
-            parsed_recipe['title'],
-            parsed_recipe['ingredients'],
+        source_url = f"file://{file.filename}"
+        duplicate_recipe = find_duplicate_recipe(
             db,
+            parsed_recipe['title'],
+            source_url,
             user_id
         )
 
-        if is_duplicate:
+        if duplicate_recipe:
             return RecipeHarvestResponse(
                 success=False,
                 message=f"Recipe '{parsed_recipe['title']}' already exists in your library",
                 recipe=None,
                 is_duplicate=True,
-                duplicate_of_id=duplicate_of
+                duplicate_of_id=duplicate_recipe.id
             )
 
         # Create recipe in database
@@ -404,7 +405,7 @@ async def upload_recipe_file(
             cook_time=parsed_recipe.get('cook_time'),
             servings=parsed_recipe.get('servings', 4),
             source_type='file_upload',
-            source_url=f"file://{file.filename}",
+            source_url=source_url,
         )
 
         db.add(recipe)
