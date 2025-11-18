@@ -17,10 +17,10 @@ export default function MealPlansPage() {
   const { user, isLoading: authLoading } = useAuth()
 
   // Data fetching with React Query
-  const { data: mealPlansData, isLoading: mealPlansLoading, error: mealPlansError } = useMealPlans(1, 20)
+  const { data: mealPlansData, isLoading: mealPlansLoading, error: mealPlansError } = useMealPlans(0, 20)
 
   // Derived state
-  const mealPlans = mealPlansData?.items || []
+  const mealPlans = mealPlansData || []
   const loading = mealPlansLoading
   const error = mealPlansError?.message || null
 
