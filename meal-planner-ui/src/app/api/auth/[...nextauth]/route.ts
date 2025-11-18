@@ -17,12 +17,13 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
+          console.error('Missing credentials')
           return null
         }
 
         try {
           // Call backend login endpoint
-          const res = await fetch(`${API_URL}/api/v1/auth/login`, {
+          const loginRes = await fetch(`${API_URL}/api/v1/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -33,18 +34,41 @@ export const authOptions: NextAuthOptions = {
             }),
           })
 
-          if (!res.ok) {
+          if (!loginRes.ok) {
+            const error = await loginRes.json().catch(() => ({ detail: 'Login failed' }))
+            console.error('Login failed:', error)
             return null
           }
 
-          const data = await res.json()
+          const tokens = await loginRes.json()
+
+          // Fetch user info using access token
+          const userRes = await fetch(`${API_URL}/api/v1/auth/me`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${tokens.access_token}`,
+            },
+          })
+
+          if (!userRes.ok) {
+            console.error('Failed to fetch user info')
+            // Still return user with token, just use email as fallback
+            return {
+              id: '0',
+              email: credentials.email,
+              name: credentials.email.split('@')[0],
+              accessToken: tokens.access_token,
+            }
+          }
+
+          const user = await userRes.json()
 
           // Return user object with token
           return {
-            id: data.user?.id || '1',
-            email: credentials.email,
-            name: data.user?.name || credentials.email.split('@')[0],
-            accessToken: data.access_token,
+            id: user.id.toString(),
+            email: user.email,
+            name: user.email.split('@')[0],
+            accessToken: tokens.access_token,
           }
         } catch (error) {
           console.error('Auth error:', error)

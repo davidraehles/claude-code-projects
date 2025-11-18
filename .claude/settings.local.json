@@ -7,7 +7,12 @@
       "Bash(git commit:*)",
       "Bash(git push:*)",
       "Bash(git mv:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(curl:*)",
+      "Bash(bash:*)",
+      "Bash(chmod:*)",
+      "Bash(/home/darae/claude-code-projects/scripts/generate_secrets.sh:*)",
+      "Bash(/home/darae/claude-code-projects/scripts/watch_deployment.sh:*)"
     ],
     "deny": [],
     "ask": []
