@@ -80,3 +80,10 @@ migrations/versions/__pycache__/
 node_modules/
 package-lock.json
 package.json
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
