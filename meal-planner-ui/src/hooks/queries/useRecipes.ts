@@ -15,7 +15,7 @@ import type { Recipe, RecipeCreateRequest, RecipeImportRequest } from '@/lib/typ
 export const recipeKeys = {
   all: ['recipes'] as const,
   lists: () => [...recipeKeys.all, 'list'] as const,
-  list: (page: number, size: number) => [...recipeKeys.lists(), { page, size }] as const,
+  list: (skip: number, limit: number) => [...recipeKeys.lists(), { skip, limit }] as const,
   details: () => [...recipeKeys.all, 'detail'] as const,
   detail: (id: number) => [...recipeKeys.details(), id] as const,
 }
@@ -24,16 +24,16 @@ export const recipeKeys = {
  * Hook to fetch paginated recipes.
  * Automatically handles auth token and provides loading/error states.
  */
-export function useRecipes(page: number = 1, size: number = 50) {
+export function useRecipes(skip: number = 0, limit: number = 50) {
   const token = useAuthToken()
 
   return useQuery({
-    queryKey: recipeKeys.list(page, size),
+    queryKey: recipeKeys.list(skip, limit),
     queryFn: async () => {
       if (!token) {
         throw new Error('Not authenticated')
       }
-      return api.getRecipes(page, size, token)
+      return api.getRecipes(skip, limit, token)
     },
     enabled: !!token, // Only run query if authenticated
   })

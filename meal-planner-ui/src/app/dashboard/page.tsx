@@ -21,7 +21,7 @@ export default function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth()
 
   // Data fetching with React Query
-  const { data: recipesData, isLoading: recipesLoading, error: recipesError } = useRecipes(1, 50)
+  const { data: recipesData, isLoading: recipesLoading, error: recipesError } = useRecipes(0, 50)
 
   // Local UI state
   const [searchQuery, setSearchQuery] = useState('')
