@@ -3,7 +3,58 @@
 **Feature**: 002-multi-agent-recipe-app
 **Version**: 1.0.0 - Phase 1 MVP
 **Created**: 2025-11-14
-**Status**: Ready for Sprint Planning
+**Updated**: 2025-11-18
+**Status**: Deployment Readiness Phase
+
+---
+
+## 🚀 DEPLOYMENT READINESS (Current Priority)
+
+**Goal:** Make all planned features available for user testing on Vercel + Railway
+**Timeline:** 2-3 hours
+**See:** [DEPLOYMENT_READINESS_PLAN.md](../../docs/DEPLOYMENT_READINESS_PLAN.md)
+
+### Deployment Tasks (D001-D015)
+
+#### Phase D1: Local Setup & Build Verification
+- [ ] D001 Install frontend dependencies (npm install in meal-planner-ui/)
+- [ ] D002 Create .env.local with development environment variables
+- [ ] D003 Test local frontend build (npm run build)
+- [ ] D004 Test local frontend dev server (npm run dev)
+- [ ] D005 Verify all pages load without errors locally
+
+#### Phase D2: Backend API Verification
+- [ ] D006 Test authentication endpoints (register, login, logout)
+- [ ] D007 Test recipe import endpoint (POST /api/v1/recipes/harvest)
+- [ ] D008 Test recipe list endpoint (GET /api/v1/recipes)
+- [ ] D009 Test meal plan generation (POST /api/v1/meal_plans)
+- [ ] D010 Test user preferences endpoint (GET/PUT /api/v1/users/preferences)
+
+#### Phase D3: Frontend-Backend Integration
+- [ ] D011 Wire login/signup pages to backend auth API
+- [ ] D012 Wire recipe import UI to /api/v1/recipes/harvest
+- [ ] D013 Wire dashboard to display recipes from API
+- [ ] D014 Wire meal plan generator to /api/v1/meal_plans
+- [ ] D015 Add loading states and error handling to all API calls
+
+#### Phase D4: Production Deployment
+- [ ] D016 Set Vercel environment variables (NEXT_PUBLIC_API_URL, NEXTAUTH_SECRET, NEXTAUTH_URL)
+- [ ] D017 Deploy frontend to Vercel (vercel --prod)
+- [ ] D018 Verify CORS settings on Railway backend
+- [ ] D019 End-to-end testing on production URLs
+- [ ] D020 Update documentation with live deployment URLs
+
+**Current Backend Status:**
+- ✅ Railway deployment healthy
+- ✅ All API endpoints functional
+- ✅ Database connected
+- ✅ Authentication working
+
+**Current Frontend Status:**
+- ✅ Vercel deployment active (landing page)
+- ⚠️ Dependencies need installation
+- ⚠️ API integration incomplete
+- ⚠️ Environment variables need setup
 
 ---
 
