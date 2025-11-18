@@ -6,7 +6,7 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
-import { initTestAuth, restoreAuth, getAuthToken, getCurrentUserEmail as getEmailFromStorage, clearAuth as clearAuthStorage } from '@/lib/auth'
+import { initTestAuth, restoreAuth, getAuthToken, getCurrentUserEmail as getEmailFromStorage, clearAuth as clearAuthStorage, refreshAuth, isTokenExpiringSoon } from '@/lib/auth'
 
 interface AuthState {
   token: string | null
@@ -106,29 +106,58 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [])
 
   /**
-   * Refresh token from localStorage.
-   * Useful for re-syncing state after external changes.
+   * Refresh token - re-authenticate if expired.
+   * Useful for re-syncing state after external changes or token expiration.
    */
-  const refreshToken = useCallback(() => {
-    const token = getAuthToken()
-    const email = getEmailFromStorage()
+  const refreshToken = useCallback(async () => {
+    try {
+      // First check if we have a valid token
+      const currentToken = getAuthToken()
+      const email = getEmailFromStorage()
 
-    if (token && email) {
-      setState({
-        token,
-        user: { email },
-        isAuthenticated: true,
-        isLoading: false,
-        error: null,
-      })
-      console.log('[AuthContext] Token refreshed')
-    } else {
+      if (currentToken && email) {
+        setState({
+          token: currentToken,
+          user: { email },
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        })
+        console.log('[AuthContext] Token is still valid')
+        return
+      }
+
+      // Token expired or not found - re-authenticate
+      console.log('[AuthContext] Token invalid, re-authenticating...')
+      const newToken = await refreshAuth()
+
+      if (newToken) {
+        const newEmail = getEmailFromStorage()
+        setState({
+          token: newToken,
+          user: { email: newEmail },
+          isAuthenticated: true,
+          isLoading: false,
+          error: null,
+        })
+        console.log('[AuthContext] Token refreshed successfully')
+      } else {
+        setState({
+          token: null,
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          error: 'Failed to refresh token',
+        })
+      }
+    } catch (error) {
+      console.error('[AuthContext] Error refreshing token:', error)
       setState({
         token: null,
         user: null,
         isAuthenticated: false,
         isLoading: false,
-        error: null,
+        error: 'Token refresh failed',
       })
     }
   }, [])
