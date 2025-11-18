@@ -80,7 +80,7 @@ class ApiClient {
   }
 
   async signup(data: SignupRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>("/api/v1/auth/signup", {
+    return this.request<AuthResponse>("/api/v1/auth/register", {
       method: "POST",
       body: JSON.stringify(data),
     })
@@ -93,12 +93,12 @@ class ApiClient {
   // ===== Recipe Endpoints (token required) =====
 
   async getRecipes(
-    page: number = 1,
-    size: number = 50,
+    skip: number = 0,
+    limit: number = 50,
     token?: string | null
   ): Promise<PaginatedResponse<Recipe>> {
     return this.request<PaginatedResponse<Recipe>>(
-      `/api/v1/recipes?page=${page}&size=${size}`,
+      `/api/v1/recipes?skip=${skip}&limit=${limit}`,
       {},
       token
     )
@@ -144,9 +144,9 @@ class ApiClient {
     )
   }
 
-  async importRecipe(data: RecipeImportRequest, token?: string | null): Promise<Recipe> {
-    return this.request<Recipe>(
-      "/api/v1/recipes/import",
+  async importRecipe(data: RecipeImportRequest, token?: string | null): Promise<any> {
+    return this.request<any>(
+      "/api/v1/recipes/harvest",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -158,24 +158,24 @@ class ApiClient {
   // ===== Meal Plan Endpoints (token required) =====
 
   async getMealPlans(
-    page: number = 1,
-    size: number = 20,
+    skip: number = 0,
+    limit: number = 20,
     token?: string | null
-  ): Promise<PaginatedResponse<MealPlan>> {
-    return this.request<PaginatedResponse<MealPlan>>(
-      `/api/v1/meal-plans?page=${page}&size=${size}`,
+  ): Promise<MealPlan[]> {
+    return this.request<MealPlan[]>(
+      `/api/v1/meal_plans?skip=${skip}&limit=${limit}`,
       {},
       token
     )
   }
 
   async getMealPlan(id: number, token?: string | null): Promise<MealPlanDetail> {
-    return this.request<MealPlanDetail>(`/api/v1/meal-plans/${id}`, {}, token)
+    return this.request<MealPlanDetail>(`/api/v1/meal_plans/${id}`, {}, token)
   }
 
   async createMealPlan(data: MealPlanCreateRequest, token?: string | null): Promise<MealPlan> {
     return this.request<MealPlan>(
-      "/api/v1/meal-plans",
+      "/api/v1/meal_plans",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -186,7 +186,7 @@ class ApiClient {
 
   async deleteMealPlan(id: number, token?: string | null): Promise<void> {
     return this.request<void>(
-      `/api/v1/meal-plans/${id}`,
+      `/api/v1/meal_plans/${id}`,
       {
         method: "DELETE",
       },
@@ -198,7 +198,7 @@ class ApiClient {
 
   async generateGroceryCart(mealPlanId: number, token?: string | null): Promise<GroceryCart> {
     return this.request<GroceryCart>(
-      `/api/v1/meal-plans/${mealPlanId}/grocery-cart`,
+      `/api/v1/meal_plans/${mealPlanId}/grocery-cart`,
       {
         method: "POST",
       },

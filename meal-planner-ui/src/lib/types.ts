@@ -13,8 +13,9 @@ export interface User {
 
 export interface AuthResponse {
   access_token: string
+  refresh_token: string
   token_type: string
-  user: User
+  expires_in: number
 }
 
 export interface LoginRequest {
@@ -70,6 +71,7 @@ export interface RecipeCreateRequest {
 
 export interface RecipeImportRequest {
   url: string
+  source_type: "html" | "api" | "rss"
 }
 
 // ===== Meal Plan =====
