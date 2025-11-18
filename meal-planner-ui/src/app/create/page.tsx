@@ -5,7 +5,7 @@
  * Allows users to add custom recipes to their library
  */
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
@@ -27,7 +27,7 @@ interface FormData {
 
 export default function CreatePage() {
   const router = useRouter()
-  const { user, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, token } = useAuth()
   const { mutate: createRecipe, isPending, error } = useCreateRecipe()
 
   const [formData, setFormData] = useState<FormData>({
@@ -40,6 +40,11 @@ export default function CreatePage() {
     dietaryTags: [],
   })
   const [success, setSuccess] = useState(false)
+
+  // Debug: Log auth state
+  useEffect(() => {
+    console.log('[CreatePage] Auth state:', { token: !!token, user: user?.email, authLoading })
+  }, [token, user, authLoading])
 
   if (authLoading) {
     return (
