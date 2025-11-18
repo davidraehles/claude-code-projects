@@ -5,7 +5,6 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { APIClient } from '@/lib/api';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -35,8 +34,6 @@ interface DeleteCredentialsResponse {
   message: string;
   success: boolean;
 }
-
-const client = new APIClient(API_URL);
 
 /**
  * Hook for managing Knuspr credentials
