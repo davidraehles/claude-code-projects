@@ -48,5 +48,19 @@ For more information about Spec-Kit, visit: https://github.com/github/spec-kit
 
 ## Documentation
 
+### Project Documentation
+
+- **[Deployment Guide](./docs/DEPLOYMENT_GUIDE.md)** - Complete guide for deploying to Railway and Vercel
+- **[Architecture](./docs/ARCHITECTURE.md)** - System architecture overview
+- **[Troubleshooting Archive](./docs/archive/)** - Historical debugging notes
+
+### Spec-Kit Documentation
+
 - [Spec-Kit README](./.specify/README.md)
 - [Spec-Kit Agent Guide](https://github.com/github/spec-kit/blob/main/AGENTS.md)
+
+## Live Deployments
+
+- **Frontend**: https://claude-code-projects.vercel.app
+- **Backend API**: https://claude-code-projects-production.up.railway.app
+- **API Docs**: https://claude-code-projects-production.up.railway.app/api/docs
