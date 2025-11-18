@@ -41,7 +41,7 @@ export default function SignupPage() {
 
     try {
       // Call backend signup endpoint
-      const res = await fetch(`${API_URL}/api/v1/auth/signup`, {
+      const res = await fetch(`${API_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -49,6 +49,7 @@ export default function SignupPage() {
         body: JSON.stringify({
           email,
           password,
+          country: 'US', // Default country
         }),
       })
 
