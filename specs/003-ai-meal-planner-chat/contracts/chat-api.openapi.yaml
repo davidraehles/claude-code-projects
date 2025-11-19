@@ -1,0 +1,609 @@
+openapi: 3.1.0
+info:
+  title: AI Meal Planner Chat API
+  version: 1.0.0
+  description: Conversational chat interface for personalized meal plan generation
+  contact:
+    name: Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.claude-code-projects.com/v1
+    description: Production
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+tags:
+  - name: Chat Sessions
+    description: Manage conversation threads
+  - name: Chat Messages
+    description: Send and receive messages
+  - name: WebSocket
+    description: Real-time WebSocket communication
+
+paths:
+  /chat/sessions:
+    post:
+      tags:
+        - Chat Sessions
+      summary: Create a new chat session
+      description: |
+        Initialize a new conversation thread for the authenticated user.
+
+        **Response Behavior**:
+        - Returns 201 Created with session ID
+        - AI system message included (introduces meal planner assistant)
+        - User preferences automatically loaded and included in context
+
+        **Example Flow**:
+        1. User logs in
+        2. POST /chat/sessions
+        3. Receive session_id and initial AI greeting
+        4. Start sending user messages
+      operationId: createChatSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                voice_enabled:
+                  type: boolean
+                  description: Whether user will use voice input
+                  default: false
+                metadata:
+                  type: object
+                  description: Optional metadata (browser type, device, etc)
+                  additionalProperties: true
+              required: []
+      responses:
+        '201':
+          description: Chat session created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  session_id:
+                    type: string
+                    format: uuid
+                    description: Unique session identifier
+                  created_at:
+                    type: string
+                    format: date-time
+                  initial_message:
+                    type: object
+                    description: AI's introductory message
+                    properties:
+                      message_id:
+                        type: string
+                        format: uuid
+                      sender:
+                        type: string
+                        enum: ['assistant']
+                      content:
+                        type: string
+                        example: "Hello! I'm your AI meal planner. To help you create the perfect meal plan, I'd like to learn about your dietary preferences. Do you have any dietary restrictions or allergies I should know about?"
+                      created_at:
+                        type: string
+                        format: date-time
+                  websocket_url:
+                    type: string
+                    format: uri
+                    description: WebSocket URL for real-time communication
+                    example: "wss://api.claude-code-projects.com/ws/chat/sessions/{session_id}"
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - Chat Sessions
+      summary: List user's chat sessions
+      description: |
+        Retrieve all active and archived chat sessions for the authenticated user.
+
+        **Pagination**: Returns up to 20 sessions per page
+        **Ordering**: Most recent first (created_at DESC)
+      operationId: listChatSessions
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: ['active', 'paused', 'archived', 'deleted']
+            default: 'active'
+          description: Filter by session status
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Number of sessions to return
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+      responses:
+        '200':
+          description: List of chat sessions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sessions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatSession'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /chat/sessions/{session_id}:
+    get:
+      tags:
+        - Chat Sessions
+      summary: Get session details
+      operationId: getChatSession
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session details with message count and context summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatSession'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+    patch:
+      tags:
+        - Chat Sessions
+      summary: Update session status
+      description: |
+        Archive, pause, or delete a chat session.
+
+        **State Transitions**:
+        - active → paused (user closes without archiving)
+        - paused → active (user resumes)
+        - any → archived (user saves session)
+        - any → deleted (user deletes session)
+      operationId: updateChatSession
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: ['active', 'paused', 'archived', 'deleted']
+              required:
+                - status
+      responses:
+        '200':
+          description: Session updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatSession'
+        '400':
+          description: Invalid state transition
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          $ref: '#/components/responses/NotFoundError'
+
+  /chat/sessions/{session_id}/messages:
+    post:
+      tags:
+        - Chat Messages
+      summary: Send a message
+      description: |
+        Send a text message to the AI meal planner.
+
+        **Processing**:
+        1. Message stored immediately
+        2. LLM processing begins asynchronously
+        3. Response streamed via WebSocket (event: "message:new")
+
+        **Intent Detection** (automatic):
+        - Detects user intent (meal_plan_request, preference_change, etc)
+        - Used for context management and analytics
+
+        **Token Counting**:
+        - Returned in response for cost tracking
+        - Sum of tokens_used across messages = session cost
+      operationId: sendChatMessage
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 5000
+                  description: User message text
+                voice_input:
+                  type: boolean
+                  description: True if message came from voice transcription
+                  default: false
+                metadata:
+                  type: object
+                  description: Optional metadata (voice confidence, duration, etc)
+                  additionalProperties: true
+              required:
+                - content
+      responses:
+        '201':
+          description: Message created and queued for processing
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message_id:
+                    type: string
+                    format: uuid
+                  session_id:
+                    type: string
+                    format: uuid
+                  sender:
+                    type: string
+                    enum: ['user']
+                  content:
+                    type: string
+                  tokens_used:
+                    type: integer
+                    description: Tokens consumed by this message
+                  timestamp:
+                    type: string
+                    format: date-time
+                  processing_status:
+                    type: string
+                    enum: ['queued', 'processing', 'completed']
+                    description: AI response processing status
+        '400':
+          description: Invalid message (too long, empty, etc)
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Session not found
+        '429':
+          $ref: '#/components/responses/RateLimitError'
+
+    get:
+      tags:
+        - Chat Messages
+      summary: Get conversation history
+      description: |
+        Retrieve messages from a chat session.
+
+        **History Limits**:
+        - Last 10 messages: Full content
+        - Messages 11-30: Summary
+        - Older messages: Archived (available on demand)
+
+        **Ordering**: Oldest first (chronological)
+      operationId: getChatHistory
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: Message history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChatMessage'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Session not found
+
+  /chat/sessions/{session_id}/messages/{message_id}:
+    get:
+      tags:
+        - Chat Messages
+      summary: Get a specific message
+      operationId: getChatMessage
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: message_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Message details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatMessage'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Message not found
+
+  /chat/sessions/{session_id}/summarize:
+    post:
+      tags:
+        - Chat Sessions
+      summary: Force conversation summarization
+      description: |
+        Manually trigger conversation summarization.
+
+        **When to Use**:
+        - After 20+ messages in a session
+        - Before context window exceeds token budget
+        - When topic shifts significantly
+
+        **Result**:
+        - LLM generates summary of message 11-30
+        - Summary stored as ChatMessage with role='summary'
+        - Original messages remain for audit trail
+      operationId: summarizeChat
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Summary created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  summary_id:
+                    type: string
+                    format: uuid
+                  summary_text:
+                    type: string
+                  messages_summarized:
+                    type: integer
+                    description: Number of messages included in summary
+                  tokens_used:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Session not found
+
+components:
+  schemas:
+    ChatSession:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+          description: User who owns this session
+        status:
+          type: string
+          enum: ['active', 'paused', 'archived', 'deleted']
+          description: Current session state
+        context_summary:
+          type: string
+          nullable: true
+          description: AI-generated summary of conversation (appears after 20+ messages)
+        total_messages:
+          type: integer
+          description: Total messages in session (user + assistant)
+        total_tokens_used:
+          type: integer
+          description: Cumulative tokens used (for cost tracking)
+        primary_topic:
+          type: string
+          nullable: true
+          enum: ['breakfast', 'lunch', 'dinner', 'weekly_plan', 'preferences', 'other']
+          description: Detected primary conversation topic
+        first_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_message_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ChatMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        sender:
+          type: string
+          enum: ['user', 'assistant']
+          description: Message origin
+        role:
+          type: string
+          nullable: true
+          enum: ['user', 'assistant', 'summary']
+          description: Role for future multi-agent support
+        content:
+          type: string
+          description: Message text (max 5000 chars)
+        tokens_used:
+          type: integer
+          description: Tokens consumed by this message
+        intent_detected:
+          type: string
+          nullable: true
+          enum: ['request_meal_plan', 'modify_preference', 'ask_clarification', 'approve_plan', 'reject_plan', 'request_explanation', 'save_preference', 'voice_input']
+          description: Detected user intent (assistant messages are null)
+        sentiment:
+          type: string
+          nullable: true
+          enum: ['positive', 'neutral', 'negative']
+        metadata:
+          type: object
+          nullable: true
+          description: Optional metadata (voice confidence, duration, etc)
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+          description: Error code for programmatic handling
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized (missing or invalid authentication)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: UNAUTHORIZED
+            message: Missing or invalid authentication token
+
+    NotFoundError:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: NOT_FOUND
+            message: Session not found
+
+    RateLimitError:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: RATE_LIMIT_EXCEEDED
+            message: Too many requests. Retry after 60 seconds
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: INTERNAL_ERROR
+            message: Internal server error
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication (from login endpoint)
+
+security:
+  - bearerAuth: []

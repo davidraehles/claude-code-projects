@@ -6,6 +6,7 @@
 'use client'
 
 import { ReactNode } from 'react'
+import { SessionProvider } from 'next-auth/react'
 import { ErrorBoundary } from './ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { QueryProvider } from '@/providers/QueryProvider'
@@ -23,11 +24,13 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <ErrorBoundary onError={handleError}>
-      <QueryProvider>
-        <AuthProvider>
-          {children}
-        </AuthProvider>
-      </QueryProvider>
+      <SessionProvider>
+        <QueryProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </QueryProvider>
+      </SessionProvider>
     </ErrorBoundary>
   )
 }

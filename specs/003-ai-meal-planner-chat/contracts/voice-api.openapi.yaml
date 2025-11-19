@@ -1,0 +1,600 @@
+openapi: 3.1.0
+info:
+  title: Voice Processing API
+  version: 1.0.0
+  description: Speech-to-text and text-to-speech services for hands-free meal planning
+  contact:
+    name: Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.claude-code-projects.com/v1
+    description: Production
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+tags:
+  - name: Speech-to-Text
+    description: Convert voice input to text
+  - name: Text-to-Speech
+    description: Convert meal plans to audio
+
+paths:
+  /voice/transcribe:
+    post:
+      tags:
+        - Speech-to-Text
+      summary: Transcribe audio to text
+      description: |
+        Convert audio recording to text using speech-to-text service.
+
+        **Supported Formats**:
+        - WAV, MP3, OGG, FLAC, WEBM
+        - 8-16 kHz sampling rate
+        - Mono or stereo
+        - Up to 10 minutes (600 seconds)
+
+        **Processing**:
+        1. Stream audio to Deepgram or fallback to Web Speech API
+        2. Return transcription with confidence score
+        3. Store recording for GDPR compliance (24-hour TTL)
+
+        **Accuracy**:
+        - Deepgram: 90%+ accuracy on clear English
+        - Web Speech API: 85%+ accuracy on Chrome/Edge
+        - Confidence <70%: Prompt user to repeat
+
+        **Cost Tracking**:
+        - API cost ~$0.46/hour of audio
+        - Charged per second of audio (minimum 1 second)
+        - Cost returned in response
+
+        **GDPR**:
+        - Audio data NOT stored permanently
+        - Stored only for 24 hours (configurable TTL)
+        - User can request deletion before TTL
+      operationId: transcribeAudio
+      requestBody:
+        required: true
+        content:
+          audio/wav:
+            schema:
+              type: string
+              format: binary
+          audio/mp3:
+            schema:
+              type: string
+              format: binary
+          audio/ogg:
+            schema:
+              type: string
+              format: binary
+          audio/webm:
+            schema:
+              type: string
+              format: binary
+      parameters:
+        - name: session_id
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Associated chat session ID
+        - name: language
+          in: query
+          schema:
+            type: string
+            default: en
+            description: Language code (BCP 47 format, currently only en supported)
+        - name: model
+          in: query
+          schema:
+            type: string
+            enum: ['auto', 'nova-3', 'enhanced', 'base']
+            default: auto
+          description: |
+            Transcription model:
+            - auto: Let backend choose optimal model
+            - nova-3: Deepgram Nova-3 (most accurate, most expensive)
+            - enhanced: Standard accuracy, lower cost
+            - base: Fastest, lowest cost
+      responses:
+        '200':
+          description: Audio transcribed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - recording_id
+                  - transcription
+                  - confidence_score
+                  - duration_seconds
+                  - provider
+                properties:
+                  recording_id:
+                    type: string
+                    format: uuid
+                    description: Unique recording identifier (for audit trail)
+                  transcription:
+                    type: string
+                    description: Transcribed text (up to 5000 chars for meal planning context)
+                  confidence_score:
+                    type: number
+                    format: float
+                    minimum: 0
+                    maximum: 1
+                    description: Confidence in transcription (0.0-1.0)
+                    example: 0.94
+                  duration_seconds:
+                    type: number
+                    format: float
+                    description: Duration of audio in seconds
+                  provider:
+                    type: string
+                    enum: ['deepgram', 'web_speech_api', 'azure']
+                    description: Which provider was used
+                  alternatives:
+                    type: array
+                    description: Alternative transcriptions (when confidence is low)
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                        confidence:
+                          type: number
+                  cost:
+                    type: object
+                    description: Cost of this transcription
+                    properties:
+                      amount_cents:
+                        type: integer
+                        example: 15
+                      currency:
+                        type: string
+                        example: USD
+                  created_at:
+                    type: string
+                    format: date-time
+                  expires_at:
+                    type: string
+                    format: date-time
+                    description: When recording will be auto-deleted (24 hours from now)
+
+        '400':
+          description: Invalid audio format or too long
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: INVALID_AUDIO_FORMAT
+                  message:
+                    type: string
+                  details:
+                    type: object
+                    properties:
+                      supported_formats:
+                        type: array
+                        items:
+                          type: string
+                      max_duration_seconds:
+                        type: integer
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+        '404':
+          description: Session not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: SESSION_NOT_FOUND
+                  message:
+                    type: string
+
+        '503':
+          description: Speech-to-text service unavailable (fallback to text input)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: STT_SERVICE_UNAVAILABLE
+                  message:
+                    type: string
+                  fallback_available:
+                    type: boolean
+                    example: true
+                    description: Whether to fall back to text input
+
+  /voice/synthesize:
+    post:
+      tags:
+        - Text-to-Speech
+      summary: Convert text to audio
+      description: |
+        Generate audio output from text (meal plan descriptions).
+
+        **Use Cases**:
+        - Read meal plan aloud to user
+        - Provide audio summary of recipes
+        - Multi-modal accessibility
+
+        **Voices**:
+        - Multiple voices available (male, female, neutral)
+        - Natural prosody and pacing
+        - Accent customization (US, UK, etc)
+
+        **Caching Strategy**:
+        - Audio cached for 30 days per text
+        - Same text = same audio (bit-for-bit identical)
+        - 70% cache hit rate expected
+        - Significantly reduces TTS costs
+
+        **Performance**:
+        - Cached audio: <50ms response
+        - Uncached audio: 2-5 seconds generation + CDN upload
+
+        **Cost**:
+        - ~$16 per 1 million characters
+        - With 70% cache hit rate: ~$5/month per user
+        - Batch generation for cost optimization
+
+        **GDPR**:
+        - Input text (meal plan) NOT stored
+        - Audio cached only for performance optimization
+        - User can disable caching if preferred
+      operationId: synthesizeAudio
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - text
+              properties:
+                text:
+                  type: string
+                  maxLength: 5000
+                  description: Text to synthesize (meal plan or summary)
+                voice_id:
+                  type: string
+                  enum: ['default_female', 'default_male', 'neutral']
+                  default: default_female
+                  description: Voice selection
+                accent:
+                  type: string
+                  enum: ['us', 'uk', 'australia', 'canada']
+                  default: us
+                  description: English accent variant
+                speed:
+                  type: number
+                  format: float
+                  minimum: 0.5
+                  maximum: 2.0
+                  default: 1.0
+                  description: Speech speed multiplier
+                cache_preference:
+                  type: string
+                  enum: ['prefer_cache', 'require_fresh', 'ignore_cache']
+                  default: prefer_cache
+                  description: How to handle audio caching
+      responses:
+        '200':
+          description: Audio generated successfully
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+                description: MP3 audio file
+            application/json:
+              schema:
+                type: object
+                properties:
+                  audio_url:
+                    type: string
+                    format: uri
+                    description: CDN URL to access audio
+                  duration_seconds:
+                    type: number
+                    format: float
+                  format:
+                    type: string
+                    example: mp3
+                  cache_hit:
+                    type: boolean
+                    description: Whether audio came from cache
+                  cost:
+                    type: object
+                    properties:
+                      amount_cents:
+                        type: integer
+                      currency:
+                        type: string
+                  generated_at:
+                    type: string
+                    format: date-time
+
+        '400':
+          description: Invalid text or parameters
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+        '503':
+          description: Text-to-speech service unavailable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: TTS_SERVICE_UNAVAILABLE
+                  message:
+                    type: string
+                  fallback_available:
+                    type: boolean
+                    description: Whether to return text only
+
+  /voice/recordings/{recording_id}:
+    get:
+      tags:
+        - Speech-to-Text
+      summary: Get recording details
+      description: |
+        Retrieve metadata about a recorded audio.
+
+        **Use For**:
+        - Audit trail
+        - Retranscription with different models
+        - Quality assessment
+      operationId: getRecording
+      parameters:
+        - name: recording_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recording metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  session_id:
+                    type: string
+                    format: uuid
+                  transcription:
+                    type: string
+                  confidence_score:
+                    type: number
+                  duration_seconds:
+                    type: number
+                  provider:
+                    type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  expires_at:
+                    type: string
+                    format: date-time
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+        '404':
+          description: Recording not found or expired
+
+    delete:
+      tags:
+        - Speech-to-Text
+      summary: Delete recording (GDPR)
+      description: |
+        Manually delete a voice recording before auto-expiration.
+
+        **Use Cases**:
+        - User requests early deletion
+        - GDPR data deletion request
+        - Privacy preference
+
+        **Effect**:
+        - Audio file deleted from storage
+        - Recording metadata deleted from database
+        - Cannot be recovered
+
+        **Note**: Transcription text remains in chat history (delete chat session separately)
+      operationId: deleteRecording
+      parameters:
+        - name: recording_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Recording deleted
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+        '404':
+          description: Recording not found
+
+  /voice/health:
+    get:
+      tags:
+        - Speech-to-Text
+      summary: Check voice service status
+      description: |
+        Health check for speech services.
+
+        **Returns**:
+        - STT service availability
+        - TTS service availability
+        - Current API provider status
+        - Fallback options available
+
+        **No Authentication Required**
+        - Used by frontend before prompting for voice
+        - Determines whether to offer voice features
+      operationId: checkVoiceHealth
+      responses:
+        '200':
+          description: Voice services status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: ['healthy', 'degraded', 'unavailable']
+                  services:
+                    type: object
+                    properties:
+                      speech_to_text:
+                        type: object
+                        properties:
+                          available:
+                            type: boolean
+                          provider:
+                            type: string
+                          fallback_available:
+                            type: boolean
+                          latency_ms:
+                            type: integer
+                      text_to_speech:
+                        type: object
+                        properties:
+                          available:
+                            type: boolean
+                          provider:
+                            type: string
+                          latency_ms:
+                            type: integer
+                  recommendations:
+                    type: array
+                    description: Recommendations based on service status
+                    items:
+                      type: string
+
+components:
+  schemas:
+    VoiceRecording:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        transcription:
+          type: string
+        confidence_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        duration_seconds:
+          type: number
+          format: float
+        provider:
+          type: string
+          enum: ['deepgram', 'web_speech_api', 'azure']
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    AudioCache:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        text_hash:
+          type: string
+          description: SHA256 hash of input text (for cache lookup)
+        duration_seconds:
+          type: number
+          format: float
+        voice_id:
+          type: string
+        accent:
+          type: string
+        cache_hit_count:
+          type: integer
+          description: Number of times this cached audio was served
+        created_at:
+          type: string
+          format: date-time
+        expires_at:
+          type: string
+          format: date-time
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized (missing or invalid authentication)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: UNAUTHORIZED
+            message: Missing or invalid authentication token
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication
+
+security:
+  - bearerAuth: []
