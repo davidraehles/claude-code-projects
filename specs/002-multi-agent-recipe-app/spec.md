@@ -219,8 +219,8 @@ The system follows a **multi-agent swarm architecture** where specialized agents
 - **API Integration**: Knuspr MCP Server (experimental), Knuspr REST client
 
 **Frontend**:
-- **UI Framework**: TBD in planning phase (mobile-first)
-- **CLI**: TBD in planning phase (optional for power users)
+- **UI Framework**: Next.js 16 + React 19 (mobile-first)
+- **CLI**: Mandatory for all core agents (Harvester, Architect, Optimizer) to ensure library-first testability and independent operation.
 
 ## Open Questions - RESOLVED ✅
 

@@ -1,0 +1,640 @@
+openapi: 3.1.0
+info:
+  title: User Preferences API
+  version: 1.0.0
+  description: Manage dietary and ethnological preferences for personalized meal planning
+  contact:
+    name: Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.claude-code-projects.com/v1
+    description: Production
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+tags:
+  - name: User Preferences
+    description: Save and retrieve dietary preferences
+
+paths:
+  /preferences:
+    get:
+      tags:
+        - User Preferences
+      summary: Get user's saved preferences
+      description: |
+        Retrieve the authenticated user's dietary and ethnological preferences.
+
+        **Caching**:
+        - Result cached for 24 hours in Redis
+        - Cache invalidated on preference update
+        - Returns 304 Not Modified if unchanged
+
+        **GDPR**:
+        - Returns all personal preference data
+        - Users can export this data for portability
+      operationId: getUserPreferences
+      responses:
+        '200':
+          description: User preferences found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '304':
+          description: Preferences not modified since last request
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: User has no saved preferences (first-time user)
+
+    post:
+      tags:
+        - User Preferences
+      summary: Save user preferences
+      description: |
+        Create or update the user's dietary and ethnological preferences.
+
+        **First-Time Creation**:
+        - Creates UserPreference record linked to authenticated user
+        - Immediately used in next chat session
+        - Returns 201 Created
+
+        **Updates**:
+        - Validates against existing preferences
+        - Checks for conflicting restrictions (e.g., keto + high-carb)
+        - Invalidates all cached meal plans when preferences change
+        - Returns 200 OK
+
+        **Validation**:
+        - Dietary restrictions: Must be from predefined list
+        - Allergies: Must include severity level
+        - Time constraints: Must be positive integers
+        - Household size: 1-20 people
+
+        **Side Effects**:
+        - Clears meal plan cache (user might have been offered incompatible plans)
+        - Refreshes user profile in active chat sessions
+        - Logs preference change for analytics
+      operationId: saveUserPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferenceInput'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '201':
+          description: Preferences created for first-time user
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          description: Invalid preferences (validation error)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: VALIDATION_ERROR
+                  message:
+                    type: string
+                  errors:
+                    type: array
+                    description: Field-level validation errors
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        reason:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Conflicting preferences detected (e.g., keto + high-carb)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: CONFLICTING_PREFERENCES
+                  message:
+                    type: string
+                    example: "Cannot combine 'keto' and 'high-carb' restrictions"
+                  suggestions:
+                    type: array
+                    description: Suggested valid combinations
+                    items:
+                      type: string
+
+    patch:
+      tags:
+        - User Preferences
+      summary: Partially update preferences
+      description: |
+        Update specific preference fields without replacing entire record.
+
+        **Use Cases**:
+        - User adds new allergy
+        - User upgrades cooking skill
+        - User changes household size
+        - User adds cuisine preference
+
+        **Atomicity**:
+        - Updates applied atomically
+        - Validation runs before any changes
+        - Rollback on error (no partial updates)
+      operationId: updateUserPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Partial preferences object (any field can be omitted)
+              properties:
+                dietary_restrictions:
+                  type: array
+                  items:
+                    type: string
+                  description: Replace entire list
+                allergies:
+                  type: array
+                  items:
+                    type: object
+                  description: Replace entire list
+                cuisine_preferences:
+                  type: array
+                  items:
+                    type: string
+                cooking_skill:
+                  type: string
+                household_size:
+                  type: integer
+                max_prep_time_minutes:
+                  type: integer
+                max_cooking_time_minutes:
+                  type: integer
+                equipment_available:
+                  type: array
+                  items:
+                    type: string
+                budget_tier:
+                  type: string
+                dietary_goals:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferences'
+        '400':
+          description: Validation error
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '409':
+          description: Conflicting preferences
+
+    delete:
+      tags:
+        - User Preferences
+      summary: Delete all preferences
+      description: |
+        Clear all saved preferences for the user.
+
+        **GDPR**:
+        - Implements "right to be forgotten"
+        - Deletes preference data permanently
+        - Chat history and meal plans NOT deleted (separate deletion required)
+
+        **Effect on Chat**:
+        - Next chat session will not reference preferences
+        - User will be asked to provide preferences again
+      operationId: deleteUserPreferences
+      responses:
+        '204':
+          description: Preferences deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /preferences/validate:
+    post:
+      tags:
+        - User Preferences
+      summary: Validate preferences without saving
+      description: |
+        Check if preferences are valid before saving.
+
+        **Use Cases**:
+        - Client-side form validation
+        - Detect conflicts before submission
+        - Provide real-time feedback
+
+        **Returns**:
+        - Valid: 200 OK with normalized preferences
+        - Invalid: 400 Bad Request with error list
+      operationId: validatePreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreferenceInput'
+      responses:
+        '200':
+          description: Preferences are valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  normalized:
+                    $ref: '#/components/schemas/UserPreferences'
+                  warnings:
+                    type: array
+                    description: Non-blocking warnings (e.g., unusual combinations)
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        warning:
+                          type: string
+        '400':
+          description: Preferences are invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                        reason:
+                          type: string
+
+  /preferences/allergen-list:
+    get:
+      tags:
+        - User Preferences
+      summary: Get available allergen definitions
+      description: |
+        Retrieve the list of recognized allergens with severity levels.
+
+        **Use For**:
+        - Populating allergen selection UI
+        - Validating custom allergen input
+        - Display allergen information
+
+        **Cache**:
+        - Static content, cached indefinitely
+        - No authentication required
+      operationId: getAllergenList
+      responses:
+        '200':
+          description: Allergen definitions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  allergens:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: peanut
+                        common_names:
+                          type: array
+                          items:
+                            type: string
+                          example: ['groundnut', 'arachis oil']
+                        severity_levels:
+                          type: array
+                          items:
+                            type: string
+                            enum: ['mild', 'moderate', 'severe']
+                        description:
+                          type: string
+
+  /preferences/dietary-restrictions-list:
+    get:
+      tags:
+        - User Preferences
+      summary: Get available dietary restrictions
+      description: |
+        Retrieve the list of recognized dietary restrictions.
+
+        **Use For**:
+        - UI dropdown/checkbox selection
+        - Validating input
+        - Displaying restriction definitions
+
+        **No Authentication Required**
+      operationId: getDietaryRestrictionsList
+      responses:
+        '200':
+          description: Dietary restrictions list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  restrictions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: vegan
+                        description:
+                          type: string
+                        excluded_ingredients:
+                          type: array
+                          items:
+                            type: string
+                        related_restrictions:
+                          type: array
+                          items:
+                            type: string
+                            example: vegetarian
+
+  /preferences/cuisine-list:
+    get:
+      tags:
+        - User Preferences
+      summary: Get available cuisine types
+      description: |
+        Retrieve recognized cuisine types for preference selection.
+
+        **Use For**:
+        - Populating cuisine preference UI
+        - Validating selection
+        - Displaying cuisine information
+
+        **No Authentication Required**
+      operationId: getCuisineList
+      responses:
+        '200':
+          description: Cuisine types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cuisines:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: mediterranean
+                        description:
+                          type: string
+                        common_ingredients:
+                          type: array
+                          items:
+                            type: string
+
+components:
+  schemas:
+    UserPreferences:
+      type: object
+      required:
+        - id
+        - user_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        dietary_restrictions:
+          type: array
+          items:
+            type: string
+            enum:
+              - vegan
+              - vegetarian
+              - keto
+              - low_carb
+              - gluten_free
+              - kosher
+              - halal
+              - paleo
+              - whole30
+              - low_fat
+          description: User's dietary restrictions
+          example: ['vegan', 'gluten_free']
+        allergies:
+          type: array
+          items:
+            type: object
+            required:
+              - allergen
+              - severity
+            properties:
+              allergen:
+                type: string
+                description: Allergen name
+                example: peanut
+              severity:
+                type: string
+                enum: ['mild', 'moderate', 'severe']
+                description: Allergy severity
+          description: User's allergies with severity levels
+          example:
+            - allergen: peanut
+              severity: severe
+            - allergen: shellfish
+              severity: mild
+        cuisine_preferences:
+          type: array
+          items:
+            type: string
+            enum:
+              - mediterranean
+              - asian
+              - latin_american
+              - indian
+              - middle_eastern
+              - european
+              - african
+              - american
+          description: Preferred cuisines
+          example: ['mediterranean', 'asian']
+        cooking_skill:
+          type: string
+          enum: ['beginner', 'intermediate', 'advanced']
+          description: Cooking skill level
+        household_size:
+          type: integer
+          minimum: 1
+          maximum: 20
+          description: Number of people to cook for
+        household_types:
+          type: array
+          items:
+            type: string
+            enum: ['infant', 'child', 'teen', 'adult', 'senior']
+          description: Types of people in household
+        max_prep_time_minutes:
+          type: integer
+          minimum: 5
+          maximum: 480
+          description: Maximum acceptable meal prep time
+        max_cooking_time_minutes:
+          type: integer
+          minimum: 5
+          maximum: 480
+          description: Maximum acceptable cooking time
+        equipment_available:
+          type: array
+          items:
+            type: string
+            enum:
+              - oven
+              - stovetop
+              - microwave
+              - blender
+              - food_processor
+              - rice_cooker
+              - slow_cooker
+              - instant_pot
+          description: Available kitchen equipment
+        budget_tier:
+          type: string
+          enum: ['budget-friendly', 'moderate', 'premium']
+          description: Budget constraints
+        dietary_goals:
+          type: array
+          items:
+            type: string
+            enum:
+              - weight_loss
+              - muscle_gain
+              - maintenance
+              - performance
+          description: Health/fitness goals
+        version:
+          type: integer
+          description: Version number (for optimistic locking)
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PreferenceInput:
+      type: object
+      properties:
+        dietary_restrictions:
+          type: array
+          items:
+            type: string
+        allergies:
+          type: array
+          items:
+            type: object
+            properties:
+              allergen:
+                type: string
+              severity:
+                type: string
+                enum: ['mild', 'moderate', 'severe']
+        cuisine_preferences:
+          type: array
+          items:
+            type: string
+        cooking_skill:
+          type: string
+          enum: ['beginner', 'intermediate', 'advanced']
+        household_size:
+          type: integer
+        household_types:
+          type: array
+          items:
+            type: string
+        max_prep_time_minutes:
+          type: integer
+        max_cooking_time_minutes:
+          type: integer
+        equipment_available:
+          type: array
+          items:
+            type: string
+        budget_tier:
+          type: string
+        dietary_goals:
+          type: array
+          items:
+            type: string
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized (missing or invalid authentication)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: UNAUTHORIZED
+            message: Missing or invalid authentication token
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication (from login endpoint)
+
+security:
+  - bearerAuth: []

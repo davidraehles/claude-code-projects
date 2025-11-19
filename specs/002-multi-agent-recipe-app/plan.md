@@ -43,13 +43,14 @@ The MVP is successful when:
 **Tasks**:
 ```
 1. Initialize FastAPI project structure
-   - src/
-     - api/          (FastAPI routes)
-     - agents/       (Agent implementations)
-     - models/       (Pydantic models)
-     - services/     (Business logic)
-     - db/           (SQLAlchemy models)
-     - events/       (Event types & handlers)
+   - packages/       (Library-First Architecture)
+     - harvester/    (Recipe scraping & normalization)
+     - intelligence/ (Ingredient taxonomy & substitution)
+     - architect/    (Meal planning logic & solvers)
+     - optimizer/    (Cart optimization & Knuspr integration)
+     - core/         (Shared models, events, utils)
+   - services/
+     - api/          (FastAPI gateway importing packages)
    - tests/
    - docker/
    - k8s/            (Future: Kubernetes manifests)
@@ -1070,7 +1071,7 @@ Output: {
 ### 4A: Frontend Setup (Week 8.5)
 
 **Technology**:
-- React 18 or Vue 3 (decision pending)
+- Next.js 16 + React 19
 - Mobile-first responsive design
 - TypeScript for type safety
 - Vite for fast builds
@@ -1551,7 +1552,7 @@ Documentation:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Frontend (React/Vue)                  │
+│              Frontend (Next.js 16 + React 19)            │
 │   ┌────────────────────────────────────────────────┐   │
 │   │ Auth | Recipes | MealPlan | Cart | Profile    │   │
 │   └────────────────────────────────────────────────┘   │
