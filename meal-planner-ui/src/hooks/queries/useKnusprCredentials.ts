@@ -36,8 +36,6 @@ interface DeleteCredentialsResponse {
   success: boolean;
 }
 
-const client = new APIClient(API_URL);
-
 /**
  * Hook for managing Knuspr credentials
  *
