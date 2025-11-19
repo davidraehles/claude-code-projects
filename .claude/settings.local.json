@@ -14,7 +14,17 @@
       "Bash(/home/darae/claude-code-projects/scripts/generate_secrets.sh:*)",
       "Bash(/home/darae/claude-code-projects/scripts/watch_deployment.sh:*)",
       "Bash(vercel ls:*)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(tee:*)",
+      "Bash(ls:*)",
+      "Bash(xargs ls:*)",
+      "Bash(.specify/scripts/init-feature.sh:*)",
+      "Bash(scripts/bash/create-new-feature.sh:*)",
+      "Bash(npx tsc:*)",
+      "Bash(scripts/bash/speckit-paths.sh:*)",
+      "Bash(scripts/bash/check-prerequisites.sh:*)",
+      "WebSearch"
     ],
     "deny": [],
     "ask": []

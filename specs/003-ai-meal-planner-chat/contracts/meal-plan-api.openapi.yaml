@@ -1,0 +1,909 @@
+openapi: 3.1.0
+info:
+  title: Meal Plan API
+  version: 1.0.0
+  description: Generate, save, and manage personalized meal plans from chat conversations
+  contact:
+    name: Development Team
+  license:
+    name: MIT
+
+servers:
+  - url: https://api.claude-code-projects.com/v1
+    description: Production
+  - url: http://localhost:8000/v1
+    description: Local Development
+
+tags:
+  - name: Meal Plan Generation
+    description: Create meal plans from conversations
+  - name: Meal Plan Management
+    description: Save, view, and modify meal plans
+
+paths:
+  /meal-plans:
+    post:
+      tags:
+        - Meal Plan Generation
+      summary: Generate a meal plan
+      description: |
+        Generate a personalized meal plan based on user preferences from a chat conversation.
+
+        **Workflow**:
+        1. User provides preferences through chat
+        2. Request meal plan generation
+        3. System extracts preferences from chat history
+        4. LLM generates candidate meals
+        5. Validate against allergies (CRITICAL)
+        6. Return meal plan for approval
+
+        **Preferences Used**:
+        - Dietary restrictions (vegan, keto, etc)
+        - Allergies (MUST comply 100%)
+        - Cuisine preferences
+        - Time constraints
+        - Equipment available
+        - Cooking skill level
+        - Household size
+
+        **Meal Plan Characteristics**:
+        - Duration: 7 days (configurable in future)
+        - Meals per day: breakfast, lunch, dinner
+        - Snacks optional (based on user preferences)
+        - Total prep time respects user constraints
+        - Cuisine diversity: At least 2 different cuisines
+
+        **Allergen Compliance**:
+        - CRITICAL: 100% compliance with saved allergies
+        - Multi-stage validation:
+          1. LLM validates before suggesting
+          2. Backend validates against recipe database
+          3. Final compliance check before save
+        - Zero tolerance for allergen violations
+        - All meals flagged if any allergen found
+
+        **Cost**:
+        - ~2000 tokens per plan (with prompt caching)
+        - With caching: ~$0.001 per plan
+        - Batch API available for bulk generation
+
+        **Response Behavior**:
+        - Returns unvalidated meal plan (status: review)
+        - User must approve before saving
+        - Cannot be saved until passed allergen check
+
+        **Generation Time**:
+        - Expected: <10 seconds
+        - Max: 30 seconds (timeout and retry)
+      operationId: generateMealPlan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - session_id
+              properties:
+                session_id:
+                  type: string
+                  format: uuid
+                  description: Chat session to extract preferences from
+                duration_days:
+                  type: integer
+                  minimum: 1
+                  maximum: 365
+                  default: 7
+                  description: Number of days for meal plan
+                include_snacks:
+                  type: boolean
+                  default: false
+                  description: Include snacks in meal plan
+                cuisine_diversity:
+                  type: string
+                  enum: ['minimal', 'balanced', 'high']
+                  default: balanced
+                  description: How many different cuisines to include
+                difficulty_level:
+                  type: string
+                  enum: ['easy', 'moderate', 'challenging']
+                  description: Recipe difficulty (defaults to user preference)
+                regenerate_count:
+                  type: integer
+                  default: 0
+                  description: How many times to regenerate (for "give me something different")
+
+      responses:
+        '201':
+          description: Meal plan generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlan'
+
+        '400':
+          description: |
+            Invalid request:
+            - Session not found
+            - Insufficient user preferences
+            - Conflicting preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    enum: ['SESSION_NOT_FOUND', 'INSUFFICIENT_PREFERENCES', 'INVALID_PREFERENCES']
+                  message:
+                    type: string
+                  missing_preferences:
+                    type: array
+                    description: (For INSUFFICIENT_PREFERENCES) What info is needed
+                    items:
+                      type: string
+                      example: ['dietary_restrictions', 'cooking_skill']
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+        '409':
+          description: Preferences conflict
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: CONFLICTING_PREFERENCES
+                  message:
+                    type: string
+                  conflicts:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        restriction1:
+                          type: string
+                        restriction2:
+                          type: string
+                        reason:
+                          type: string
+
+        '500':
+          description: Meal plan generation failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: GENERATION_FAILED
+                  message:
+                    type: string
+                  retry_after_seconds:
+                    type: integer
+
+    get:
+      tags:
+        - Meal Plan Management
+      summary: List saved meal plans
+      description: |
+        Retrieve all saved meal plans for the authenticated user.
+
+        **Filtering**:
+        - saved_only: Include only approved/saved plans
+        - session_id: Plans from specific chat session
+        - date_range: Plans created between dates
+
+        **Ordering**:
+        - Most recent first (created_at DESC)
+
+        **Pagination**:
+        - 20 plans per page
+      operationId: listMealPlans
+      parameters:
+        - name: saved_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Show only saved meal plans (exclude reviews)
+        - name: session_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filter by chat session
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Plans created on or after this date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Plans created on or before this date
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        '200':
+          description: List of meal plans
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  plans:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MealPlan'
+                  pagination:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /meal-plans/{plan_id}:
+    get:
+      tags:
+        - Meal Plan Management
+      summary: Get meal plan details
+      description: |
+        Retrieve full details of a meal plan including all meals and explanations.
+
+        **Response Includes**:
+        - All meals with recipes
+        - Why each meal was selected
+        - Alternative meal suggestions
+        - Nutritional summary
+        - Shopping list (derived from meals)
+      operationId: getMealPlan
+      parameters:
+        - name: plan_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Meal plan details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlanDetailed'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Meal plan not found
+
+    patch:
+      tags:
+        - Meal Plan Management
+      summary: Update meal plan
+      description: |
+        Modify an existing meal plan.
+
+        **Allowed Modifications**:
+        - Replace a single meal
+        - Add/remove meals
+        - Change portion sizes
+        - Rename/add notes
+        - Save/unsave status
+
+        **Validation**:
+        - New meals must comply with allergies
+        - Portion sizes must be positive
+        - Cannot modify saved plan (save as new version)
+
+        **Versioning**:
+        - Original plan retained as history
+        - New plan created with parent_plan_id reference
+        - Maintains full audit trail
+      operationId: updateMealPlan
+      parameters:
+        - name: plan_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                meals:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      date:
+                        type: string
+                        format: date
+                      meal_type:
+                        type: string
+                        enum: ['breakfast', 'lunch', 'dinner', 'snack']
+                      recipe_id:
+                        type: string
+                        format: uuid
+                      portion_size:
+                        type: number
+                        minimum: 0.5
+                      servings:
+                        type: integer
+                        minimum: 1
+      responses:
+        '200':
+          description: Meal plan updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlanDetailed'
+        '400':
+          description: Invalid update (allergen violation, missing meal, etc)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                  message:
+                    type: string
+                  validation_errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        meal_index:
+                          type: integer
+                        reason:
+                          type: string
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Meal plan not found
+        '409':
+          description: Cannot modify saved plan
+
+    delete:
+      tags:
+        - Meal Plan Management
+      summary: Delete meal plan
+      description: |
+        Delete a meal plan permanently.
+
+        **GDPR Compliance**:
+        - Hard delete from database
+        - Audit trail retained (meal_plan archived to S3)
+        - Cannot be recovered
+      operationId: deleteMealPlan
+      parameters:
+        - name: plan_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Meal plan deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Meal plan not found
+
+  /meal-plans/{plan_id}/save:
+    post:
+      tags:
+        - Meal Plan Management
+      summary: Save/approve meal plan
+      description: |
+        Approve and save a meal plan for future reference.
+
+        **Preconditions**:
+        - Meal plan must pass allergen check
+        - All meals must have valid recipes
+        - User must review and approve
+
+        **Effect**:
+        - Sets is_saved=true
+        - User preferences can be saved at same time
+        - Plan cannot be modified after save (create new version instead)
+
+        **Response**:
+        - Offers to save user preferences
+        - Returns meal plan with is_saved=true
+      operationId: saveMealPlan
+      parameters:
+        - name: plan_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                user_satisfaction_score:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: User rating (for analytics)
+                feedback:
+                  type: string
+                  maxLength: 500
+                  description: User feedback/notes
+                also_save_preferences:
+                  type: boolean
+                  default: false
+                  description: Also save current user preferences
+      responses:
+        '200':
+          description: Meal plan saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MealPlan'
+
+        '400':
+          description: Cannot save (allergen violation, incomplete)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    example: FAILED_ALLERGEN_CHECK
+                  message:
+                    type: string
+                  allergen_violations:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        meal_date:
+                          type: string
+                          format: date
+                        meal_type:
+                          type: string
+                        recipe_name:
+                          type: string
+                        allergens_found:
+                          type: array
+                          items:
+                            type: string
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Meal plan not found
+
+  /meal-plans/{plan_id}/alternative-meal:
+    post:
+      tags:
+        - Meal Plan Management
+      summary: Get alternative meal suggestion
+      description: |
+        Generate an alternative meal for a specific date/meal type.
+
+        **Use Cases**:
+        - User dislikes a suggested meal
+        - Need vegetarian alternative
+        - Dietary violation found
+        - Want something different
+
+        **Process**:
+        1. LLM generates alternative meal
+        2. Validate against allergens
+        3. Return suggested replacement
+        4. User can accept or ask for another
+
+        **Cost**:
+        - Same as meal plan generation (~500 tokens)
+      operationId: getAlternativeMeal
+      parameters:
+        - name: plan_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - meal_date
+                - meal_type
+              properties:
+                meal_date:
+                  type: string
+                  format: date
+                  description: Date of meal to replace
+                meal_type:
+                  type: string
+                  enum: ['breakfast', 'lunch', 'dinner', 'snack']
+                reason:
+                  type: string
+                  description: Why user wants alternative (dislike, allergy, etc)
+                exclude_recipes:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  description: Recipe IDs to exclude from suggestions
+      responses:
+        '200':
+          description: Alternative meal suggestion
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggested_recipe:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      cuisine_type:
+                        type: string
+                      prep_time_minutes:
+                        type: integer
+                      cooking_time_minutes:
+                        type: integer
+                      difficulty_level:
+                        type: integer
+                      why_chosen:
+                        type: string
+                        description: AI explanation for why this was suggested
+                  accept_endpoint:
+                    type: string
+                    description: POST endpoint to accept this alternative
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Meal plan not found
+        '500':
+          description: Could not generate alternative
+
+  /meal-plans/{plan_id}/shopping-list:
+    get:
+      tags:
+        - Meal Plan Management
+      summary: Get shopping list
+      description: |
+        Generate a shopping list from all meals in the plan.
+
+        **Features**:
+        - Aggregates ingredients from all meals
+        - Deduplicates (e.g., "2 cups flour" + "1 cup flour" = "3 cups flour")
+        - Organized by grocery section (produce, dairy, meat, etc)
+        - Quantities and units normalized
+        - Allergens highlighted
+        - Estimated cost range
+
+        **Format Options**:
+        - JSON (default, for app)
+        - PDF (for printing)
+        - Markdown (for sharing)
+
+        **Nutrition Summary**:
+        - Total calories
+        - Macronutrient breakdown
+        - Micronutrient summary
+      operationId: getShoppingList
+      parameters:
+        - name: plan_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: ['json', 'pdf', 'markdown']
+            default: json
+      responses:
+        '200':
+          description: Shopping list generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ingredients:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                        quantity:
+                          type: number
+                        unit:
+                          type: string
+                        section:
+                          type: string
+                          enum: ['produce', 'dairy', 'meat', 'pantry', 'spices', 'other']
+                        allergens:
+                          type: array
+                          items:
+                            type: string
+                        estimated_cost_cents:
+                          type: integer
+                  nutrition_summary:
+                    type: object
+                    properties:
+                      total_calories:
+                        type: integer
+                      protein_grams:
+                        type: number
+                      carbs_grams:
+                        type: number
+                      fat_grams:
+                        type: number
+                      fiber_grams:
+                        type: number
+                  estimated_total_cost:
+                    type: object
+                    properties:
+                      min_cents:
+                        type: integer
+                      max_cents:
+                        type: integer
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            text/markdown:
+              schema:
+                type: string
+
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Meal plan not found
+
+components:
+  schemas:
+    MealPlan:
+      type: object
+      required:
+        - id
+        - user_id
+        - session_id
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        session_id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          default: Weekly Meal Plan
+        description:
+          type: string
+          nullable: true
+        plan_start_date:
+          type: string
+          format: date
+        plan_duration_days:
+          type: integer
+          default: 7
+        total_meals:
+          type: integer
+          description: Total number of meals in plan
+        total_prep_time_minutes:
+          type: integer
+        total_cooking_time_minutes:
+          type: integer
+        total_servings:
+          type: integer
+        cuisine_distribution:
+          type: object
+          description: Count of meals by cuisine type
+          additionalProperties:
+            type: integer
+        preferences_applied:
+          type: object
+          description: Snapshot of user preferences used for generation
+        passed_allergen_check:
+          type: boolean
+          description: Whether plan complies with all allergies
+        allergen_violations:
+          type: array
+          items:
+            type: string
+          description: Allergens found (if any)
+        dietary_compliance_score:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: How well plan matches user dietary preferences (0-1)
+        is_saved:
+          type: boolean
+          description: Whether user has approved and saved this plan
+        user_satisfaction_score:
+          type: integer
+          nullable: true
+          minimum: 1
+          maximum: 5
+        feedback:
+          type: string
+          nullable: true
+        is_favorite:
+          type: boolean
+          default: false
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    MealPlanDetailed:
+      allOf:
+        - $ref: '#/components/schemas/MealPlan'
+        - type: object
+          properties:
+            meals:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  meal_date:
+                    type: string
+                    format: date
+                  meal_type:
+                    type: string
+                    enum: ['breakfast', 'lunch', 'dinner', 'snack']
+                  recipe:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      name:
+                        type: string
+                      cuisine_type:
+                        type: string
+                      prep_time_minutes:
+                        type: integer
+                      cooking_time_minutes:
+                        type: integer
+                      servings:
+                        type: integer
+                      difficulty_level:
+                        type: integer
+                      ingredients:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            amount:
+                              type: number
+                            unit:
+                              type: string
+                            allergens:
+                              type: array
+                              items:
+                                type: string
+                      nutrition:
+                        type: object
+                        properties:
+                          calories:
+                            type: integer
+                          protein_g:
+                            type: number
+                          carbs_g:
+                            type: number
+                          fat_g:
+                            type: number
+                  portion_size:
+                    type: number
+                  servings:
+                    type: integer
+                  why_chosen:
+                    type: string
+                    description: AI explanation for meal selection
+                  alternatives:
+                    type: array
+                    description: Alternative meal suggestions
+                    items:
+                      type: object
+                      properties:
+                        recipe_id:
+                          type: string
+                          format: uuid
+                        recipe_name:
+                          type: string
+                        reason:
+                          type: string
+
+    Error:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          nullable: true
+          additionalProperties: true
+
+  responses:
+    UnauthorizedError:
+      description: Unauthorized (missing or invalid authentication)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            code: UNAUTHORIZED
+            message: Missing or invalid authentication token
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Bearer token authentication
+
+security:
+  - bearerAuth: []

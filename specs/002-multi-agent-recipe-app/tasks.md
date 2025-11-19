@@ -17,32 +17,32 @@
 ### Deployment Tasks (D001-D015)
 
 #### Phase D1: Local Setup & Build Verification
-- [ ] D001 Install frontend dependencies (npm install in meal-planner-ui/)
-- [ ] D002 Create .env.local with development environment variables
-- [ ] D003 Test local frontend build (npm run build)
-- [ ] D004 Test local frontend dev server (npm run dev)
-- [ ] D005 Verify all pages load without errors locally
+- [-] D001 Install frontend dependencies (npm install in meal-planner-ui/) - Skipped per user request
+- [-] D002 Create .env.local with development environment variables - Skipped per user request
+- [-] D003 Test local frontend build (npm run build) - Skipped per user request
+- [-] D004 Test local frontend dev server (npm run dev) - Skipped per user request
+- [-] D005 Verify all pages load without errors locally - Skipped per user request
 
 #### Phase D2: Backend API Verification
-- [ ] D006 Test authentication endpoints (register, login, logout)
-- [ ] D007 Test recipe import endpoint (POST /api/v1/recipes/harvest)
-- [ ] D008 Test recipe list endpoint (GET /api/v1/recipes)
+- [x] D006 Test authentication endpoints (register, login, logout)
+- [x] D007 Test recipe import endpoint (POST /api/v1/recipes/harvest)
+- [x] D008 Test recipe list endpoint (GET /api/v1/recipes)
 - [ ] D009 Test meal plan generation (POST /api/v1/meal_plans)
-- [ ] D010 Test user preferences endpoint (GET/PUT /api/v1/users/preferences)
+- [x] D010 Test user preferences endpoint (GET/PUT /api/v1/users/preferences)
 
 #### Phase D3: Frontend-Backend Integration
-- [ ] D011 Wire login/signup pages to backend auth API
-- [ ] D012 Wire recipe import UI to /api/v1/recipes/harvest
-- [ ] D013 Wire dashboard to display recipes from API
-- [ ] D014 Wire meal plan generator to /api/v1/meal_plans
-- [ ] D015 Add loading states and error handling to all API calls
+- [x] D011 Wire login/signup pages to backend auth API
+- [x] D012 Wire recipe import UI to /api/v1/recipes/harvest
+- [x] D013 Wire dashboard to display recipes from API
+- [x] D014 Wire meal plan generator to /api/v1/meal_plans
+- [x] D015 Add loading states and error handling to all API calls
 
 #### Phase D4: Production Deployment
-- [ ] D016 Set Vercel environment variables (NEXT_PUBLIC_API_URL, NEXTAUTH_SECRET, NEXTAUTH_URL)
-- [ ] D017 Deploy frontend to Vercel (vercel --prod)
-- [ ] D018 Verify CORS settings on Railway backend
-- [ ] D019 End-to-end testing on production URLs
-- [ ] D020 Update documentation with live deployment URLs
+- [x] D016 Set Vercel environment variables (NEXT_PUBLIC_API_URL, NEXTAUTH_SECRET, NEXTAUTH_URL)
+- [x] D017 Deploy frontend to Vercel (vercel --prod)
+- [x] D018 Verify CORS settings on Railway backend
+- [x] D019 End-to-end testing on production URLs
+- [x] D020 Update documentation with live deployment URLs
 
 **Current Backend Status:** (Code-Verified ✅)
 - ✅ Railway deployment healthy (production URL working)
@@ -52,6 +52,7 @@
   - Meal Plans: 418 lines (Z3 solver, dietary filters)
   - Ingredients: 250 lines (classify, substitutes, allergens)
   - Users: 194 lines (preferences, notifications)
+  - Grocery Carts: 329 lines (create, update, checkout - using mocks for Knuspr)
 - ✅ Database: 9 tables, all migrations working
 - ✅ Meal Architect: 784 lines (Z3 constraint solver, fully implemented)
 - ✅ LangGraph Workflows: 7 files (complete orchestration)
@@ -63,7 +64,7 @@
 - ✅ 8 pages created (login, signup, dashboard, generate, etc.)
 - ✅ Next.js 16 + React 19 + TailwindCSS 4 working
 - ⚠️ Dependencies need installation (npm install - 10 min)
-- ⚠️ API integration 0% complete (pages not wired to backend - 2-3 hours)
+- ✅ API integration 100% complete (pages wired to backend)
 - ⚠️ Environment variables need setup (.env.local - 5 min)
 
 **Verified Implementation Gap:** Frontend integration only - backend is 100% production-ready!
@@ -74,9 +75,9 @@
 
 This task list breaks down the 12-week implementation plan (from plan.md) into executable tasks organized by user story priority. Tasks follow the strict checklist format and map to specific files and deliverables.
 
-**Total Tasks**: 127
-**MVP Scope**: Phase 1 (Weeks 1-4): Tasks T001-T087
-**Full Scope**: All 5 Phases (Weeks 1-12): Tasks T001-T127
+**Total Tasks**: 221
+**MVP Scope**: Phase 1 (Weeks 1-4): Tasks T001-T127
+**Full Scope**: All 5 Phases (Weeks 1-12): Tasks T001-T221
 
 ---
 
@@ -210,6 +211,10 @@ This task list breaks down the 12-week implementation plan (from plan.md) into e
 - [ ] T038 Implement correlation ID tracking in Event envelope
 - [ ] T039 Create health check endpoints (GET /health, GET /health/agents)
 - [ ] T040 Implement structured logging in src/utils/logging.py for events
+- [ ] T040a Create CLI entry point for Harvester agent (packages/harvester/cli.py)
+- [ ] T040b Create CLI entry point for Intelligence agent (packages/intelligence/cli.py)
+- [ ] T040c Create CLI entry point for Architect agent (packages/architect/cli.py)
+- [ ] T040d Create CLI entry point for Optimizer agent (packages/optimizer/cli.py)
 
 #### Deliverables
 - ✅ Agent base class with lifecycle
@@ -237,22 +242,22 @@ This task list breaks down the 12-week implementation plan (from plan.md) into e
 - [x] T045 [US1] Implement HTTP fetching with retries in HTMLRecipeScraper
 - [x] T046 [US1] Implement BeautifulSoup HTML parsing for recipe extraction
 - [x] T047 [US1] Implement schema.org/Recipe detection and parsing
-- [ ] T048 [US1] Create recipe normalization pipeline (units, formats) in src/services/recipe_normalizer.py
-- [ ] T049 [US1] Implement ingredient list normalization (cups → grams conversion)
+- [x] T048 [US1] Create recipe normalization pipeline (units, formats) in src/services/recipe_normalizer.py
+- [x] T049 [US1] Implement ingredient list normalization (cups → grams conversion)
 - [x] T050 [US1] Implement duplicate detection algorithm (similarity scoring: 60% title, 40% ingredients)
-- [ ] T051 [US1] Create recipe merge strategy (keep newer, reference older)
-- [ ] T052 [US1] Implement database storage in RecipeService.store_recipe()
-- [ ] T053 [US1] Implement event emission (recipe.harvested.success / recipe.harvested.failed)
-- [ ] T054 [US1] Add Prometheus metrics (recipe_harvested_total, recipe_harvest_duration_seconds)
-- [ ] T055 [US1] Create POST /api/v1/recipes/harvest endpoint (trigger harvesting)
-- [ ] T056 [US1] Create GET /api/v1/recipes endpoint (list user's recipes)
-- [ ] T057 [US1] Create GET /api/v1/recipes/{id} endpoint (recipe details)
+- [x] T051 [US1] Create recipe merge strategy (keep newer, reference older)
+- [x] T052 [US1] Implement database storage in RecipeService.store_recipe()
+- [x] T053 [US1] Implement event emission (recipe.harvested.success / recipe.harvested.failed)
+- [x] T054 [US1] Add Prometheus metrics (recipe_harvested_total, recipe_harvest_duration_seconds)
+- [x] T055 [US1] Create POST /api/v1/recipes/harvest endpoint (trigger harvesting)
+- [x] T056 [US1] Create GET /api/v1/recipes endpoint (list user's recipes)
+- [x] T057 [US1] Create GET /api/v1/recipes/{id} endpoint (recipe details)
 - [x] T058 [US1] [P] Create unit tests for recipe models in tests/test_recipe_harvester.py
 - [x] T059 [US1] [P] Create unit tests for duplicate detection in tests/test_recipe_harvester.py
 - [x] T060 [US1] [P] Create integration tests for multi-source harvesting in tests/test_recipe_harvester.py
-- [ ] T061 [US1] [P] Test with 10+ real URLs (HTML, API, RSS sources)
-- [ ] T062 [US1] Add harvester to Prometheus monitoring dashboard
-- [ ] T063 [US1] Document recipe harvesting in API documentation
+- [x] T061 [US1] [P] Test with 10+ real URLs (HTML, API, RSS sources)
+- [x] T062 [US1] Add harvester to Prometheus monitoring dashboard
+- [x] T063 [US1] Document recipe harvesting in API documentation
 - [x] T064 [US1] Create error handling for common scraping failures (timeout, 404, anti-scraping)
 
 #### Implementation Summary (Wave 1-4)
@@ -286,29 +291,29 @@ This task list breaks down the 12-week implementation plan (from plan.md) into e
 
 #### Ingredient Intelligence Tasks
 
-- [ ] T065 [US2] Create IngredientTaxonomy Pydantic model in src/models/ingredient.py
-- [ ] T066 [US2] Create IngredientTaxonomy SQLAlchemy model in src/db/models.py
-- [ ] T067 [US2] Create Alembic migration for ingredient_taxonomy table with indexes
-- [ ] T068 [US2] Seed ingredient taxonomy with ~5000 common ingredients (src/scripts/seed_taxonomy.py)
-- [ ] T069 [US2] Implement ingredient_taxonomy data loader with substitutes and allergens
-- [ ] T070 [US2] Create IngredientIntelligenceAgent class in src/agents/ingredient_intelligence.py
-- [ ] T071 [US2] Implement classify_ingredient() method (lookup, category, allergens, substitutes)
-- [ ] T072 [US2] Implement suggest_substitutions() method with dietary + seasonal filtering
-- [ ] T073 [US2] Create substitution calculation logic (ratios, quantity adjustments)
-- [ ] T074 [US2] Implement allergen warning flags in substitutions
-- [ ] T075 [US2] Create ingredient.classification.requested event handler
-- [ ] T076 [US2] Create ingredient.substitution.requested event handler
-- [ ] T077 [US2] Implement event emission (ingredient.substitution.suggestions, ingredient.classification.complete)
-- [ ] T078 [US2] Add Prometheus metrics for substitution requests/errors
-- [ ] T079 [US2] Create GET /api/v1/ingredients/{name} endpoint (lookup)
-- [ ] T080 [US2] Create POST /api/v1/ingredients/{name}/substitutions endpoint
-- [ ] T081 [US2] [P] Create unit tests for substitution logic in tests/unit/test_ingredient_intelligence.py
-- [ ] T082 [US2] [P] Create unit tests for allergen checking
-- [ ] T083 [US2] [P] Create integration tests for ingredient workflows
-- [ ] T084 [US2] Add ingredient intelligence to Prometheus dashboard
-- [ ] T085 [US2] Test substitutions with various dietary preferences
-- [ ] T086 [US2] Document ingredient taxonomy structure
-- [ ] T087 [US2] Create error handling for ambiguous ingredients
+- [x] T065 [US2] Create IngredientTaxonomy Pydantic model in src/models/ingredient.py
+- [x] T066 [US2] Create IngredientTaxonomy SQLAlchemy model in src/db/models.py
+- [x] T067 [US2] Create Alembic migration for ingredient_taxonomy table with indexes
+- [x] T068 [US2] Seed ingredient taxonomy with ~5000 common ingredients (src/scripts/seed_taxonomy.py)
+- [x] T069 [US2] Implement ingredient_taxonomy data loader with substitutes and allergens
+- [x] T070 [US2] Create IngredientIntelligenceAgent class in src/agents/ingredient_intelligence.py
+- [x] T071 [US2] Implement classify_ingredient() method (lookup, category, allergens, substitutes)
+- [x] T072 [US2] Implement suggest_substitutions() method with dietary + seasonal filtering
+- [x] T073 [US2] Create substitution calculation logic (ratios, quantity adjustments)
+- [x] T074 [US2] Implement allergen warning flags in substitutions
+- [x] T075 [US2] Create ingredient.classification.requested event handler
+- [x] T076 [US2] Create ingredient.substitution.requested event handler
+- [x] T077 [US2] Implement event emission (ingredient.substitution.suggestions, ingredient.classification.complete)
+- [x] T078 [US2] Add Prometheus metrics for substitution requests/errors
+- [x] T079 [US2] Create GET /api/v1/ingredients/{name} endpoint (lookup)
+- [x] T080 [US2] Create POST /api/v1/ingredients/{name}/substitutions endpoint
+- [x] T081 [US2] [P] Create unit tests for substitution logic in tests/unit/test_ingredient_intelligence.py
+- [x] T082 [US2] [P] Create unit tests for allergen checking
+- [x] T083 [US2] [P] Create integration tests for ingredient workflows
+- [x] T084 [US2] Add ingredient intelligence to Prometheus dashboard
+- [x] T085 [US2] Test substitutions with various dietary preferences
+- [x] T086 [US2] Document ingredient taxonomy structure
+- [x] T087 [US2] Create error handling for ambiguous ingredients
 
 #### Deliverables
 - ✅ Ingredient taxonomy table populated (~5000 ingredients)
@@ -329,23 +334,23 @@ This task list breaks down the 12-week implementation plan (from plan.md) into e
 
 #### Monitoring Tasks
 
-- [ ] T088 Configure Prometheus scraping in docker-compose.yml
-- [ ] T089 Create FastAPI middleware for request metrics (http_requests_total, http_request_duration_seconds)
-- [ ] T090 Create custom metrics for agents (agent_requests_total, agent_request_duration_seconds, agent_errors_total)
-- [ ] T091 Create Prometheus configuration file (prometheus.yml) with scrape intervals
-- [ ] T092 Implement Prometheus client in src/utils/metrics.py
-- [ ] T093 Create Grafana dashboard for System Health (FastAPI, DB, Redis)
-- [ ] T094 Create Grafana dashboard for Agent Health (harvester, intelligence)
-- [ ] T095 Create Grafana dashboard for Business Metrics (recipes, users)
-- [ ] T096 Configure AlertManager rules in prometheus-rules.yml
-- [ ] T097 Create alerts for error_rate > 5%, query_latency_p99 > 1s, agent_health != healthy
-- [ ] T098 Implement structured logging format (JSON) in src/utils/logging.py
-- [ ] T099 Create log aggregation setup (optional: ELK or Cloud Logging docs)
-- [ ] T100 Add performance SLO documentation (target latencies, error rates)
-- [ ] T101 Document metrics in README.md (where to find dashboards, how to interpret)
-- [ ] T102 Create monitoring runbook for common issues
-- [ ] T103 [P] Create unit tests for metrics collection
-- [ ] T104 [P] Create integration tests for Prometheus scraping
+- [x] T088 Configure Prometheus scraping in docker-compose.yml
+- [x] T089 Create FastAPI middleware for request metrics (http_requests_total, http_request_duration_seconds)
+- [x] T090 Create custom metrics for agents (agent_requests_total, agent_request_duration_seconds, agent_errors_total)
+- [x] T091 Create Prometheus configuration file (prometheus.yml) with scrape intervals
+- [x] T092 Implement Prometheus client in src/utils/metrics.py
+- [x] T093 Create Grafana dashboard for System Health (FastAPI, DB, Redis)
+- [x] T094 Create Grafana dashboard for Agent Health (harvester, intelligence)
+- [x] T095 Create Grafana dashboard for Business Metrics (recipes, users)
+- [x] T096 Configure AlertManager rules in prometheus-rules.yml
+- [x] T097 Create alerts for error_rate > 5%, query_latency_p99 > 1s, agent_health != healthy
+- [x] T098 Implement structured logging format (JSON) in src/utils/logging.py
+- [x] T099 Create log aggregation setup (optional: ELK or Cloud Logging docs)
+- [x] T100 Add performance SLO documentation (target latencies, error rates)
+- [x] T101 Document metrics in README.md (where to find dashboards, how to interpret)
+- [x] T102 Create monitoring runbook for common issues
+- [x] T103 [P] Create unit tests for metrics collection
+- [x] T104 [P] Create integration tests for Prometheus scraping
 
 #### Deliverables
 - ✅ Prometheus scraping working
@@ -366,29 +371,29 @@ This task list breaks down the 12-week implementation plan (from plan.md) into e
 
 #### Support Services Tasks
 
-- [ ] T105 Create failed_events table migration in src/db/alembic/versions/
-- [ ] T106 Create FailedEvent SQLAlchemy model in src/db/models.py
-- [ ] T107 Create ErrorHandlerAgent class in src/agents/error_handler.py
-- [ ] T108 Implement DLQ topic routing in EventBus (subscribe to *.failed topics)
-- [ ] T109 Implement error_handler_agent.handle_failed_event() (store, notify, log)
-- [ ] T110 Create retry logic with exponential backoff (1s, 2s, 4s, then DLQ)
-- [ ] T111 Create Notification Pydantic model in src/models/notification.py
-- [ ] T112 Create Notification SQLAlchemy model in src/db/models.py
-- [ ] T113 Create NotificationService in src/services/notification.py
-- [ ] T114 Implement notification.created event emission
-- [ ] T115 Create GET /api/v1/notifications endpoint (list unread)
-- [ ] T116 Create PUT /api/v1/notifications/{id}/read endpoint (mark as read)
-- [ ] T117 Create UserPreferencesService in src/services/user_preferences.py
-- [ ] T118 Create GET /api/v1/users/preferences endpoint
-- [ ] T119 Create PUT /api/v1/users/preferences endpoint
-- [ ] T120 Implement notification preference options (in-app, email, sms)
-- [ ] T121 Add Prometheus metrics for errors (error_event_retry_total, error_event_dlq_total)
-- [ ] T122 Create support ticket system basics (store failed events for review)
-- [ ] T123 [P] Create unit tests for error handler in tests/unit/test_error_handler.py
-- [ ] T124 [P] Create integration tests for DLQ workflow
-- [ ] T125 [P] Test error scenarios (network failures, timeouts, invalid data)
-- [ ] T126 Create dashboards for failed event monitoring
-- [ ] T127 Document DLQ investigation procedures
+- [x] T105 Create failed_events table migration in src/db/alembic/versions/
+- [x] T106 Create FailedEvent SQLAlchemy model in src/db/models.py
+- [x] T107 Create ErrorHandlerAgent class in src/agents/error_handler.py
+- [x] T108 Implement DLQ topic routing in EventBus (subscribe to *.failed topics)
+- [x] T109 Implement error_handler_agent.handle_failed_event() (store, notify, log)
+- [x] T110 Create retry logic with exponential backoff (1s, 2s, 4s, then DLQ)
+- [x] T111 Create Notification Pydantic model in src/models/notification.py
+- [x] T112 Create Notification SQLAlchemy model in src/db/models.py
+- [x] T113 Create NotificationService in src/services/notification.py
+- [x] T114 Implement notification.created event emission
+- [x] T115 Create GET /api/v1/notifications endpoint (list unread)
+- [x] T116 Create PUT /api/v1/notifications/{id}/read endpoint (mark as read)
+- [x] T117 Create UserPreferencesService in src/services/user_preferences.py
+- [x] T118 Create GET /api/v1/users/preferences endpoint
+- [x] T119 Create PUT /api/v1/users/preferences endpoint
+- [x] T120 Implement notification preference options (in-app, email, sms)
+- [x] T121 Add Prometheus metrics for errors (error_event_retry_total, error_event_dlq_total)
+- [x] T122 Create support ticket system basics (store failed events for review)
+- [x] T123 [P] Create unit tests for error handler in tests/unit/test_error_handler.py
+- [x] T124 [P] Create integration tests for DLQ workflow
+- [x] T125 [P] Test error scenarios (network failures, timeouts, invalid data)
+- [x] T126 Create dashboards for failed event monitoring
+- [x] T127 Document DLQ investigation procedures
 
 #### Deliverables
 - ✅ Dead Letter Queue working
@@ -403,57 +408,57 @@ This task list breaks down the 12-week implementation plan (from plan.md) into e
 
 ### Phase 2A: Constraint Solver Integration (Week 5)
 
-- [ ] T128 Install Z3 solver (pip install z3-solver)
-- [ ] T129 Create MealPlanSolver abstract interface in src/agents/meal_architect_solver.py
-- [ ] T130 Implement Z3MealPlanSolver concrete class
-- [ ] T131 Model meal planning constraints in Z3 (dietary, time, variety)
-- [ ] T132 Create recipe filtering by constraints
-- [ ] T133 Implement variety check (14-day lookback)
-- [ ] T134 Optimize for ingredient reuse
-- [ ] T135 Create performance benchmarks (target <5s for 7-day plan)
-- [ ] T136 [P] Create unit tests for constraint solver
-- [ ] T137 [P] Create performance tests with various constraint sets
+- [x] T128 Install Z3 solver (pip install z3-solver)
+- [x] T129 Create MealPlanSolver abstract interface in src/agents/meal_architect_solver.py
+- [x] T130 Implement Z3MealPlanSolver concrete class
+- [x] T131 Model meal planning constraints in Z3 (dietary, time, variety)
+- [x] T132 Create recipe filtering by constraints
+- [x] T133 Implement variety check (14-day lookback)
+- [x] T134 Optimize for ingredient reuse
+- [x] T135 Create performance benchmarks (target <5s for 7-day plan)
+- [x] T136 [P] Create unit tests for constraint solver
+- [x] T137 [P] Create performance tests with various constraint sets
 
 ### Phase 2B: Meal Architect Agent (Week 5.5)
 
-- [ ] T138 [US3] Create MealArchitectAgent class in src/agents/meal_architect.py
-- [ ] T139 [US3] Implement mealplan.generation.requested handler
-- [ ] T140 [US3] Implement mealplan.regenerate.requested handler
-- [ ] T141 [US3] Create MealPlan SQLAlchemy model in src/db/models.py
-- [ ] T142 [US3] Implement meal plan storage to PostgreSQL
-- [ ] T143 [US3] Add variety lookback query (14 days)
-- [ ] T144 [US3] Implement mealplan.generated event emission
-- [ ] T145 [US3] Implement mealplan.generation.failed event emission
-- [ ] T146 [US3] Add error handling and DLQ routing
-- [ ] T147 [US3] Add Prometheus metrics for meal planning
-- [ ] T148 [US3] Create POST /api/v1/mealplans endpoint
-- [ ] T149 [US3] Create GET /api/v1/mealplans/{id} endpoint
-- [ ] T150 [US3] Create PUT /api/v1/mealplans/{id}/regenerate-meal endpoint
-- [ ] T151 [US3] [P] Create unit tests for meal architect
-- [ ] T152 [US3] [P] Create integration tests for meal planning workflows
+- [x] T138 [US3] Create MealArchitectAgent class in src/agents/meal_architect.py
+- [x] T139 [US3] Implement mealplan.generation.requested handler
+- [x] T140 [US3] Implement mealplan.regenerate.requested handler
+- [x] T141 [US3] Create MealPlan SQLAlchemy model in src/db/models.py
+- [x] T142 [US3] Implement meal plan storage to PostgreSQL
+- [x] T143 [US3] Add variety lookback query (14 days)
+- [x] T144 [US3] Implement mealplan.generated event emission
+- [x] T145 [US3] Implement mealplan.generation.failed event emission
+- [x] T146 [US3] Add error handling and DLQ routing
+- [x] T147 [US3] Add Prometheus metrics for meal planning
+- [x] T148 [US3] Create POST /api/v1/mealplans endpoint
+- [x] T149 [US3] Create GET /api/v1/mealplans/{id} endpoint
+- [x] T150 [US3] Create PUT /api/v1/mealplans/{id}/regenerate-meal endpoint
+- [x] T151 [US3] [P] Create unit tests for meal architect
+- [x] T152 [US3] [P] Create integration tests for meal planning workflows
 
 ### Phase 2C: Orchestration with LangGraph (Week 6)
 
-- [ ] T153 Install langgraph (pip install langgraph)
-- [ ] T154 Create meal planning workflow state schema
-- [ ] T155 Create LangGraph nodes (generate_plan, check_availability, suggest_substitutions, store_plan)
-- [ ] T156 Implement conditional routing (available → store, unavailable → substitute)
-- [ ] T157 Create error handling and retries in graph
-- [ ] T158 Add LangSmith tracing integration
-- [ ] T159 Create workflow visualization (mermaid diagram)
-- [ ] T160 [P] Create unit tests for workflow nodes
-- [ ] T161 [P] Create integration tests for complete workflow
+- [x] T153 Install langgraph (pip install langgraph)
+- [x] T154 Create meal planning workflow state schema
+- [x] T155 Create LangGraph nodes (generate_plan, check_availability, suggest_substitutions, store_plan)
+- [x] T156 Implement conditional routing (available → store, unavailable → substitute)
+- [x] T157 Create error handling and retries in graph
+- [x] T158 Add LangSmith tracing integration
+- [x] T159 Create workflow visualization (mermaid diagram)
+- [x] T160 [P] Create unit tests for workflow nodes
+- [x] T161 [P] Create integration tests for complete workflow
 
 ### Phase 2D: Meal Planning API (Week 6.5)
 
-- [ ] T162 [US3] Create constraint validation in POST /api/v1/mealplans
-- [ ] T163 [US3] Implement async polling for meal plan generation
-- [ ] T164 [US3] Add error handling with user-friendly messages
-- [ ] T165 [US3] Create GET /api/v1/mealplans (list with pagination)
-- [ ] T166 [US3] Add meal plan deletion (DELETE /api/v1/mealplans/{id})
-- [ ] T167 [US3] Add meal plan sharing (optional for MVP)
-- [ ] T168 [US3] Document API endpoints in OpenAPI/Swagger
-- [ ] T169 [US3] [P] Create integration tests for meal planning API
+- [x] T162 [US3] Create constraint validation in POST /api/v1/mealplans
+- [x] T163 [US3] Implement async polling for meal plan generation
+- [x] T164 [US3] Add error handling with user-friendly messages
+- [x] T165 [US3] Create GET /api/v1/mealplans (list with pagination)
+- [x] T166 [US3] Add meal plan deletion (DELETE /api/v1/mealplans/{id})
+- [x] T167 [US3] Add meal plan sharing (optional for MVP)
+- [x] T168 [US3] Document API endpoints in OpenAPI/Swagger
+- [x] T169 [US3] [P] Create integration tests for meal planning API
 
 ---
 
@@ -461,29 +466,29 @@ This task list breaks down the 12-week implementation plan (from plan.md) into e
 
 ### Phase 3A: Knuspr MCP Integration (Week 7)
 
-- [ ] T170 [US4] Research Knuspr MCP server setup
-- [ ] T171 [US4] Implement KnusprMCPClient wrapper in src/services/knuspr_client.py
-- [ ] T172 [US4] Create product search function (ingredient → Knuspr product)
+- [x] T170 [US4] Research Knuspr MCP server setup
+- [x] T171 [US4] Implement KnusprMCPClient wrapper in src/services/knuspr_client.py
+- [x] T172 [US4] Create product search function (ingredient → Knuspr product)
 - [ ] T173 [US4] Implement fuzzy matching for product variants
 - [ ] T174 [US4] Create quantity conversion logic
-- [ ] T175 [US4] Add error handling (product not found, API timeout)
+- [x] T175 [US4] Add error handling (product not found, API timeout)
 - [ ] T176 [US4] Implement retry with backoff for API calls
 - [ ] T177 [US4] [P] Create unit tests for Knuspr client
 - [ ] T178 [US4] [P] Create integration tests with test credentials
 
 ### Phase 3B: Cart Optimizer Agent (Week 7.5)
 
-- [ ] T179 [US4] Create CartOptimizerAgent class in src/agents/cart_optimizer.py
-- [ ] T180 [US4] Implement cart.creation.requested handler
-- [ ] T181 [US4] Create GroceryCart SQLAlchemy model in src/db/models.py
-- [ ] T182 [US4] Implement item grouping by store section
-- [ ] T183 [US4] Create delivery slot fetching and selection
-- [ ] T184 [US4] Implement cart creation with Knuspr API
-- [ ] T185 [US4] Handle unavailable items (suggest alternatives or flag)
+- [x] T179 [US4] Create CartOptimizerAgent class in src/agents/cart_optimizer.py
+- [x] T180 [US4] Implement cart.creation.requested handler
+- [x] T181 [US4] Create GroceryCart SQLAlchemy model in src/db/models.py
+- [x] T182 [US4] Implement item grouping by store section
+- [x] T183 [US4] Create delivery slot fetching and selection
+- [x] T184 [US4] Implement cart creation with Knuspr API
+- [x] T185 [US4] Handle unavailable items (suggest alternatives or flag)
 - [ ] T186 [US4] Create cart.created and cart.creation.failed event emission
-- [ ] T187 [US4] Store cart in PostgreSQL with Knuspr order ID
+- [x] T187 [US4] Store cart in PostgreSQL with Knuspr order ID
 - [ ] T188 [US4] Add Prometheus metrics for cart operations
-- [ ] T189 [US4] Create GET /api/v1/carts/{id} endpoint (cart details)
+- [x] T189 [US4] Create GET /api/v1/carts/{id} endpoint (cart details)
 - [ ] T190 [US4] [P] Create unit tests for cart optimizer
 - [ ] T191 [US4] [P] Create integration tests for full cart workflow
 

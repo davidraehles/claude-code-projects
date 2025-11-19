@@ -98,8 +98,7 @@ class KnusprCredential(Base):
     # Relationships
     user = relationship(
         "User",
-        foreign_keys=[user_id],
-        comment="Relationship to User"
+        foreign_keys=[user_id]
     )
 
     def __repr__(self) -> str:
