@@ -31,7 +31,7 @@ class RecipeCreate(BaseModel):
     @validator("source_type")
     def validate_source_type(cls, v):
         """Ensure source_type is valid."""
-        valid_types = {"html", "api", "rss"}
+        valid_types = {"html", "api", "rss", "file_upload"}
         if v.lower() not in valid_types:
             raise ValueError(f"source_type must be one of {valid_types}")
         return v.lower()
