@@ -21,7 +21,7 @@ import json
 from sqlalchemy.orm import Session
 
 from app.models.knuspr_credential import KnusprCredential
-from app.services.knuspr_mcp_client import KnusprMCPClient
+from app.services.knuspr_mcp_client import KnusprMCPClient, KnusprCountry
 
 logger = logging.getLogger(__name__)
 
@@ -318,11 +318,18 @@ class CredentialManager:
         try:
             logger.debug(f"Testing Knuspr credentials for {email}")
 
+            # Convert country string to Enum if needed
+            try:
+                country_enum = KnusprCountry(country)
+            except ValueError:
+                logger.warning(f"Invalid country code: {country}")
+                return False
+
             # Create temporary client to test credentials
             client = KnusprMCPClient(
                 login_email=email,
                 login_password=password,
-                country=country
+                country=country_enum
             )
 
             # Attempt authentication

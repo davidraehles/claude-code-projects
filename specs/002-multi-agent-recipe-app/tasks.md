@@ -27,7 +27,7 @@
 - [x] D006 Test authentication endpoints (register, login, logout)
 - [x] D007 Test recipe import endpoint (POST /api/v1/recipes/harvest)
 - [x] D008 Test recipe list endpoint (GET /api/v1/recipes)
-- [ ] D009 Test meal plan generation (POST /api/v1/meal_plans)
+- [x] D009 Test meal plan generation (POST /api/v1/meal_plans)
 - [x] D010 Test user preferences endpoint (GET/PUT /api/v1/users/preferences)
 
 #### Phase D3: Frontend-Backend Integration

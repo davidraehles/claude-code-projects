@@ -12,10 +12,13 @@ This service bridges the meal planning system with Knuspr's grocery ordering API
 
 import logging
 import asyncio
+import difflib
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
+
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +112,21 @@ class KnusprMCPClient:
 
         logger.info(f"Initialized KnusprMCPClient for {country.value}")
 
+    def _normalize_knuspr_unit(self, unit: str) -> str:
+        """Normalize Knuspr-specific units to standard units."""
+        unit = unit.lower().strip()
+        mapping = {
+            "ks": "pcs",
+            "kus": "pcs",
+            "bal": "pkg",
+            "balení": "pkg",
+            "g": "g",
+            "kg": "kg",
+            "ml": "ml",
+            "l": "l"
+        }
+        return mapping.get(unit, unit)
+
     async def authenticate(self) -> bool:
         """
         Authenticate with Knuspr API using stored credentials.
@@ -138,6 +156,11 @@ class KnusprMCPClient:
             self.authenticated = False
             return False
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1.5, min=1, max=10),
+        reraise=True
+    )
     async def search_products(
         self,
         ingredient_name: str,
@@ -184,7 +207,7 @@ class KnusprMCPClient:
                     product_id=f"knuspr-{ingredient_name.replace(' ', '-')}-1",
                     name=f"{ingredient_name.title()} 400g",
                     quantity=400,
-                    unit="g",
+                    unit=self._normalize_knuspr_unit("g"),
                     price=45.99,
                     available=True,
                     category="canned_goods",
@@ -192,15 +215,27 @@ class KnusprMCPClient:
                 )
             ]
 
+            if not exact_match and mock_products:
+                # Sort by similarity to ingredient_name
+                def similarity(p):
+                    return difflib.SequenceMatcher(None, ingredient_name.lower(), p.name.lower()).ratio()
+
+                mock_products.sort(key=similarity, reverse=True)
+
             logger.info(f"Found {len(mock_products)} products for '{ingredient_name}'")
-            return mock_products
+            return mock_products[:max_results]
         except asyncio.TimeoutError:
             logger.error(f"Search timeout for '{ingredient_name}'")
             raise TimeoutError(f"Knuspr search timeout for '{ingredient_name}'")
         except Exception as e:
             logger.error(f"Product search failed: {str(e)}")
-            return []
+            raise
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1.5, min=1, max=10),
+        reraise=True
+    )
     async def create_cart(
         self,
         items: List[Dict[str, Any]],
@@ -267,6 +302,11 @@ class KnusprMCPClient:
             logger.error(f"Cart creation failed: {str(e)}")
             raise
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1.5, min=1, max=10),
+        reraise=True
+    )
     async def get_delivery_slots(
         self,
         start_date: datetime,
@@ -325,8 +365,13 @@ class KnusprMCPClient:
             return slots
         except Exception as e:
             logger.error(f"Delivery slot fetch failed: {str(e)}")
-            return []
+            raise
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1.5, min=1, max=10),
+        reraise=True
+    )
     async def select_delivery_slot(
         self,
         cart_id: str,
@@ -360,7 +405,7 @@ class KnusprMCPClient:
             return True
         except Exception as e:
             logger.error(f"Slot selection failed: {str(e)}")
-            return False
+            raise
 
     async def get_cart(self, cart_id: str) -> Optional[KnusprCart]:
         """

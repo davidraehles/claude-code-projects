@@ -36,6 +36,7 @@ class EventType(str, Enum):
     # Grocery Cart Events
     CART_CREATION_REQUESTED = "cart.creation.requested"
     CART_CREATED = "cart.created"
+    CART_CREATION_FAILED = "cart.creation.failed"
     CART_KNUSPR_SYNC_REQUESTED = "cart.knuspr.sync.requested"
     CART_KNUSPR_SYNCED = "cart.knuspr.synced"
 
