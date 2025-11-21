@@ -7,7 +7,7 @@ Provides REST API for user operations including preferences and notifications.
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from app.api.dependencies import get_database, get_current_user_id
 from app.models.user import User
@@ -26,9 +26,6 @@ class UserPreferencesUpdate(BaseModel):
     language: Optional[str] = Field(None, description="Preferred language")
     theme: Optional[str] = Field(None, description="UI theme (light, dark)")
     notification_settings: Optional[dict] = Field(None, description="Notification preferences")
-    is_premium: Optional[bool] = Field(None, description="Premium subscription status")
-    subscription_level: Optional[str] = Field(None, description="Subscription level (free, basic, premium, enterprise)")
-    last_login: Optional[str] = Field(None, description="Last login timestamp")
 
 
 class UserPreferencesResponse(BaseModel):

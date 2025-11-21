@@ -7,59 +7,12 @@ Initializes the FastAPI app with middleware, routes, and event handlers.
 import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-from datetime import datetime, timedelta
-from functools import wraps
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-import jwt
 
 from app.database import engine, Base
-
-
-# JWT Authentication Middleware
-class JWTAuthenticationMiddleware:
-    """JWT-based authentication middleware for API requests."""
-
-    def __init__(self, app):
-        self.app = app
-
-    async def __call__(self, request: Request, call_next):
-        """Process JWT token from request headers."""
-        # Skip authentication for public endpoints
-        public_paths = ["/health", "/metrics", "/", "/api/docs", "/api/redoc", "/openapi.json"]
-        if request.url.path in public_paths:
-            return await call_next(request)
-
-        # Extract token from Authorization header
-        auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return JSONResponse(
-                status_code=401,
-                content={"error": "Missing or invalid authorization header"}
-            )
-
-        token = auth_header[7:]  # Remove "Bearer " prefix
-
-        try:
-            # Verify and decode JWT token
-            secret_key = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
-            payload = jwt.decode(token, secret_key, algorithms=["HS256"])
-            request.state.user_id = payload.get("sub")
-            request.state.user_data = payload
-        except jwt.ExpiredSignatureError:
-            return JSONResponse(
-                status_code=401,
-                content={"error": "Token has expired"}
-            )
-        except jwt.InvalidTokenError:
-            return JSONResponse(
-                status_code=401,
-                content={"error": "Invalid authentication token"}
-            )
-
-        return await call_next(request)
 
 
 # Lifespan context manager for startup/shutdown events
@@ -125,9 +78,6 @@ app = FastAPI(
     redoc_url="/api/redoc",
     lifespan=lifespan,
 )
-
-# JWT Authentication middleware
-app.add_middleware(JWTAuthenticationMiddleware)
 
 # CORS middleware configuration
 app.add_middleware(
