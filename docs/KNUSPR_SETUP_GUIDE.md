@@ -373,6 +373,15 @@ pytest --cov=app --cov-report=html
 3. Try disabling "test_connection" and verify manually later
 4. Check server logs for detailed error
 
+### Issue: "Login succeeded but no user data received"
+
+**Cause**: 2FA verification required or API structure mismatch
+
+**Solution**:
+1. Check your email for a "Verify login" link from Knuspr/Rohlik and click it.
+2. Wait a few seconds and try again.
+3. Ensure the server is using the correct `ROHLIK_BASE_URL` (e.g., `https://www.knuspr.de`).
+
 ### Issue: "Failed to decrypt credentials"
 
 **Cause**: Encryption key changed or corrupted

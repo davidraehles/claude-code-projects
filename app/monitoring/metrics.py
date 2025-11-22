@@ -116,6 +116,31 @@ agent_operation_duration_seconds = Histogram(
     buckets=(0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0)
 )
 
+# Cart Optimizer Metrics
+cart_creation_total = Counter(
+    'cart_creation_total',
+    'Total number of cart creation attempts',
+    ['status']
+)
+
+cart_creation_duration_seconds = Histogram(
+    'cart_creation_duration_seconds',
+    'Time taken to create a cart',
+    buckets=(1.0, 2.5, 5.0, 10.0, 15.0, 30.0, 60.0)
+)
+
+cart_value_eur = Histogram(
+    'cart_value_eur',
+    'Value of the created cart in EUR',
+    buckets=(10.0, 25.0, 50.0, 75.0, 100.0, 150.0, 200.0, 300.0, 500.0)
+)
+
+cart_items_count = Histogram(
+    'cart_items_count',
+    'Number of items in the created cart',
+    buckets=(5, 10, 15, 20, 30, 40, 50, 75, 100)
+)
+
 # Database Metrics
 database_connections_active = Gauge(
     'database_connections_active',

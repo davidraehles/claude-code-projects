@@ -15,6 +15,20 @@ import logging
 from typing import Optional, Dict, List, Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass
+import time
+
+from app.events.bus import EventBus
+from app.events import Event, EventType
+from app.models.meal_plan import MealPlan, MealPlanRecipe, GroceryCart, CartItem
+from app.models.recipe import Recipe
+from app.monitoring.metrics import (
+    cart_creation_total,
+    cart_creation_duration_seconds,
+    cart_value_eur,
+    cart_items_count
+)
+from app.services.knuspr_mcp_client import KnusprMCPClient
+from app.services.ingredient_mapper import IngredientMapper
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +57,7 @@ class CartOptimizerAgent:
     - Create and manage shopping carts
     """
 
-    def __init__(self, knuspr_client, ingredient_mapper, db):
+    def __init__(self, knuspr_client: KnusprMCPClient, ingredient_mapper: IngredientMapper, db, event_bus: Optional[EventBus] = None):
         """
         Initialize Cart Optimizer Agent.
 
@@ -51,15 +65,17 @@ class CartOptimizerAgent:
             knuspr_client: KnusprMCPClient for Knuspr API access
             ingredient_mapper: IngredientMapper for ingredient→product mapping
             db: Database connection for cart storage
+            event_bus: EventBus for publishing events
         """
         self.knuspr_client = knuspr_client
         self.ingredient_mapper = ingredient_mapper
         self.db = db
+        self.event_bus = event_bus
 
     async def create_cart_from_meal_plan(
         self,
-        meal_plan_id: str,
-        user_id: str,
+        meal_plan_id: int,
+        user_id: int,
         db,
         credential_manager,
         delivery_preferences: Optional[Dict] = None
@@ -100,8 +116,16 @@ class CartOptimizerAgent:
             ValueError: If meal plan not found or empty
             RuntimeError: If cart creation fails
         """
+        start_time = time.time()
         try:
             logger.info(f"Creating cart from meal plan {meal_plan_id} for user {user_id}")
+
+            # Ensure IDs are integers (they should be, but validate anyway)
+            try:
+                meal_plan_id = int(meal_plan_id)
+                user_id = int(user_id)
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid meal plan ID or user ID: {str(e)}")
 
             # Step 1: Fetch meal plan and extract ingredients
             ingredients = await self._extract_ingredients_from_meal_plan(meal_plan_id)
@@ -170,7 +194,7 @@ class CartOptimizerAgent:
             # Step 8: Return comprehensive cart summary
             result = {
                 "cart_id": cart.cart_id,
-                "knuspr_url": f"https://knuspr.cz/cart/{cart.cart_id}",  # TODO: Use actual domain
+                "knuspr_url": f"{self.knuspr_client.get_domain()}/cart/{cart.cart_id}",
                 "total_price": cart.total_price,
                 "item_count": len(mapped_products),
                 "delivery_slot": {
@@ -195,11 +219,48 @@ class CartOptimizerAgent:
                 "created_at": datetime.utcnow().isoformat()
             }
 
+            # Record metrics
+            duration = time.time() - start_time
+            cart_creation_total.labels(status="success").inc()
+            cart_creation_duration_seconds.observe(duration)
+            cart_value_eur.observe(cart.total_price)
+            cart_items_count.observe(len(mapped_products))
+
+            # Publish event
+            if self.event_bus:
+                await self.event_bus.publish(Event(
+                    event_type=EventType.CART_CREATED,
+                    correlation_id=str(meal_plan_id),  # Convert to string for event ID
+                    user_id=user_id,  # Already validated as integer
+                    payload={
+                        "cart_id": cart.cart_id,
+                        "meal_plan_id": meal_plan_id,
+                        "total_price": cart.total_price,
+                        "item_count": len(mapped_products)
+                    }
+                ))
+
             logger.info(f"Cart creation complete: {result['cart_id']}")
             return result
 
         except Exception as e:
             logger.error(f"Cart creation failed: {str(e)}")
+
+            # Record failure metrics
+            cart_creation_total.labels(status="failure").inc()
+
+            # Publish failure event
+            if self.event_bus:
+                await self.event_bus.publish(Event(
+                    event_type=EventType.CART_CREATION_FAILED,
+                    correlation_id=str(meal_plan_id),  # Convert to string for event ID
+                    user_id=user_id,  # Already validated as integer
+                    payload={
+                        "meal_plan_id": meal_plan_id,
+                        "error": str(e)
+                    }
+                ))
+
             raise
 
     def _select_delivery_slot(
@@ -275,41 +336,116 @@ class CartOptimizerAgent:
         Returns:
             List of unique ingredient strings
         """
-        # TODO: Query database for meal plan and its recipes
-        # SELECT DISTINCT ingredient FROM recipe_ingredients
-        # WHERE recipe_id IN (
-        #     SELECT recipe_id FROM meal_plan_items WHERE meal_plan_id = ?
-        # )
-
         logger.debug(f"Extracting ingredients from meal plan {meal_plan_id}")
-        # For now, return empty list (will be implemented with DB)
-        return []
+
+        try:
+            # Query recipes associated with the meal plan
+            recipes = self.db.query(Recipe).join(
+                MealPlanRecipe, Recipe.id == MealPlanRecipe.recipe_id
+            ).filter(
+                MealPlanRecipe.meal_plan_id == meal_plan_id
+            ).all()
+
+            all_ingredients = []
+            for recipe in recipes:
+                # Recipe ingredients are stored as JSON list of dicts or strings
+                # Skip if ingredients is None or not a list
+                if recipe.ingredients and isinstance(recipe.ingredients, list):
+                    for ing in recipe.ingredients:
+                        if isinstance(ing, dict):
+                            # Extract name from dict (e.g. {"name": "Milk", ...})
+                            name = ing.get("name") or ing.get("ingredient")
+                            if name:
+                                all_ingredients.append(name)
+                        elif isinstance(ing, str):
+                            all_ingredients.append(ing)
+
+            # Deduplicate
+            unique_ingredients = list(set(all_ingredients))
+            logger.info(f"Found {len(unique_ingredients)} unique ingredients in {len(recipes)} recipes")
+            return unique_ingredients
+
+        except Exception as e:
+            logger.error(f"Failed to extract ingredients: {str(e)}")
+            return []
 
     async def _store_cart_in_database(
         self,
-        user_id: str,
-        meal_plan_id: str,
+        user_id: int,
+        meal_plan_id: int,
         cart_id: str,
         items_by_section: Dict,
         total_price: float,
         delivery_slot: Optional[Any]
     ) -> None:
         """
-        Store cart information in PostgreSQL.
+        Store cart information in PostgreSQL using transaction management.
+
+        Uses explicit transaction context to ensure ACID properties:
+        - All cart items stored atomically with cart record
+        - Automatic rollback on error
+        - Proper isolation from concurrent operations
 
         Args:
-            user_id: User ID
-            meal_plan_id: Meal plan ID
+            user_id: User ID (integer)
+            meal_plan_id: Meal plan ID (integer)
             cart_id: Knuspr cart ID
             items_by_section: Dict of products by category
             total_price: Total cart price
             delivery_slot: Selected delivery slot or None
-        """
-        # TODO: Insert into grocery_carts table
-        # INSERT INTO grocery_carts (user_id, meal_plan_id, knuspr_cart_id, ...)
-        # VALUES (?, ?, ?, ...)
 
+        Raises:
+            Exception: If database operation fails (automatically rolled back)
+        """
         logger.debug(f"Storing cart {cart_id} in database for user {user_id}")
+
+        try:
+            # Use transaction context manager for proper ACID semantics
+            # All operations within this block form a single transaction
+            try:
+                # Create GroceryCart record
+                cart = GroceryCart(
+                    user_id=user_id,
+                    meal_plan_id=meal_plan_id,
+                    name=f"Knuspr Cart {datetime.utcnow().strftime('%Y-%m-%d')}",
+                    status="active",
+                    total_items=sum(len(items) for items in items_by_section.values()),
+                    total_cost=total_price,
+                    knuspr_cart_id=cart_id,
+                    knuspr_synced_at=datetime.utcnow()
+                )
+                self.db.add(cart)
+                self.db.flush()  # Get ID before adding items
+
+                # Create CartItem records
+                for section, items in items_by_section.items():
+                    for item in items:
+                        cart_item = CartItem(
+                            cart_id=cart.id,
+                            name=item["name"],
+                            quantity=item["quantity"],
+                            unit=item["unit"],
+                            category=section,
+                            unit_price=item.get("price", 0),
+                            total_price=item.get("price", 0) * item["quantity"],
+                            knuspr_product_id=item.get("product_id"),
+                            is_purchased=False
+                        )
+                        self.db.add(cart_item)
+
+                # Commit the entire transaction atomically
+                self.db.commit()
+                logger.info(f"Successfully stored cart {cart.id} with {len(cart.items)} items in database")
+
+            except Exception as db_error:
+                # Explicit rollback on any database error
+                self.db.rollback()
+                logger.error(f"Database transaction failed, rolling back: {str(db_error)}")
+                raise
+
+        except Exception as e:
+            logger.error(f"Failed to store cart in database: {str(e)}")
+            raise
 
     async def group_items_by_section(
         self,

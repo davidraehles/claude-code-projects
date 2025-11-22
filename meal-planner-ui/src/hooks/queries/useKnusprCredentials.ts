@@ -5,7 +5,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import APIClient from '@/lib/api';
+import { useAuthToken } from '@/contexts/AuthContext';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -59,6 +59,7 @@ interface DeleteCredentialsResponse {
  */
 export const useKnusprCredentials = () => {
   const queryClient = useQueryClient();
+  const token = useAuthToken();
 
   /**
    * Get current credential status
@@ -68,7 +69,7 @@ export const useKnusprCredentials = () => {
     queryFn: async () => {
       const response = await fetch(`${API_URL}/api/v1/knuspr-credentials`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -89,6 +90,7 @@ export const useKnusprCredentials = () => {
       return response.json();
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
+    enabled: !!token, // Only run query if token exists
   });
 
   /**
@@ -99,7 +101,7 @@ export const useKnusprCredentials = () => {
       const response = await fetch(`${API_URL}/api/v1/knuspr-credentials`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(data),
@@ -126,7 +128,7 @@ export const useKnusprCredentials = () => {
       const response = await fetch(`${API_URL}/api/v1/knuspr-credentials/verify`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
@@ -151,7 +153,7 @@ export const useKnusprCredentials = () => {
       const response = await fetch(`${API_URL}/api/v1/knuspr-credentials`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
 
