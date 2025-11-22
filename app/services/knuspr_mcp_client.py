@@ -229,7 +229,12 @@ class KnusprMCPClient:
     async def _call_tool(self, tool_name: str, **arguments) -> Dict[str, Any]:
         try:
             async with self._session_context() as session:
-                sanitized_args = {k: ('***' if 'password' in k.lower() else v) for k, v in arguments.items()}
+                # Sanitize sensitive fields in arguments
+                sensitive_fields = {'password', 'email', 'username', 'token', 'secret', 'key', 'auth', 'credential'}
+                sanitized_args = {
+                    k: '***' if any(field in k.lower() for field in sensitive_fields) else v
+                    for k, v in arguments.items()
+                }
                 logger.debug(f"Calling MCP tool '{tool_name}' with sanitized args: {sanitized_args}")
                 response = await session.call_tool(tool_name, arguments=arguments)
                 logger.debug(f"Received response from '{tool_name}': {response}")

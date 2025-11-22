@@ -24,7 +24,10 @@
       "Bash(npx tsc:*)",
       "Bash(scripts/bash/speckit-paths.sh:*)",
       "Bash(scripts/bash/check-prerequisites.sh:*)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(cat:*)",
+      "Bash(gh pr view:*)",
+      "Bash(python3:*)"
     ],
     "deny": [],
     "ask": []
