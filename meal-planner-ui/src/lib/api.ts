@@ -238,6 +238,43 @@ class ApiClient {
     return this.request<GroceryCart>(`/api/v1/grocery-carts/${id}`, {}, token)
   }
 
+  // ===== Workflow Endpoints (token required) =====
+
+  async createCartFromMealPlanWorkflow(
+    mealPlanId: number,
+    deliveryPreferences?: {
+      preferred_dates?: string[]
+      preferred_time_slot?: 'morning' | 'afternoon' | 'evening'
+      budget_optimization?: boolean
+    },
+    token?: string | null
+  ): Promise<{
+    workflow_id: string
+    status: string
+    message: string
+    result?: {
+      cart_id: number
+      knuspr_url: string
+      total_price: number
+      item_count: number
+      delivery_slot?: unknown
+      items_by_section?: Record<string, unknown>
+      unavailable_items?: string[]
+    }
+  }> {
+    return this.request(
+      "/api/v1/workflows/meal-plan-with-groceries",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          meal_plan_id: mealPlanId,
+          delivery_preferences: deliveryPreferences,
+        }),
+      },
+      token
+    )
+  }
+
   // ===== Health Check =====
 
   async healthCheck(): Promise<{ status: string }> {
