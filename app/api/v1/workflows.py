@@ -5,7 +5,7 @@ Exposes end-to-end workflows that coordinate multiple agents and services.
 """
 
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, NamedTuple
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
@@ -23,6 +23,13 @@ from app.events.bus import get_event_bus
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+class KnusprCredentials(NamedTuple):
+    """Structured container for Knuspr credentials."""
+    email: str
+    password: str
+    country: str
 
 
 class DeliveryPreferences(BaseModel):
@@ -86,18 +93,30 @@ async def create_cart_from_meal_plan(
     # 2. Initialize dependencies
     # We need to get credentials for the user to initialize the Knuspr client
     credential_manager = CredentialManager()
-    credentials = await credential_manager.get_credentials(db, user_id)
+    credentials_tuple = await credential_manager.get_credentials(db, user_id)
 
-    if not credentials:
+    if not credentials_tuple:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Knuspr credentials not found. Please configure Knuspr integration first."
         )
 
-    email, password, country = credentials
+    # Use named tuple for structured access to credentials
+    try:
+        credentials = KnusprCredentials(
+            email=credentials_tuple[0],
+            password=credentials_tuple[1],
+            country=credentials_tuple[2]
+        )
+    except (IndexError, TypeError) as e:
+        logger.error(f"Invalid credentials structure for user {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Knuspr credentials are malformed. Please reconfigure your Knuspr integration."
+        )
 
     # Validate credential values are not empty
-    if not email or not password or not country:
+    if not credentials.email or not credentials.password or not credentials.country:
         logger.error(f"Invalid credentials for user {user_id}: missing email, password, or country")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -117,8 +136,8 @@ async def create_cart_from_meal_plan(
 
     # Initialize services
     knuspr_client = KnusprMCPClient(
-        login_email=email,
-        login_password=password,
+        login_email=credentials.email,
+        login_password=credentials.password,
         country=country_enum
     )
 

@@ -121,8 +121,11 @@ class CartOptimizerAgent:
             logger.info(f"Creating cart from meal plan {meal_plan_id} for user {user_id}")
 
             # Ensure IDs are integers (they should be, but validate anyway)
-            meal_plan_id = int(meal_plan_id)
-            user_id = int(user_id)
+            try:
+                meal_plan_id = int(meal_plan_id)
+                user_id = int(user_id)
+            except (ValueError, TypeError) as e:
+                raise ValueError(f"Invalid meal plan ID or user ID: {str(e)}")
 
             # Step 1: Fetch meal plan and extract ingredients
             ingredients = await self._extract_ingredients_from_meal_plan(meal_plan_id)
@@ -346,7 +349,8 @@ class CartOptimizerAgent:
             all_ingredients = []
             for recipe in recipes:
                 # Recipe ingredients are stored as JSON list of dicts or strings
-                if isinstance(recipe.ingredients, list):
+                # Skip if ingredients is None or not a list
+                if recipe.ingredients and isinstance(recipe.ingredients, list):
                     for ing in recipe.ingredients:
                         if isinstance(ing, dict):
                             # Extract name from dict (e.g. {"name": "Milk", ...})
