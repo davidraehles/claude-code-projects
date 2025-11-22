@@ -76,8 +76,12 @@ async def create_cart_from_meal_plan(
             detail=f"Meal plan {request.meal_plan_id} not found"
         )
 
-    # Check if meal plan has recipes/ingredients
-    # Note: In a real scenario, we'd check if it's in a 'ready' state or has items
+    # Validate meal plan has recipes
+    if not meal_plan.total_recipes or meal_plan.total_recipes == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Meal plan must contain at least one recipe to generate a grocery cart"
+        )
 
     # 2. Initialize dependencies
     # We need to get credentials for the user to initialize the Knuspr client
@@ -92,6 +96,14 @@ async def create_cart_from_meal_plan(
 
     email, password, country = credentials
 
+    # Validate credential values are not empty
+    if not email or not password or not country:
+        logger.error(f"Invalid credentials for user {user_id}: missing email, password, or country")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Knuspr credentials are incomplete. Please reconfigure your Knuspr integration."
+        )
+
     # Convert country string to Enum if needed
     try:
         country_enum = KnusprCountry(country)
@@ -99,6 +111,9 @@ async def create_cart_from_meal_plan(
         # Default to CZ if invalid
         logger.warning(f"Invalid country code '{country}', defaulting to CZ")
         country_enum = KnusprCountry.CZECH_REPUBLIC
+
+    # Initialize MCP client to None for cleanup in finally block
+    knuspr_client = None
 
     # Initialize services
     knuspr_client = KnusprMCPClient(
@@ -129,8 +144,8 @@ async def create_cart_from_meal_plan(
         # For this phase, we'll run it inline but handle errors gracefully.
 
         result = await agent.create_cart_from_meal_plan(
-            meal_plan_id=str(request.meal_plan_id),
-            user_id=str(user_id),
+            meal_plan_id=request.meal_plan_id,  # Pass as int, not string
+            user_id=user_id,  # Pass as int, not string
             db=db,
             credential_manager=credential_manager,
             delivery_preferences=prefs_dict
@@ -163,4 +178,5 @@ async def create_cart_from_meal_plan(
         )
     finally:
         # Cleanup resources
-        await knuspr_client.close()
+        if knuspr_client is not None:
+            await knuspr_client.close()

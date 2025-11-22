@@ -87,7 +87,7 @@ async def _create_mcp_session():
             env={
                 "ROHLIK_USERNAME": os.getenv("ROHLIK_USERNAME", ""),
                 "ROHLIK_PASSWORD": os.getenv("ROHLIK_PASSWORD", ""),
-                "ROHLIK_BASE_URL": "https://www.knuspr.de", # Default to DE for this project context
+                "ROHLIK_BASE_URL": os.getenv("ROHLIK_BASE_URL", "https://www.knuspr.de"),  # Use env var or default to DE
                 **os.environ
             }
         )
@@ -118,6 +118,18 @@ class KnusprCountry(str, Enum):
     CZECH_REPUBLIC = "cz"
     GERMANY = "de"
     AUSTRIA = "at"
+
+
+# Mapping from country code to domain
+KNUSPR_COUNTRY_DOMAINS = {
+    KnusprCountry.CZECH_REPUBLIC: "https://www.knuspr.cz",
+    KnusprCountry.GERMANY: "https://www.knuspr.de",
+    KnusprCountry.AUSTRIA: "https://www.knuspr.at",
+    # Fallbacks for string values
+    "cz": "https://www.knuspr.cz",
+    "de": "https://www.knuspr.de",
+    "at": "https://www.knuspr.at",
+}
 
 
 @dataclass
@@ -204,6 +216,15 @@ class KnusprMCPClient:
 
     def _session_context(self):
         return _create_mcp_session()
+
+    def get_domain(self) -> str:
+        """
+        Get the domain URL for the current country.
+
+        Returns:
+            Domain URL (e.g., "https://www.knuspr.cz")
+        """
+        return KNUSPR_COUNTRY_DOMAINS.get(self.country, KNUSPR_COUNTRY_DOMAINS.get(self.country.value, "https://www.knuspr.de"))
 
     async def _call_tool(self, tool_name: str, **arguments) -> Dict[str, Any]:
         try:

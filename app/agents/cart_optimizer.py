@@ -74,8 +74,8 @@ class CartOptimizerAgent:
 
     async def create_cart_from_meal_plan(
         self,
-        meal_plan_id: str,
-        user_id: str,
+        meal_plan_id: int,
+        user_id: int,
         db,
         credential_manager,
         delivery_preferences: Optional[Dict] = None
@@ -119,6 +119,10 @@ class CartOptimizerAgent:
         start_time = time.time()
         try:
             logger.info(f"Creating cart from meal plan {meal_plan_id} for user {user_id}")
+
+            # Ensure IDs are integers (they should be, but validate anyway)
+            meal_plan_id = int(meal_plan_id)
+            user_id = int(user_id)
 
             # Step 1: Fetch meal plan and extract ingredients
             ingredients = await self._extract_ingredients_from_meal_plan(meal_plan_id)
@@ -187,7 +191,7 @@ class CartOptimizerAgent:
             # Step 8: Return comprehensive cart summary
             result = {
                 "cart_id": cart.cart_id,
-                "knuspr_url": f"https://knuspr.cz/cart/{cart.cart_id}",  # TODO: Use actual domain
+                "knuspr_url": f"{self.knuspr_client.get_domain()}/cart/{cart.cart_id}",
                 "total_price": cart.total_price,
                 "item_count": len(mapped_products),
                 "delivery_slot": {
@@ -223,8 +227,8 @@ class CartOptimizerAgent:
             if self.event_bus:
                 await self.event_bus.publish(Event(
                     event_type=EventType.CART_CREATED,
-                    correlation_id=meal_plan_id,  # Using meal_plan_id as correlation_id for now
-                    user_id=int(user_id) if str(user_id).isdigit() else None,
+                    correlation_id=str(meal_plan_id),  # Convert to string for event ID
+                    user_id=user_id,  # Already validated as integer
                     payload={
                         "cart_id": cart.cart_id,
                         "meal_plan_id": meal_plan_id,
@@ -246,8 +250,8 @@ class CartOptimizerAgent:
             if self.event_bus:
                 await self.event_bus.publish(Event(
                     event_type=EventType.CART_CREATION_FAILED,
-                    correlation_id=meal_plan_id,
-                    user_id=int(user_id) if str(user_id).isdigit() else None,
+                    correlation_id=str(meal_plan_id),  # Convert to string for event ID
+                    user_id=user_id,  # Already validated as integer
                     payload={
                         "meal_plan_id": meal_plan_id,
                         "error": str(e)
@@ -363,8 +367,8 @@ class CartOptimizerAgent:
 
     async def _store_cart_in_database(
         self,
-        user_id: str,
-        meal_plan_id: str,
+        user_id: int,
+        meal_plan_id: int,
         cart_id: str,
         items_by_section: Dict,
         total_price: float,
@@ -374,8 +378,8 @@ class CartOptimizerAgent:
         Store cart information in PostgreSQL.
 
         Args:
-            user_id: User ID
-            meal_plan_id: Meal plan ID
+            user_id: User ID (integer)
+            meal_plan_id: Meal plan ID (integer)
             cart_id: Knuspr cart ID
             items_by_section: Dict of products by category
             total_price: Total cart price
@@ -386,8 +390,8 @@ class CartOptimizerAgent:
         try:
             # Create GroceryCart record
             cart = GroceryCart(
-                user_id=int(user_id),
-                meal_plan_id=int(meal_plan_id),
+                user_id=user_id,
+                meal_plan_id=meal_plan_id,
                 name=f"Knuspr Cart {datetime.utcnow().strftime('%Y-%m-%d')}",
                 status="active",
                 total_items=sum(len(items) for items in items_by_section.values()),
