@@ -19,10 +19,15 @@ from app.services.knuspr_mcp_client import KnusprMCPClient, KnusprCountry
 from app.services.ingredient_mapper import IngredientMapper
 from app.services.credential_manager import CredentialManager
 from app.events.bus import get_event_bus
+from app.utils.rate_limit import WorkflowRateLimiter
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+# Initialize rate limiter for workflow endpoints
+# Prevents abuse of expensive MCP operations
+rate_limiter = WorkflowRateLimiter()
 
 
 class KnusprCredentials(NamedTuple):
@@ -69,6 +74,15 @@ async def create_cart_from_meal_plan(
 
     Returns the created cart details.
     """
+    # Rate limit check (prevent abuse of expensive MCP operations)
+    is_allowed, limit_info = rate_limiter.check_limit(user_id)
+    if not is_allowed:
+        logger.warning(f"Rate limit exceeded for user {user_id}")
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail=f"Rate limit exceeded. Maximum {limit_info['limit']} requests per 5 minutes. Reset at {limit_info['reset_at']}"
+        )
+
     logger.info(f"Starting meal-plan-with-groceries workflow for user {user_id}, plan {request.meal_plan_id}")
 
     # 1. Validate meal plan
