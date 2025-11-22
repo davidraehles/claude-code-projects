@@ -278,6 +278,11 @@ class KnusprMCPClient:
         """
         Authenticate with Knuspr API using stored credentials.
 
+        Implements retry logic to handle transient auth failures:
+        - Retries up to max_retries times with exponential backoff
+        - Handles connection errors, timeouts, and API errors
+        - Returns False on persistent failures
+
         Returns:
             True if authentication successful, False otherwise
         """
@@ -285,13 +290,17 @@ class KnusprMCPClient:
             logger.info(f"Authenticating with Knuspr as {self.login_email}")
             logger.debug("Authentication will be validated via 'get_account_data'")
 
-            # The rohlik-mcp server handles authentication internally via env vars
-            # We can verify authentication by making a simple call, e.g. to account data
-            # or just assume it's working if we can connect.
-            # Let's try to fetch account data to verify auth.
+            # Use retry logic for transient failures
+            async def auth_attempt():
+                # The rohlik-mcp server handles authentication internally via env vars
+                # We can verify authentication by making a simple call, e.g. to account data
+                # or just assume it's working if we can connect.
+                # Let's try to fetch account data to verify auth.
+                response = await self._call_tool("get_account_data")
+                logger.debug(f"Authentication verification response keys: {list(response.keys())}")
+                return response
 
-            response = await self._call_tool("get_account_data")
-            logger.debug(f"Authentication verification response keys: {list(response.keys())}")
+            response = await self._with_retry(auth_attempt)
 
             # If we get here without error, we are authenticated
             self.session_token = "implicit-session" # The MCP server manages the session
@@ -300,23 +309,36 @@ class KnusprMCPClient:
             return True
 
         except ToolExecutionError as exc:
-            logger.error(f"Authentication verification failed: {exc}")
+            logger.error(f"Authentication verification failed (tool error): {exc}")
             self.authenticated = False
             return False
         except ConnectionError as exc:
-            logger.error(f"Authentication connection error: {exc}")
+            logger.error(f"Authentication connection error after retries: {exc}")
+            self.authenticated = False
+            return False
+        except TimeoutError as exc:
+            logger.error(f"Authentication timeout after retries: {exc}")
             self.authenticated = False
             return False
         except Exception as exc:
-            logger.error(f"Authentication failed: {exc}")
+            logger.error(f"Authentication failed after retries: {exc}")
             self.authenticated = False
             return False
 
     async def _ensure_session(self):
+        """
+        Ensure we have a valid authenticated session.
+
+        Attempts authentication if not already authenticated.
+        Retries with exponential backoff on transient failures.
+
+        Raises:
+            RuntimeError: If authentication fails persistently
+        """
         if not self.authenticated:
-            await self.authenticate()
-        if not self.authenticated:
-            raise RuntimeError("Failed to authenticate with Knuspr")
+            success = await self.authenticate()
+            if not success:
+                raise RuntimeError("Failed to authenticate with Knuspr after retries")
 
     async def _with_retry(self, coro):
         async for attempt in AsyncRetrying(
