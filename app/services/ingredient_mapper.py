@@ -13,12 +13,14 @@ import logging
 import re
 from typing import Optional, List, Dict, Tuple
 from dataclasses import dataclass
-from difflib import SequenceMatcher
 from fuzzywuzzy import fuzz
-from fuzzywuzzy import process
 
 logger = logging.getLogger(__name__)
 
+# Scoring constants
+AVAILABILITY_BOOST_THRESHOLD = 0.5
+AVAILABILITY_BOOST_MULTIPLIER = 1.1
+CONFIDENCE_MIN_THRESHOLD = 0.70
 
 # Unit conversion factors (normalized to grams or milliliters)
 UNIT_CONVERSIONS = {
@@ -178,7 +180,13 @@ class IngredientMapper:
 
         Returns:
             Tuple of (normalized_quantity, normalized_unit)
+
+        Raises:
+            ValueError: If quantity is negative
         """
+        if quantity < 0:
+            raise ValueError(f"Quantity must be non-negative, got {quantity}")
+
         from_unit = from_unit.lower().strip()
         to_unit = to_unit.lower().strip()
 
@@ -236,6 +244,11 @@ class IngredientMapper:
 
         if to_factor == 1 and to_unit not in UNIT_CONVERSIONS:
             logger.warning(f"Unknown unit: {to_unit}, cannot convert")
+            return quantity, from_unit
+
+        # Guard against division by zero
+        if to_factor == 0:
+            logger.error(f"Invalid conversion factor for unit {to_unit}: {to_factor}")
             return quantity, from_unit
 
         # Convert through base unit
@@ -310,11 +323,11 @@ class IngredientMapper:
             similarity = self._similarity_score(ingredient.name, product.name)
 
             # Boost score if product is available
-            if product.available and similarity > 0.5:
-                similarity = min(1.0, similarity * 1.1)
+            if product.available and similarity > AVAILABILITY_BOOST_THRESHOLD:
+                similarity = min(1.0, similarity * AVAILABILITY_BOOST_MULTIPLIER)
 
             # Consider confidence score from MCP client
-            if hasattr(product, 'confidence') and product.confidence:
+            if hasattr(product, 'confidence') and product.confidence is not None:
                 similarity = (similarity + product.confidence) / 2
 
             if similarity >= min_confidence and similarity > best_score:
