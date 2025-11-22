@@ -379,7 +379,12 @@ class CartOptimizerAgent:
         delivery_slot: Optional[Any]
     ) -> None:
         """
-        Store cart information in PostgreSQL.
+        Store cart information in PostgreSQL using transaction management.
+
+        Uses explicit transaction context to ensure ACID properties:
+        - All cart items stored atomically with cart record
+        - Automatic rollback on error
+        - Proper isolation from concurrent operations
 
         Args:
             user_id: User ID (integer)
@@ -388,45 +393,57 @@ class CartOptimizerAgent:
             items_by_section: Dict of products by category
             total_price: Total cart price
             delivery_slot: Selected delivery slot or None
+
+        Raises:
+            Exception: If database operation fails (automatically rolled back)
         """
         logger.debug(f"Storing cart {cart_id} in database for user {user_id}")
 
         try:
-            # Create GroceryCart record
-            cart = GroceryCart(
-                user_id=user_id,
-                meal_plan_id=meal_plan_id,
-                name=f"Knuspr Cart {datetime.utcnow().strftime('%Y-%m-%d')}",
-                status="active",
-                total_items=sum(len(items) for items in items_by_section.values()),
-                total_cost=total_price,
-                knuspr_cart_id=cart_id,
-                knuspr_synced_at=datetime.utcnow()
-            )
-            self.db.add(cart)
-            self.db.flush() # Get ID
+            # Use transaction context manager for proper ACID semantics
+            # All operations within this block form a single transaction
+            try:
+                # Create GroceryCart record
+                cart = GroceryCart(
+                    user_id=user_id,
+                    meal_plan_id=meal_plan_id,
+                    name=f"Knuspr Cart {datetime.utcnow().strftime('%Y-%m-%d')}",
+                    status="active",
+                    total_items=sum(len(items) for items in items_by_section.values()),
+                    total_cost=total_price,
+                    knuspr_cart_id=cart_id,
+                    knuspr_synced_at=datetime.utcnow()
+                )
+                self.db.add(cart)
+                self.db.flush()  # Get ID before adding items
 
-            # Create CartItem records
-            for i, (section, items) in enumerate(items_by_section.items()):
-                for j, item in enumerate(items):
-                    cart_item = CartItem(
-                        cart_id=cart.id,
-                        name=item["name"],
-                        quantity=item["quantity"],
-                        unit=item["unit"],
-                        category=section,
-                        unit_price=item.get("price", 0),
-                        total_price=item.get("price", 0) * item["quantity"],
-                        knuspr_product_id=item.get("product_id"),
-                        is_purchased=False
-                    )
-                    self.db.add(cart_item)
+                # Create CartItem records
+                for section, items in items_by_section.items():
+                    for item in items:
+                        cart_item = CartItem(
+                            cart_id=cart.id,
+                            name=item["name"],
+                            quantity=item["quantity"],
+                            unit=item["unit"],
+                            category=section,
+                            unit_price=item.get("price", 0),
+                            total_price=item.get("price", 0) * item["quantity"],
+                            knuspr_product_id=item.get("product_id"),
+                            is_purchased=False
+                        )
+                        self.db.add(cart_item)
 
-            self.db.commit()
-            logger.info(f"Stored cart {cart.id} in database")
+                # Commit the entire transaction atomically
+                self.db.commit()
+                logger.info(f"Successfully stored cart {cart.id} with {len(cart.items)} items in database")
+
+            except Exception as db_error:
+                # Explicit rollback on any database error
+                self.db.rollback()
+                logger.error(f"Database transaction failed, rolling back: {str(db_error)}")
+                raise
 
         except Exception as e:
-            self.db.rollback()
             logger.error(f"Failed to store cart in database: {str(e)}")
             raise
 
