@@ -62,20 +62,16 @@ async def test_authenticate_success(client, mock_mcp_session):
 
     assert result is True
     assert client.authenticated is True
-    assert client.session_token == "mock_token"
+    assert client.session_token == "implicit-session"
     mock_mcp_session.call_tool.assert_called_once_with(
-        "authenticate",
-        arguments={
-            "email": "test@example.com",
-            "password": "password",
-            "country": "cz"
-        }
+        "get_account_data",
+        arguments={}
     )
 
 @pytest.mark.asyncio
 async def test_authenticate_failure_no_token(client, mock_mcp_session):
     """Test authentication failure when no session token is returned."""
-    mock_mcp_session.call_tool.return_value = {} # No session token
+    mock_mcp_session.call_tool.side_effect = ToolExecutionError("Auth failed", "AUTH_ERROR")
 
     result = await client.authenticate()
 
@@ -132,11 +128,10 @@ async def test_search_products_success(client, mock_mcp_session):
     mock_mcp_session.call_tool.assert_called_once_with(
         "search_products",
         arguments={
-            "query": "apple",
+            "product_name": "apple",
             "country": "cz",
             "max_results": 10,
             "exact_match": False,
-            "session_token": "mock_token"
         }
     )
 
@@ -161,11 +156,10 @@ async def test_search_products_exact_match(client, mock_mcp_session):
     mock_mcp_session.call_tool.assert_called_once_with(
         "search_products",
         arguments={
-            "query": "Exact Apple",
+            "product_name": "Exact Apple",
             "country": "cz",
             "max_results": 10,
             "exact_match": True,
-            "session_token": "mock_token"
         }
     )
 
@@ -182,7 +176,7 @@ async def test_search_products_unauthenticated(client, mock_mcp_session):
 
     assert len(products) == 0
     assert client.authenticated is True
-    assert client.session_token == "new_mock_token"
+    assert client.session_token == "implicit-session"
     assert mock_mcp_session.call_tool.call_count == 2
 
 @pytest.mark.asyncio
@@ -237,7 +231,6 @@ async def test_create_cart_success(client, mock_mcp_session):
         "create_cart",
         arguments={
             "items": mock_items,
-            "session_token": "mock_token",
             "delivery_slot_id": None
         }
     )
@@ -285,7 +278,6 @@ async def test_get_delivery_slots_success(client, mock_mcp_session):
             "start_date": start_date.isoformat(),
             "end_date": end_date.isoformat(),
             "country": "cz",
-            "session_token": "mock_token"
         }
     )
 
@@ -312,7 +304,6 @@ async def test_select_delivery_slot_success(client, mock_mcp_session):
         arguments={
             "cart_id": "cart123",
             "slot_id": "slot456",
-            "session_token": "mock_token"
         }
     )
 
@@ -354,7 +345,6 @@ async def test_get_cart_success(client, mock_mcp_session):
         "get_cart",
         arguments={
             "cart_id": "cart123",
-            "session_token": "mock_token"
         }
     )
 
@@ -380,10 +370,9 @@ async def test_close_success(client, mock_mcp_session):
     await client.close()
 
     assert client.authenticated is False
-    mock_mcp_session.call_tool.assert_called_once_with(
-        "logout",
-        arguments={"session_token": "mock_token"}
-    )
+    # The implementation just sets authenticated=False and session_token=None
+    # It does not call logout tool
+    mock_mcp_session.call_tool.assert_not_called()
 
 @pytest.mark.asyncio
 async def test_close_unauthenticated(client, mock_mcp_session):

@@ -208,7 +208,8 @@ class KnusprMCPClient:
     async def _call_tool(self, tool_name: str, **arguments) -> Dict[str, Any]:
         try:
             async with self._session_context() as session:
-                logger.debug(f"Calling MCP tool '{tool_name}' with args: {arguments}")
+                sanitized_args = {k: ('***' if 'password' in k.lower() else v) for k, v in arguments.items()}
+                logger.debug(f"Calling MCP tool '{tool_name}' with sanitized args: {sanitized_args}")
                 response = await session.call_tool(tool_name, arguments=arguments)
                 logger.debug(f"Received response from '{tool_name}': {response}")
 
@@ -256,6 +257,7 @@ class KnusprMCPClient:
         """
         try:
             logger.info(f"Authenticating with Knuspr as {self.login_email}")
+            logger.debug("Authentication will be validated via 'get_account_data'")
 
             # The rohlik-mcp server handles authentication internally via env vars
             # We can verify authentication by making a simple call, e.g. to account data
@@ -263,6 +265,7 @@ class KnusprMCPClient:
             # Let's try to fetch account data to verify auth.
 
             response = await self._call_tool("get_account_data")
+            logger.debug(f"Authentication verification response keys: {list(response.keys())}")
 
             # If we get here without error, we are authenticated
             self.session_token = "implicit-session" # The MCP server manages the session

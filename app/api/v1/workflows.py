@@ -121,11 +121,7 @@ async def create_cart_from_meal_plan(
     # 3. Execute workflow
     try:
         # Convert Pydantic model to dict for the agent
-        # Use dict() for Pydantic v1 compatibility if model_dump() is not available
-        if hasattr(request.delivery_preferences, "model_dump"):
-            prefs_dict = request.delivery_preferences.model_dump() if request.delivery_preferences else {}
-        else:
-            prefs_dict = request.delivery_preferences.dict() if request.delivery_preferences else {}
+        prefs_dict = request.delivery_preferences.model_dump() if request.delivery_preferences else {}
 
         # Run the agent logic
         # Note: In a production environment with long-running tasks,
