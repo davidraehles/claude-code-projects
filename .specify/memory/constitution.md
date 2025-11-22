@@ -1,50 +1,230 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+SYNC IMPACT REPORT
+==================
+Version Change: (template) → 1.0.0 (initial ratification)
+Rationale: First complete constitution for Multi-Agent Recipe and Meal Planning System
+  - Added 5 core principles (Code Quality, Testing Discipline, UX Consistency, Performance, Observability)
+  - Added governance for decision-making and amendment procedures
+  - Aligned with Phase 4 frontend implementation requirements
+  - Establishes quality gates and review processes
+
+Templates Requiring Updates:
+  - ✅ .specify/templates/spec-template.md (added @Constitution requirement checks)
+  - ✅ .specify/templates/plan-template.md (added Constitution alignment section)
+  - ✅ .specify/templates/tasks-template.md (added testing/observability task types)
+  - ⚠ Runtime docs (README.md, docs/DEPLOYMENT_GUIDE.md) - manual updates recommended
+
+Follow-up TODOs:
+  - Update CI/CD pipeline to enforce linting/coverage gates (automated via GitHub Actions)
+  - Establish SLA targets in monitoring dashboard (Grafana configuration)
+-->
+
+# Multi-Agent Recipe and Meal Planning System - Constitution
+
+## Project Overview
+
+**Project Name**: Multi-Agent Recipe and Meal Planning System
+**Purpose**: Enable users to discover recipes, plan weekly meals based on constraints, and automatically generate optimized grocery orders integrated with Knuspr
+**Scope**: Full-stack application (FastAPI backend, Next.js frontend) with multi-agent orchestration using LangGraph
+
+---
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Code Quality and Maintainability
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+**Non-negotiable Rules:**
+- All code MUST pass type checking (mypy for Python, TypeScript strict mode for frontend)
+- All code MUST conform to linting standards (Black/isort for Python, ESLint for TypeScript)
+- Complex functions MUST have docstrings explaining inputs, outputs, and side effects
+- No unused imports, variables, or commented-out code allowed
+- Database queries MUST use parameterized statements (SQLAlchemy ORM, not raw SQL)
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+**Rationale:** Type safety and consistent style reduce bugs, improve readability, and enable confident refactoring. This is especially critical in a multi-agent system where component interdependencies are high.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+---
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### II. Testing Discipline (Test-First Development)
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+**Non-negotiable Rules:**
+- New features MUST have tests written BEFORE implementation (Red-Green-Refactor cycle)
+- All functions returning values MUST have unit tests (target ≥80% code coverage)
+- All API endpoints MUST have integration tests verifying request/response contracts
+- All inter-agent workflows MUST have end-to-end tests with mocked external services
+- Database migrations MUST be tested in isolation before merge
+- Tests MUST be deterministic and not depend on external services (use fixtures, mocks, in-memory databases)
+- Test naming MUST follow pattern: `test_<function/endpoint>_<scenario>_<expected_result>`
+- All tests MUST pass locally before CI/CD approval
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Rationale:** Test-first development catches bugs early, forces clear API design, and documents expected behavior. In a distributed system with agents, this is the primary defense against integration failures.
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+---
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### III. User Experience Consistency
+
+**Non-negotiable Rules:**
+- All UI components MUST follow established design patterns (TailwindCSS utility classes, component hierarchy)
+- All form inputs MUST have real-time validation feedback and clear error messages
+- All async operations MUST show loading states (spinners, skeleton screens, progress indicators)
+- All errors MUST be user-friendly (no stack traces) and actionable (suggest next steps)
+- All workflows MUST maintain consistent navigation patterns and confirmation dialogs for destructive actions
+- Accessibility MUST be verified: semantic HTML, ARIA labels, keyboard navigation support
+- All UI MUST be responsive across desktop (1024+px), tablet (768-1023px), and mobile (<768px)
+
+**Rationale:** Consistent, polished UX builds user confidence and reduces support burden. Clear error handling and loading states are essential when coordinating multi-agent workflows with unpredictable latencies.
+
+---
+
+### IV. Performance and Scalability
+
+**Non-negotiable Rules:**
+- API response times MUST be <200ms for standard queries (indexed lookups, simple aggregations)
+- Meal plan generation MUST complete within 5 seconds for typical constraints (7-day plan, <100 recipes)
+- Frontend bundle size MUST remain <150KB (gzipped), <500KB uncompressed
+- Database queries MUST use indexes on frequently filtered columns (user_id, created_at, source_url)
+- Long-running operations (recipe scraping, cart creation) MUST be async with progress tracking
+- Caching MUST be implemented for static/semi-static data (ingredient taxonomy, user preferences)
+- N+1 queries MUST be eliminated through proper ORM eager loading or database denormalization
+- All URLs/endpoints MUST support pagination (default 20, max 100 items)
+
+**Rationale:** Performance directly impacts user satisfaction and operational costs. Scalability constraints ensure the system can grow from pilot users to production scale without architectural changes.
+
+---
+
+### V. Observability and Operational Hygiene
+
+**Non-negotiable Rules:**
+- All agents MUST emit structured logs in JSON format with correlation IDs for tracing requests
+- All async operations MUST emit start/complete/error events to the event bus
+- All database operations MUST emit Prometheus metrics (operation count, latency percentiles)
+- All API endpoints MUST have request/response metrics and error tracking
+- Failed operations MUST be routed to Dead Letter Queue (DLQ) for review and manual recovery
+- Health checks MUST be exposed at GET /health (overall system) and /health/agents (agent status)
+- Production deployments MUST have alerting for: error rate >5%, p99 latency >1s, agent health failures
+- All configuration MUST come from environment variables (12-factor app compliance)
+
+**Rationale:** Distributed systems fail in unexpected ways. Comprehensive observability enables rapid diagnosis, incident response, and post-mortems. This principle supports the multi-agent architecture's operational complexity.
+
+---
+
+## Decision-Making Framework
+
+### How Principles Guide Technical Choices
+
+When evaluating technology, design, or architectural decisions, apply these filters in order:
+
+1. **Testing**: Does it support automated testing? Can we write tests before code?
+2. **Quality**: Does it enforce type safety, linting, and code organization?
+3. **UX Consistency**: Does it align with established patterns (TailwindCSS, Next.js conventions)?
+4. **Performance**: Does it meet latency/throughput SLAs? Is scalability clear?
+5. **Observability**: Can we instrument it? Does it emit required metrics/logs?
+
+**Example Decision**: Choosing a UI state management library
+- ❌ Reject: Library without TypeScript support (violates Code Quality)
+- ❌ Reject: Library that requires deeply nested mocking in tests (violates Testing Discipline)
+- ✅ Accept: React Context + hooks (native to React, fully typed, testable)
+- ✅ Accept: Redux Toolkit (if team consensus + established patterns)
+
+---
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+### Amendment Procedure
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+1. **Proposal**: File a GitHub issue titled "Constitution Amendment: <brief description>" with rationale
+2. **Discussion**: Team reviews (minimum 24h), discusses trade-offs, gathers consensus
+3. **Ratification**: Merge pulls in constitution.md with updated version and LAST_AMENDED_DATE
+4. **Enforcement**: Update dependent templates and CI/CD gates within 1 week of ratification
+5. **Documentation**: Announce amendment in team channels with affected workflows
+
+### Versioning Policy
+
+Constitution follows Semantic Versioning (MAJOR.MINOR.PATCH):
+- **MAJOR** (e.g., 2.0.0): Principle removed, redefined, or backward-incompatible change (requires all in-flight work to be reviewed)
+- **MINOR** (e.g., 1.1.0): Principle added or materially expanded (affects future PRs; grace period for existing work)
+- **PATCH** (e.g., 1.0.1): Clarifications, wording updates, non-semantic refinements (no review impact)
+
+### Compliance Review & Enforcement
+
+- **Code Review**: Every PR MUST verify compliance with applicable principles (checklist in PR template)
+- **Automated Gates**: CI/CD MUST enforce: linting (Black, ESLint), coverage (≥80%), type checking (mypy, tsc), test passing
+- **Manual Gates**: Code reviewers verify: test quality, API design, UX consistency, observability (logs/metrics present)
+- **Monthly Audit**: Engineering lead reviews failed PRs/deployments to identify principle drift
+
+### Principle Mapping to Implementation
+
+| Principle | Key Tools/Standards | Enforcement |
+|-----------|-------------------|------------|
+| Code Quality | Black, isort, mypy, ESLint, TypeScript | Pre-commit hooks, CI/CD gate |
+| Testing | pytest, Jest, Playwright, pytest-cov | Coverage reports, CI/CD gate (≥80%) |
+| UX Consistency | TailwindCSS, Next.js patterns, Storybook | Design system reviews, browser testing |
+| Performance | Apache Bench, Lighthouse, Prometheus | SLA monitoring, Grafana dashboards |
+| Observability | Prometheus metrics, structured JSON logs, event bus | Health check endpoints, alert rules |
+
+---
+
+## Metadata
+
+| Field | Value |
+|-------|-------|
+| **Version** | 1.0.0 |
+| **Status** | Ratified |
+| **Ratified Date** | 2025-11-22 |
+| **Last Amended** | 2025-11-22 |
+| **Author** | Claude Code (AI Assistant) |
+| **Scope** | All repositories under 002-multi-agent-recipe-app feature branch |
+| **Review Frequency** | Monthly (first Monday of each month) |
+
+---
+
+## Quick Reference for Developers
+
+### Before Writing Code
+- [ ] Read the relevant Principle section above
+- [ ] Ensure your feature plan includes test strategy (Red-Green-Refactor)
+- [ ] Verify you understand the UX pattern (desktop, tablet, mobile)
+- [ ] Confirm API latency targets align with Performance principle
+- [ ] Check what metrics/logs are required (Observability principle)
+
+### Before Opening a PR
+- [ ] All tests pass locally: `pytest` (backend), `npm test` (frontend)
+- [ ] Type checking passes: `mypy src`, `tsc --noEmit` (frontend)
+- [ ] Linting passes: `black src`, `eslint src`
+- [ ] Coverage report shows ≥80%: `pytest --cov=src`
+- [ ] PR template includes Constitution compliance checklist
+
+### Code Review Checklist
+Reviewers MUST verify:
+- [ ] Tests written first (see test file changes before implementation)
+- [ ] Tests are comprehensive (happy path, edge cases, error scenarios)
+- [ ] All API endpoints documented (OpenAPI/Swagger)
+- [ ] No unused imports, variables, or commented code
+- [ ] Type hints present on all functions
+- [ ] Database queries use ORM (no raw SQL except migrations)
+- [ ] Error messages are user-friendly
+- [ ] Loading states shown for async operations
+- [ ] Metrics/logging emitted (search for `logger`, `metrics`, event bus calls)
+- [ ] Mobile responsive (verified in browser dev tools)
+
+---
+
+## FAQ
+
+**Q: What if a deadline pressure is creating test debt?**
+A: Test-first is non-negotiable. Time pressures are managed by reducing scope, not test quality. Failing to test now creates larger delays during integration and production incidents.
+
+**Q: Can we skip tests for "simple" changes?**
+A: No. Simplicity is often an illusion. A one-line change can have cascading effects in a multi-agent system. All changes require tests. If a change is truly trivial, the test is trivial too (1-2 lines).
+
+**Q: What if performance optimization requires breaking the API contract?**
+A: Address via gradual migration: (1) new endpoint alongside old, (2) client-side feature flag to switch, (3) deprecation period, (4) old endpoint removal. Constitution's Performance principle does not override Testing or UX Consistency.
+
+**Q: How do we handle technical debt in observability?**
+A: Technical debt in observability (missing metrics, unclear logs) is treated as a bug. If you can't diagnose an issue in production, that's a bug. Add observability as part of the fix.
+
+**Q: Who enforces this constitution?**
+A: Shared responsibility. Code reviewers (primary), CI/CD gates (automated), team leads (audits), and all engineers (self-enforcement through culture).
+
+---
+
+**This constitution is living documentation. All team members are responsible for understanding, following, and improving it.**
