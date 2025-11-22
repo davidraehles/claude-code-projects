@@ -62,8 +62,9 @@ export function usePerformanceMetrics(componentName?: string) {
       const clsObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         entries.forEach((entry) => {
-          if (!(entry as any).hadRecentInput) {
-            clsValue += (entry as PerformanceEntryWithValue).value;
+          const layoutShiftEntry = entry as LayoutShiftEntry;
+          if (!layoutShiftEntry.hadRecentInput) {
+            clsValue += layoutShiftEntry.value;
             metricsRef.current.cls = clsValue;
             if (process.env.NODE_ENV === 'development') {
               console.log(
@@ -82,15 +83,30 @@ export function usePerformanceMetrics(componentName?: string) {
   }, [componentName]);
 
   useEffect(() => {
-    // Track page load time
+    // Track page load time using Navigation Timing Level 2 API
     const handleLoad = () => {
-      const perfData = window.performance.timing;
-      metricsRef.current.pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
-      metricsRef.current.ttfb = perfData.responseStart - perfData.navigationStart;
+      try {
+        // Use PerformanceNavigationTiming (Level 2 API) if available
+        if (window.performance.getEntriesByType) {
+          const navTimings = window.performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
+          if (navTimings.length > 0) {
+            const navTiming = navTimings[0];
+            metricsRef.current.pageLoadTime = navTiming.loadEventEnd - navTiming.fetchStart;
+            metricsRef.current.ttfb = navTiming.responseStart - navTiming.fetchStart;
+          }
+        } else {
+          // Fallback to deprecated timing API
+          const perfData = window.performance.timing;
+          metricsRef.current.pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+          metricsRef.current.ttfb = perfData.responseStart - perfData.navigationStart;
+        }
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log(`[${componentName || 'Performance'}] Page Load Time: ${metricsRef.current.pageLoadTime}ms`);
-        console.log(`[${componentName || 'Performance'}] TTFB: ${metricsRef.current.ttfb}ms`);
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`[${componentName || 'Performance'}] Page Load Time: ${metricsRef.current.pageLoadTime}ms`);
+          console.log(`[${componentName || 'Performance'}] TTFB: ${metricsRef.current.ttfb}ms`);
+        }
+      } catch (error) {
+        // Performance API not available
       }
     };
 
@@ -111,6 +127,13 @@ interface PerformanceEntryWithDuration extends PerformanceEntry {
   processingDuration: number;
 }
 
-interface PerformanceEntryWithValue extends PerformanceEntry {
+interface LayoutShiftEntry extends PerformanceEntry {
   value: number;
+  hadRecentInput: boolean;
+}
+
+interface PerformanceNavigationTiming extends PerformanceEntry {
+  fetchStart: number;
+  responseStart: number;
+  loadEventEnd: number;
 }
