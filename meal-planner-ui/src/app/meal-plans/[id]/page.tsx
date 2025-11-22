@@ -2,21 +2,30 @@
 
 /**
  * Meal Plan detail page - View specific meal plan with recipes.
- * Refactored to use Auth Context and React Query hooks.
+ * Refactored to use Auth Context and React Query hooks with MCP workflow integration.
  */
 
+import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMealPlan } from '@/hooks/queries/useMealPlans'
-import { useGenerateGroceryCart } from '@/hooks/queries/useGroceryCarts'
+import { useCreateCartFromMealPlanWorkflow } from '@/hooks/queries/useWorkflows'
+import { useKnusprCredentials } from '@/hooks/queries/useKnusprCredentials'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
+import { Input } from '@/components/ui/Input'
+import { Checkbox } from '@/components/ui/Checkbox'
 
 export default function MealPlanDetailPage() {
   const params = useParams()
   const router = useRouter()
   const mealPlanId = parseInt(params.id as string)
+
+  // Local state for delivery preferences modal
+  const [showDeliveryModal, setShowDeliveryModal] = useState(false)
+  const [preferredTimeSlot, setPreferredTimeSlot] = useState<'morning' | 'afternoon' | 'evening'>('afternoon')
+  const [budgetOptimization, setBudgetOptimization] = useState(false)
 
   // Auth state from context
   const { user, isLoading: authLoading } = useAuth()
@@ -24,25 +33,52 @@ export default function MealPlanDetailPage() {
   // Data fetching with React Query
   const { data: mealPlan, isLoading: mealPlanLoading, error: mealPlanError } = useMealPlan(mealPlanId)
 
-  // Generate grocery cart mutation
-  const generateCart = useGenerateGroceryCart()
+  // Knuspr credentials status
+  const { credentialStatus } = useKnusprCredentials()
+
+  // Workflow mutation for generating cart with MCP integration
+  const workflowMutation = useCreateCartFromMealPlanWorkflow()
 
   // Derived state
   const loading = mealPlanLoading
-  const error = mealPlanError?.message || generateCart.error?.message || null
-  const generatingCart = generateCart.isPending
+  const error = mealPlanError?.message || workflowMutation.error?.message || null
+  const generatingCart = workflowMutation.isPending
+  const hasKnusprCredentials = credentialStatus.data?.has_credentials || false
 
-  // Generate grocery cart handler
+  // Generate grocery cart with delivery preferences
   const handleGenerateCart = () => {
-    generateCart.mutate(mealPlanId, {
-      onSuccess: (cart) => {
-        console.log('✅ Grocery cart generated:', cart)
-        router.push(`/grocery-carts/${cart.id}`)
+    if (!hasKnusprCredentials) {
+      // Show credentials setup prompt
+      alert('Please configure Knuspr credentials first. Go to your account settings.')
+      return
+    }
+    // Show delivery preferences modal
+    setShowDeliveryModal(true)
+  }
+
+  // Submit workflow with delivery preferences
+  const handleSubmitWorkflow = () => {
+    workflowMutation.mutate(
+      {
+        mealPlanId,
+        deliveryPreferences: {
+          preferred_time_slot: preferredTimeSlot,
+          budget_optimization: budgetOptimization,
+        },
       },
-      onError: (err) => {
-        console.error('Failed to generate grocery cart:', err)
-      },
-    })
+      {
+        onSuccess: (response) => {
+          console.log('✅ Workflow completed:', response)
+          setShowDeliveryModal(false)
+          if (response.result?.cart_id) {
+            router.push(`/grocery-carts/${response.result.cart_id}`)
+          }
+        },
+        onError: (err) => {
+          console.error('Failed to generate cart from meal plan:', err)
+        },
+      }
+    )
   }
 
   if (authLoading || loading) {
@@ -140,7 +176,9 @@ export default function MealPlanDetailPage() {
             <div>
               <h3 className="font-semibold text-gray-900 mb-1">Ready to shop?</h3>
               <p className="text-sm text-gray-600">
-                Generate a consolidated grocery list for all recipes
+                {hasKnusprCredentials
+                  ? 'Generate a Knuspr shopping cart with real products and delivery slots'
+                  : 'Configure Knuspr integration to generate a real shopping cart'}
               </p>
             </div>
             <Button
@@ -157,7 +195,7 @@ export default function MealPlanDetailPage() {
                   Generating...
                 </span>
               ) : (
-                <span>🛒 Generate Grocery List</span>
+                <span>🛒 {hasKnusprCredentials ? 'Generate Knuspr Cart' : 'Setup Knuspr'}</span>
               )}
             </Button>
           </div>
@@ -252,6 +290,96 @@ export default function MealPlanDetailPage() {
               </div>
             ))}
         </div>
+
+        {/* Delivery Preferences Modal */}
+        {showDeliveryModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle>Delivery Preferences</CardTitle>
+                <CardDescription>
+                  Choose your preferred delivery time and optimization strategy
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Time Slot Selection */}
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-3">Preferred Time Slot</p>
+                  <div className="space-y-2">
+                    {(['morning', 'afternoon', 'evening'] as const).map((slot) => (
+                      <label key={slot} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input
+                          type="radio"
+                          name="timeSlot"
+                          value={slot}
+                          checked={preferredTimeSlot === slot}
+                          onChange={(e) => setPreferredTimeSlot(e.target.value as 'morning' | 'afternoon' | 'evening')}
+                          className="w-4 h-4 text-blue-600"
+                        />
+                        <span className="ml-3 capitalize font-medium text-gray-700">
+                          {slot === 'morning' && '🌅 Morning (6AM - 12PM)'}
+                          {slot === 'afternoon' && '☀️ Afternoon (12PM - 6PM)'}
+                          {slot === 'evening' && '🌙 Evening (6PM - 10PM)'}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Budget Optimization */}
+                <div>
+                  <Checkbox
+                    label="Optimize for budget (find cheapest delivery option)"
+                    checked={budgetOptimization}
+                    onChange={(checked) => setBudgetOptimization(checked)}
+                  />
+                  <p className="text-xs text-gray-500 mt-2">
+                    Without this, we'll prioritize the earliest available delivery slot
+                  </p>
+                </div>
+
+                {/* Workflow Error */}
+                {workflowMutation.error && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-700">
+                      {workflowMutation.error.message}
+                    </p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowDeliveryModal(false)}
+                    disabled={generatingCart}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={handleSubmitWorkflow}
+                    disabled={generatingCart}
+                    className="flex-1"
+                  >
+                    {generatingCart ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Creating Cart...
+                      </span>
+                    ) : (
+                      'Create Cart'
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
     </div>
   )
