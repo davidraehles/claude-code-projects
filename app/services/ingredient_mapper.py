@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 AVAILABILITY_BOOST_THRESHOLD = 0.5
 AVAILABILITY_BOOST_MULTIPLIER = 1.1
 CONFIDENCE_MIN_THRESHOLD = 0.70
+MAX_PRODUCT_SEARCH_RESULTS = 15  # Increased to get more variants for better matching
 
 # Unit conversion factors (normalized to grams or milliliters)
 UNIT_CONVERSIONS = {
@@ -306,7 +307,7 @@ class IngredientMapper:
         # Search Knuspr for products
         products = await self.knuspr_client.search_products(
             ingredient.name,
-            max_results=15,  # Increased to get more variants
+            max_results=MAX_PRODUCT_SEARCH_RESULTS,
             exact_match=False
         )
 
