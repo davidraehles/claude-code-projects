@@ -199,3 +199,276 @@ async def test_meal_plan_to_grocery_cart_workflow(client, test_user, test_meal_p
     assert cart.knuspr_cart_id.startswith("cart-")
 
     db.close()
+
+
+@pytest.mark.asyncio
+async def test_workflow_meal_plan_not_found(client, test_user):
+    """Test error when meal plan doesn't exist."""
+    db = TestingSessionLocal()
+    cred_manager = CredentialManager()
+
+    # Create credentials
+    encrypted_email = cred_manager.encrypt("test@knuspr.cz")
+    encrypted_password = cred_manager.encrypt("password123")
+
+    credential = KnusprCredential(
+        id=1,
+        user_id=test_user.id,
+        knuspr_email=encrypted_email,
+        knuspr_password=encrypted_password,
+        country="cz",
+        is_active=True,
+        last_verified_at=datetime.utcnow()
+    )
+    db.add(credential)
+    db.commit()
+    db.close()
+
+    # Try to create cart with non-existent meal plan
+    request_data = {
+        "meal_plan_id": 9999,
+        "delivery_preferences": {
+            "preferred_time_slot": "afternoon"
+        }
+    }
+
+    response = client.post("/api/v1/workflows/meal-plan-with-groceries", json=request_data)
+
+    # Should return 404
+    assert response.status_code == 404
+    data = response.json()
+    assert "not found" in data["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_workflow_no_credentials(client, test_user, test_meal_plan):
+    """Test error when user has no Knuspr credentials configured."""
+    request_data = {
+        "meal_plan_id": test_meal_plan.id,
+        "delivery_preferences": {
+            "preferred_time_slot": "morning"
+        }
+    }
+
+    response = client.post("/api/v1/workflows/meal-plan-with-groceries", json=request_data)
+
+    # Should return 400 - credentials not configured
+    assert response.status_code == 400
+    data = response.json()
+    assert "credentials not found" in data["detail"].lower() or "configure knuspr" in data["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_workflow_empty_meal_plan(client, test_user):
+    """Test error when meal plan has no recipes."""
+    db = TestingSessionLocal()
+
+    # Create meal plan with no recipes
+    meal_plan = MealPlan(
+        id=2,
+        user_id=test_user.id,
+        name="Empty Plan",
+        start_date=date.today(),
+        end_date=date.today(),
+        status="ready",
+        total_recipes=0  # No recipes
+    )
+    db.add(meal_plan)
+    db.commit()
+
+    cred_manager = CredentialManager()
+    encrypted_email = cred_manager.encrypt("test@knuspr.cz")
+    encrypted_password = cred_manager.encrypt("password123")
+
+    credential = KnusprCredential(
+        id=2,
+        user_id=test_user.id,
+        knuspr_email=encrypted_email,
+        knuspr_password=encrypted_password,
+        country="cz",
+        is_active=True,
+        last_verified_at=datetime.utcnow()
+    )
+    db.add(credential)
+    db.commit()
+    db.close()
+
+    # Try to create cart
+    request_data = {
+        "meal_plan_id": meal_plan.id,
+        "delivery_preferences": {}
+    }
+
+    response = client.post("/api/v1/workflows/meal-plan-with-groceries", json=request_data)
+
+    # Should return 400 - no recipes
+    assert response.status_code == 400
+    data = response.json()
+    assert "at least one recipe" in data["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_workflow_with_all_delivery_preferences(client, test_user, test_meal_plan):
+    """Test workflow with all delivery preferences specified."""
+    db = TestingSessionLocal()
+    cred_manager = CredentialManager()
+
+    # Create credentials
+    encrypted_email = cred_manager.encrypt("test@knuspr.cz")
+    encrypted_password = cred_manager.encrypt("password123")
+
+    credential = KnusprCredential(
+        id=3,
+        user_id=test_user.id,
+        knuspr_email=encrypted_email,
+        knuspr_password=encrypted_password,
+        country="cz",
+        is_active=True,
+        last_verified_at=datetime.utcnow()
+    )
+    db.add(credential)
+    db.commit()
+    db.close()
+
+    # Test with all delivery preferences
+    request_data = {
+        "meal_plan_id": test_meal_plan.id,
+        "delivery_preferences": {
+            "preferred_dates": [str(date.today())],
+            "preferred_time_slot": "evening",
+            "budget_optimization": False
+        }
+    }
+
+    response = client.post("/api/v1/workflows/meal-plan-with-groceries", json=request_data)
+
+    # Should succeed
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["result"] is not None
+
+
+@pytest.mark.asyncio
+async def test_workflow_without_delivery_preferences(client, test_user, test_meal_plan):
+    """Test workflow without delivery preferences (should use defaults)."""
+    db = TestingSessionLocal()
+    cred_manager = CredentialManager()
+
+    # Create credentials
+    encrypted_email = cred_manager.encrypt("test@knuspr.cz")
+    encrypted_password = cred_manager.encrypt("password123")
+
+    credential = KnusprCredential(
+        id=4,
+        user_id=test_user.id,
+        knuspr_email=encrypted_email,
+        knuspr_password=encrypted_password,
+        country="cz",
+        is_active=True,
+        last_verified_at=datetime.utcnow()
+    )
+    db.add(credential)
+    db.commit()
+    db.close()
+
+    # Test without delivery preferences
+    request_data = {
+        "meal_plan_id": test_meal_plan.id
+    }
+
+    response = client.post("/api/v1/workflows/meal-plan-with-groceries", json=request_data)
+
+    # Should succeed with default preferences
+    assert response.status_code == 200
+    data = response.json()
+    assert data["status"] == "success"
+    assert data["result"] is not None
+
+
+@pytest.mark.asyncio
+async def test_workflow_response_structure(client, test_user, test_meal_plan):
+    """Test that workflow response has all required fields."""
+    db = TestingSessionLocal()
+    cred_manager = CredentialManager()
+
+    # Create credentials
+    encrypted_email = cred_manager.encrypt("test@knuspr.cz")
+    encrypted_password = cred_manager.encrypt("password123")
+
+    credential = KnusprCredential(
+        id=5,
+        user_id=test_user.id,
+        knuspr_email=encrypted_email,
+        knuspr_password=encrypted_password,
+        country="cz",
+        is_active=True,
+        last_verified_at=datetime.utcnow()
+    )
+    db.add(credential)
+    db.commit()
+    db.close()
+
+    request_data = {
+        "meal_plan_id": test_meal_plan.id,
+        "delivery_preferences": {
+            "preferred_time_slot": "afternoon",
+            "budget_optimization": False
+        }
+    }
+
+    response = client.post("/api/v1/workflows/meal-plan-with-groceries", json=request_data)
+
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify all required response fields
+    assert "workflow_id" in data
+    assert "status" in data
+    assert "message" in data
+    assert "result" in data
+
+    result = data["result"]
+    assert "cart_id" in result
+    assert "knuspr_url" in result
+    assert "total_price" in result
+    assert "item_count" in result
+    assert "delivery_slot" in result or result.get("delivery_slot") is None
+    assert "items_by_section" in result
+    assert "unavailable_items" in result
+    assert "created_at" in result
+
+
+@pytest.mark.asyncio
+async def test_workflow_invalid_meal_plan_id(client, test_user):
+    """Test with invalid meal plan ID type."""
+    db = TestingSessionLocal()
+    cred_manager = CredentialManager()
+
+    # Create credentials
+    encrypted_email = cred_manager.encrypt("test@knuspr.cz")
+    encrypted_password = cred_manager.encrypt("password123")
+
+    credential = KnusprCredential(
+        id=6,
+        user_id=test_user.id,
+        knuspr_email=encrypted_email,
+        knuspr_password=encrypted_password,
+        country="cz",
+        is_active=True,
+        last_verified_at=datetime.utcnow()
+    )
+    db.add(credential)
+    db.commit()
+    db.close()
+
+    # Try with invalid meal plan ID
+    request_data = {
+        "meal_plan_id": "invalid",
+        "delivery_preferences": {}
+    }
+
+    response = client.post("/api/v1/workflows/meal-plan-with-groceries", json=request_data)
+
+    # Should return validation error
+    assert response.status_code == 422  # Pydantic validation error
