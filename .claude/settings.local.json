@@ -27,7 +27,9 @@
       "WebSearch",
       "Bash(cat:*)",
       "Bash(gh pr view:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(pip install:*)"
     ],
     "deny": [],
     "ask": []
