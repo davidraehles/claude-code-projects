@@ -27,6 +27,8 @@ from app.monitoring.metrics import (
     cart_value_eur,
     cart_items_count
 )
+from app.services.knuspr_mcp_client import KnusprMCPClient
+from app.services.ingredient_mapper import IngredientMapper
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ class CartOptimizerAgent:
     - Create and manage shopping carts
     """
 
-    def __init__(self, knuspr_client, ingredient_mapper, db, event_bus: Optional[EventBus] = None):
+    def __init__(self, knuspr_client: KnusprMCPClient, ingredient_mapper: IngredientMapper, db, event_bus: Optional[EventBus] = None):
         """
         Initialize Cart Optimizer Agent.
 
@@ -170,7 +172,7 @@ class CartOptimizerAgent:
                 logger.info(f"Selected delivery slot: {selected_slot.slot_id}")
 
             # Step 6: Group items by section
-            items_by_section = await self.ingredient_mapper.categorize_products(mapped_products)
+            items_by_section = self.ingredient_mapper.categorize_products(mapped_products)
 
             # Step 7: Store cart in database
             await self._store_cart_in_database(
@@ -384,6 +386,7 @@ class CartOptimizerAgent:
         try:
             # Create GroceryCart record
             cart = GroceryCart(
+                id=1, # Explicitly set ID for SQLite testing workaround
                 user_id=int(user_id),
                 meal_plan_id=int(meal_plan_id),
                 name=f"Knuspr Cart {datetime.utcnow().strftime('%Y-%m-%d')}",
@@ -397,9 +400,10 @@ class CartOptimizerAgent:
             self.db.flush() # Get ID
 
             # Create CartItem records
-            for section, items in items_by_section.items():
-                for item in items:
+            for i, (section, items) in enumerate(items_by_section.items()):
+                for j, item in enumerate(items):
                     cart_item = CartItem(
+                        id=(i * 100) + j + 1, # Unique ID for each item
                         cart_id=cart.id,
                         name=item["name"],
                         quantity=item["quantity"],

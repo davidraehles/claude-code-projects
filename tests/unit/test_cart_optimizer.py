@@ -2,14 +2,15 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from datetime import datetime
 from app.agents.cart_optimizer import CartOptimizerAgent
+from app.services.knuspr_mcp_client import KnusprCart, DeliverySlot
 from app.events import EventType
 
 @pytest.fixture
 def mock_knuspr_client():
     client = AsyncMock()
-    client.create_cart.return_value = MagicMock(cart_id="cart_123", total_price=100.0)
+    client.create_cart.return_value = MagicMock(spec=KnusprCart, cart_id="cart_123", total_price=100.0)
     client.get_delivery_slots.return_value = [
-        MagicMock(slot_id="slot_1", date=datetime.now(), time_window="12:00-14:00", price=5.0)
+        MagicMock(spec=DeliverySlot, slot_id="slot_1", date=datetime.now(), time_window="12:00-14:00", price=5.0)
     ]
     return client
 
@@ -22,7 +23,7 @@ def mock_ingredient_mapper():
         ],
         []
     )
-    mapper.categorize_products.return_value = {"dairy": [{"name": "Milk", "quantity": 1, "unit": "l", "price": 2.5}]}
+    mapper.categorize_products = MagicMock(return_value={"dairy": [{"name": "Milk", "quantity": 1, "unit": "l", "price": 2.5}]})
     return mapper
 
 @pytest.fixture

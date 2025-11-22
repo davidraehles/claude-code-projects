@@ -13,12 +13,102 @@ This service bridges the meal planning system with Knuspr's grocery ordering API
 import logging
 import asyncio
 import difflib
+import importlib
+import sys
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
+import os
+from contextlib import asynccontextmanager
 
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import stop_after_attempt, wait_exponential, AsyncRetrying
+
+try:
+    logging.debug("Attempting to import mcp.ClientSession")
+    from mcp import ClientSession, StdioServerParameters, McpError
+    from mcp.client.stdio import stdio_client
+    logging.info("Successfully imported mcp components")
+except Exception as e:  # pragma: no cover
+    logging.error(
+        "Failed to import mcp components. Interpreter=%s, sys.path=%s, error=%s",
+        sys.executable,
+        sys.path,
+        e,
+        exc_info=True
+    )
+    ClientSession = None
+    StdioServerParameters = None
+    stdio_client = None
+    McpError = None
+
+
+class ToolExecutionError(RuntimeError):
+    """Local shim for MCP tool invocation errors."""
+
+    def __init__(self, message: str, code: Optional[str] = None):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+
+
+class ConnectionError(RuntimeError):
+    """Local shim for MCP connection failures."""
+
+
+def _map_mcp_errors(exc: Exception) -> Exception:
+    if McpError and isinstance(exc, McpError):
+        return ToolExecutionError(getattr(exc, "message", str(exc)), getattr(exc, "code", None))
+    return exc
+
+
+@asynccontextmanager
+async def _create_mcp_session():
+    mcp_url = os.getenv("ROHLIK_MCP_URL")
+
+    # Check if we should run locally via stdio
+    if not mcp_url or not mcp_url.startswith("http"):
+        if ClientSession is None or StdioServerParameters is None or stdio_client is None:
+             raise RuntimeError("mcp package components unavailable; ensure 'mcp' is installed")
+
+        # Assume local execution if no URL or not HTTP
+        # If mcp_url is set, treat it as path to script, otherwise default to sibling directory
+        script_path = mcp_url
+        if not script_path:
+            # Default location relative to this project
+            script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../rohlik-mcp-temp/dist/index.js"))
+
+        if not os.path.exists(script_path):
+             raise RuntimeError(f"Local MCP server script not found at: {script_path}")
+
+        server_params = StdioServerParameters(
+            command="node",
+            args=[script_path],
+            env={
+                "ROHLIK_USERNAME": os.getenv("ROHLIK_USERNAME", ""),
+                "ROHLIK_PASSWORD": os.getenv("ROHLIK_PASSWORD", ""),
+                "ROHLIK_BASE_URL": "https://www.knuspr.de", # Default to DE for this project context
+                **os.environ
+            }
+        )
+
+        async with stdio_client(server_params) as (read, write):
+            async with ClientSession(read, write) as session:
+                await session.initialize()
+                yield session
+            return
+
+    # Remote SSE connection
+    try:
+        from mcp.client.sse import sse_client
+    except ImportError:
+        raise RuntimeError("mcp package components unavailable; ensure 'mcp' is installed")
+
+    async with sse_client(mcp_url) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            yield session
+
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +116,8 @@ logger = logging.getLogger(__name__)
 class KnusprCountry(str, Enum):
     """Supported Knuspr countries"""
     CZECH_REPUBLIC = "cz"
-    SLOVAKIA = "sk"
-    POLAND = "pl"
+    GERMANY = "de"
+    AUSTRIA = "at"
 
 
 @dataclass
@@ -85,7 +175,7 @@ class KnusprMCPClient:
         self,
         login_email: str,
         login_password: str,
-        country: KnusprCountry = KnusprCountry.CZECH_REPUBLIC,
+        country: KnusprCountry = KnusprCountry.GERMANY,
         api_timeout: int = 30,
         max_retries: int = 3,
         retry_backoff: float = 1.5
@@ -112,6 +202,36 @@ class KnusprMCPClient:
 
         logger.info(f"Initialized KnusprMCPClient for {country.value}")
 
+    def _session_context(self):
+        return _create_mcp_session()
+
+    async def _call_tool(self, tool_name: str, **arguments) -> Dict[str, Any]:
+        try:
+            async with self._session_context() as session:
+                logger.debug(f"Calling MCP tool '{tool_name}' with args: {arguments}")
+                response = await session.call_tool(tool_name, arguments=arguments)
+                logger.debug(f"Received response from '{tool_name}': {response}")
+
+                if hasattr(response, "result") and isinstance(response.result, dict):
+                    return response.result
+                if isinstance(response, dict):
+                    return response
+                if hasattr(response, "dict"):
+                    return response.dict()
+                return {"raw": response}
+        except Exception as exc:
+            logger.error(
+                "MCP tool '%s' raised exception. Args=%s, Type=%s, Error=%s",
+                tool_name,
+                arguments,
+                type(exc).__name__,
+                exc,
+                exc_info=True
+            )
+            wrapped = _map_mcp_errors(exc)
+            logger.error(f"MCP tool '{tool_name}' failed: {wrapped}")
+            raise wrapped
+
     def _normalize_knuspr_unit(self, unit: str) -> str:
         """Normalize Knuspr-specific units to standard units."""
         unit = unit.lower().strip()
@@ -137,30 +257,47 @@ class KnusprMCPClient:
         try:
             logger.info(f"Authenticating with Knuspr as {self.login_email}")
 
-            # TODO: Call MCP tool to authenticate
-            # client = MCPClient()
-            # response = await client.authenticate({
-            #     "email": self.login_email,
-            #     "password": self.login_password,
-            #     "country": self.country.value
-            # })
-            # self.session_token = response.get("session_token")
+            # The rohlik-mcp server handles authentication internally via env vars
+            # We can verify authentication by making a simple call, e.g. to account data
+            # or just assume it's working if we can connect.
+            # Let's try to fetch account data to verify auth.
 
-            # For now, simulate successful auth
-            self.session_token = "mock_session_token"
+            response = await self._call_tool("get_account_data")
+
+            # If we get here without error, we are authenticated
+            self.session_token = "implicit-session" # The MCP server manages the session
             self.authenticated = True
-            logger.info("Authentication successful")
+            logger.info("Authentication successful (verified via get_account_data)")
             return True
-        except Exception as e:
-            logger.error(f"Authentication failed: {str(e)}")
+
+        except ToolExecutionError as exc:
+            logger.error(f"Authentication verification failed: {exc}")
+            self.authenticated = False
+            return False
+        except ConnectionError as exc:
+            logger.error(f"Authentication connection error: {exc}")
+            self.authenticated = False
+            return False
+        except Exception as exc:
+            logger.error(f"Authentication failed: {exc}")
             self.authenticated = False
             return False
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1.5, min=1, max=10),
-        reraise=True
-    )
+    async def _ensure_session(self):
+        if not self.authenticated:
+            await self.authenticate()
+        if not self.authenticated:
+            raise RuntimeError("Failed to authenticate with Knuspr")
+
+    async def _with_retry(self, coro):
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(self.max_retries),
+            wait=wait_exponential(multiplier=self.retry_backoff, min=1, max=10),
+            reraise=True
+        ):
+            with attempt:
+                return await coro()
+
     async def search_products(
         self,
         ingredient_name: str,
@@ -188,54 +325,44 @@ class KnusprMCPClient:
         if not self.authenticated:
             raise RuntimeError("Failed to authenticate with Knuspr")
 
+        await self._ensure_session()
+
+        async def _run():
+            request_payload = {
+                "product_name": ingredient_name,
+                "country": self.country.value,
+                "max_results": max_results,
+                "exact_match": exact_match,
+            }
+            response = await self._call_tool(
+                "search_products",
+                **request_payload
+            )
+
+            products = []
+            for product in response.get("products", []):
+                products.append(KnusprProduct(
+                    product_id=product.get("product_id"),
+                    name=product.get("name"),
+                    quantity=product.get("quantity", 1),
+                    unit=self._normalize_knuspr_unit(product.get("unit", "pcs")),
+                    price=product.get("price", 0.0),
+                    available=product.get("available", False),
+                    category=product.get("category", "unknown"),
+                    image_url=product.get("image_url"),
+                    confidence=product.get("confidence", 1.0)
+                ))
+
+            return products
         try:
-            logger.info(f"Searching Knuspr for '{ingredient_name}'")
+            return await self._with_retry(_run)
+        except ToolExecutionError as exc:
+            logger.error(f"Product search failed: {exc}")
+            raise RuntimeError(f"Knuspr product search failed: {exc}")
+        except ConnectionError as exc:
+            logger.error(f"Product search connection error: {exc}")
+            raise RuntimeError(f"Knuspr product search connection error: {exc}")
 
-            # TODO: Call MCP tool to search products
-            # client = MCPClient()
-            # response = await client.search_products({
-            #     "query": ingredient_name,
-            #     "country": self.country.value,
-            #     "max_results": max_results,
-            #     "exact_match": exact_match,
-            #     "session_token": self.session_token
-            # })
-
-            # For now, return mock results
-            mock_products = [
-                KnusprProduct(
-                    product_id=f"knuspr-{ingredient_name.replace(' ', '-')}-1",
-                    name=f"{ingredient_name.title()} 400g",
-                    quantity=400,
-                    unit=self._normalize_knuspr_unit("g"),
-                    price=45.99,
-                    available=True,
-                    category="canned_goods",
-                    confidence=0.95
-                )
-            ]
-
-            if not exact_match and mock_products:
-                # Sort by similarity to ingredient_name
-                def similarity(p):
-                    return difflib.SequenceMatcher(None, ingredient_name.lower(), p.name.lower()).ratio()
-
-                mock_products.sort(key=similarity, reverse=True)
-
-            logger.info(f"Found {len(mock_products)} products for '{ingredient_name}'")
-            return mock_products[:max_results]
-        except asyncio.TimeoutError:
-            logger.error(f"Search timeout for '{ingredient_name}'")
-            raise TimeoutError(f"Knuspr search timeout for '{ingredient_name}'")
-        except Exception as e:
-            logger.error(f"Product search failed: {str(e)}")
-            raise
-
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1.5, min=1, max=10),
-        reraise=True
-    )
     async def create_cart(
         self,
         items: List[Dict[str, Any]],
@@ -264,49 +391,56 @@ class KnusprMCPClient:
         if not items:
             raise ValueError("Cart must contain at least one item")
 
-        try:
-            logger.info(f"Creating Knuspr cart with {len(items)} items")
+        await self._ensure_session()
 
-            # TODO: Call MCP tool to create cart
-            # client = MCPClient()
-            # response = await client.create_cart({
-            #     "items": items,
-            #     "session_token": self.session_token,
-            #     "delivery_slot_id": delivery_slot_id
-            # })
-
-            # For now, return mock cart
-            mock_products = [
-                KnusprProduct(
-                    product_id=item.get("product_id"),
-                    name=f"Product {item.get('product_id')}",
-                    quantity=item.get("quantity", 1),
-                    unit=item.get("unit", "pcs"),
-                    price=50.0,
-                    available=True,
-                    category="unknown"
-                )
-                for item in items
-            ]
-
-            total_price = sum(p.price * p.quantity for p in mock_products)
-            cart = KnusprCart(
-                cart_id=f"cart-{datetime.utcnow().timestamp()}",
-                items=mock_products,
-                total_price=total_price
+        async def _run():
+            response = await self._call_tool(
+                "create_cart",
+                items=items,
+                delivery_slot_id=delivery_slot_id
             )
 
-            logger.info(f"Cart created: {cart.cart_id} with total {total_price} CZK")
-            return cart
-        except Exception as e:
-            logger.error(f"Cart creation failed: {str(e)}")
-            raise
+            cart_data = response.get("cart") or {}
+            cart_items = [
+                KnusprProduct(
+                    product_id=item.get("product_id"),
+                    name=item.get("name", ""),
+                    quantity=item.get("quantity", 1),
+                    unit=self._normalize_knuspr_unit(item.get("unit", "pcs")),
+                    price=item.get("price", 0.0),
+                    available=item.get("available", False),
+                    category=item.get("category", "unknown")
+                )
+                for item in cart_data.get("items", [])
+            ]
+            slot_data = cart_data.get("delivery_slot")
+            delivery_slot = None
+            if slot_data:
+                delivery_slot = DeliverySlot(
+                    slot_id=slot_data.get("slot_id"),
+                    date=datetime.fromisoformat(slot_data.get("date")),
+                    time_window=slot_data.get("time_window", ""),
+                    price=slot_data.get("price", 0.0),
+                    available=slot_data.get("available", False)
+                )
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1.5, min=1, max=10),
-        reraise=True
-    )
+            return KnusprCart(
+                cart_id=cart_data.get("cart_id", ""),
+                items=cart_items,
+                total_price=cart_data.get("total_price", 0.0),
+                delivery_slot=delivery_slot,
+                created_at=datetime.fromisoformat(cart_data.get("created_at"))
+                if cart_data.get("created_at") else None
+            )
+        try:
+            return await self._with_retry(_run)
+        except ToolExecutionError as exc:
+            logger.error(f"Cart creation failed: {exc}")
+            raise RuntimeError(f"Knuspr cart creation failed: {exc}")
+        except ConnectionError as exc:
+            logger.error(f"Cart creation connection error: {exc}")
+            raise RuntimeError(f"Knuspr cart creation connection error: {exc}")
+
     async def get_delivery_slots(
         self,
         start_date: datetime,
@@ -335,43 +469,35 @@ class KnusprMCPClient:
         if start_date < datetime.utcnow():
             start_date = datetime.utcnow()
 
-        try:
-            logger.info(f"Fetching delivery slots from {start_date} to {end_date}")
+        await self._ensure_session()
 
-            # TODO: Call MCP tool to get slots
-            # client = MCPClient()
-            # response = await client.get_delivery_slots({
-            #     "start_date": start_date.isoformat(),
-            #     "end_date": end_date.isoformat(),
-            #     "country": self.country.value,
-            #     "session_token": self.session_token
-            # })
+        async def _run():
+            response = await self._call_tool(
+                "get_delivery_slots",
+                start_date=start_date.isoformat(),
+                end_date=end_date.isoformat(),
+                country=self.country.value
+            )
 
-            # For now, return mock slots
             slots = []
-            current_date = start_date.replace(hour=9, minute=0, second=0, microsecond=0)
-            while current_date <= end_date:
-                for hour in [9, 15, 18]:
-                    slots.append(DeliverySlot(
-                        slot_id=f"slot-{current_date.date()}-{hour:02d}",
-                        date=current_date.replace(hour=hour),
-                        time_window=f"{hour:02d}:00-{hour+3:02d}:00",
-                        price=69.0 if hour == 18 else 49.0,
-                        available=True
-                    ))
-                current_date += timedelta(days=1)
-
-            logger.info(f"Found {len(slots)} delivery slots")
+            for slot in response.get("delivery_slots", []):
+                slots.append(DeliverySlot(
+                    slot_id=slot.get("slot_id"),
+                    date=datetime.fromisoformat(slot.get("date")),
+                    time_window=slot.get("time_window", ""),
+                    price=slot.get("price", 0.0),
+                    available=slot.get("available", False)
+                ))
             return slots
-        except Exception as e:
-            logger.error(f"Delivery slot fetch failed: {str(e)}")
-            raise
+        try:
+            return await self._with_retry(_run)
+        except ToolExecutionError as exc:
+            logger.error(f"Delivery slot fetch failed: {exc}")
+            raise RuntimeError(f"Knuspr delivery slots failed: {exc}")
+        except ConnectionError as exc:
+            logger.error(f"Delivery slot connection error: {exc}")
+            raise RuntimeError(f"Knuspr delivery slots connection error: {exc}")
 
-    @retry(
-        stop=stop_after_attempt(3),
-        wait=wait_exponential(multiplier=1.5, min=1, max=10),
-        reraise=True
-    )
     async def select_delivery_slot(
         self,
         cart_id: str,
@@ -390,22 +516,23 @@ class KnusprMCPClient:
         if not self.authenticated:
             await self.authenticate()
 
+        await self._ensure_session()
+
+        async def _run():
+            response = await self._call_tool(
+                "select_delivery_slot",
+                cart_id=cart_id,
+                slot_id=slot_id
+            )
+            return bool(response.get("success"))
         try:
-            logger.info(f"Selecting delivery slot {slot_id} for cart {cart_id}")
-
-            # TODO: Call MCP tool to select slot
-            # client = MCPClient()
-            # response = await client.select_delivery_slot({
-            #     "cart_id": cart_id,
-            #     "slot_id": slot_id,
-            #     "session_token": self.session_token
-            # })
-
-            logger.info(f"Successfully selected slot {slot_id}")
-            return True
-        except Exception as e:
-            logger.error(f"Slot selection failed: {str(e)}")
-            raise
+            return await self._with_retry(_run)
+        except ToolExecutionError as exc:
+            logger.error(f"Slot selection failed: {exc}")
+            return False
+        except ConnectionError as exc:
+            logger.error(f"Slot selection connection error: {exc}")
+            return False
 
     async def get_cart(self, cart_id: str) -> Optional[KnusprCart]:
         """
@@ -420,28 +547,58 @@ class KnusprMCPClient:
         if not self.authenticated:
             await self.authenticate()
 
+        await self._ensure_session()
+
+        async def _run():
+            response = await self._call_tool(
+                "get_cart",
+                cart_id=cart_id
+            )
+            cart_data = response.get("cart")
+            if not cart_data:
+                return None
+
+            items = [
+                KnusprProduct(
+                    product_id=item.get("product_id"),
+                    name=item.get("name", ""),
+                    quantity=item.get("quantity", 1),
+                    unit=self._normalize_knuspr_unit(item.get("unit", "pcs")),
+                    price=item.get("price", 0.0),
+                    available=item.get("available", False),
+                    category=item.get("category", "unknown")
+                )
+                for item in cart_data.get("items", [])
+            ]
+            slot_data = cart_data.get("delivery_slot")
+            delivery_slot = None
+            if slot_data:
+                delivery_slot = DeliverySlot(
+                    slot_id=slot_data.get("slot_id"),
+                    date=datetime.fromisoformat(slot_data.get("date")),
+                    time_window=slot_data.get("time_window", ""),
+                    price=slot_data.get("price", 0.0),
+                    available=slot_data.get("available", False)
+                )
+
+            return KnusprCart(
+                cart_id=cart_data.get("cart_id", ""),
+                items=items,
+                total_price=cart_data.get("total_price", 0.0),
+                delivery_slot=delivery_slot,
+                created_at=datetime.fromisoformat(cart_data.get("created_at"))
+                if cart_data.get("created_at") else None
+            )
         try:
-            logger.info(f"Retrieving cart {cart_id}")
-
-            # TODO: Call MCP tool to get cart
-            # client = MCPClient()
-            # response = await client.get_cart({
-            #     "cart_id": cart_id,
-            #     "session_token": self.session_token
-            # })
-
-            logger.info(f"Cart retrieved: {cart_id}")
-            return None  # TODO: Parse and return actual cart
-        except Exception as e:
-            logger.error(f"Cart retrieval failed: {str(e)}")
-            return None
+            return await self._with_retry(_run)
+        except ToolExecutionError as exc:
+            logger.error(f"Cart retrieval failed: {exc}")
+            raise RuntimeError(f"Knuspr cart retrieval failed: {exc}")
+        except ConnectionError as exc:
+            logger.error(f"Cart retrieval connection error: {exc}")
+            raise RuntimeError(f"Knuspr cart retrieval connection error: {exc}")
 
     async def close(self):
         """Clean up resources and logout from Knuspr"""
-        try:
-            if self.authenticated:
-                # TODO: Call MCP tool to logout
-                logger.info("Logged out from Knuspr")
-                self.authenticated = False
-        except Exception as e:
-            logger.error(f"Logout failed: {str(e)}")
+        self.authenticated = False
+        self.session_token = None

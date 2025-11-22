@@ -1,16 +1,47 @@
 import pytest
 import asyncio
 from unittest.mock import Mock, patch, AsyncMock
-from app.services.knuspr_mcp_client import KnusprMCPClient, KnusprProduct, KnusprCountry
+from app.services.knuspr_mcp_client import (
+    KnusprMCPClient,
+    KnusprProduct,
+    KnusprCountry,
+    DeliverySlot,
+    KnusprCart,
+    ToolExecutionError,
+    ConnectionError,
+    ClientSession
+)
 from tenacity import RetryError
+from contextlib import asynccontextmanager
+from datetime import datetime, timedelta
 
 @pytest.fixture
-def client():
-    return KnusprMCPClient(
-        login_email="test@example.com",
-        login_password="password",
-        country=KnusprCountry.CZECH_REPUBLIC
-    )
+def mock_mcp_session():
+    """Fixture to provide a mocked mcp.ClientSession."""
+    with patch('app.services.knuspr_mcp_client.ClientSession', autospec=True) as MockClientSession:
+        mock_session_instance = MockClientSession.return_value
+        mock_session_instance.call_tool = AsyncMock()
+
+        def session_factory():
+            @asynccontextmanager
+            async def fake_session_context():
+                yield mock_session_instance
+
+            return fake_session_context()
+
+        with patch('app.services.knuspr_mcp_client._create_mcp_session', side_effect=session_factory):
+            yield mock_session_instance
+
+@pytest.fixture
+def client(mock_mcp_session):
+    """Fixture to provide a KnusprMCPClient with a mocked MCP session."""
+    # Ensure ROHLIK_MCP_URL is set for client initialization
+    with patch('os.getenv', return_value="http://mock-mcp-url.com"):
+        return KnusprMCPClient(
+            login_email="test@example.com",
+            login_password="password",
+            country=KnusprCountry.CZECH_REPUBLIC
+        )
 
 @pytest.mark.asyncio
 async def test_unit_normalization(client):
@@ -23,74 +54,367 @@ async def test_unit_normalization(client):
     assert client._normalize_knuspr_unit("unknown") == "unknown"
 
 @pytest.mark.asyncio
-async def test_fuzzy_matching_sorting(client):
-    """Test that search results are sorted by similarity when exact_match is False."""
-    # Mock the search implementation to return unsorted results
-    # Since the current implementation mocks the return value inside the method,
-    # we'll test the sorting logic by patching the internal list if possible,
-    # or by relying on the fact that the method sorts the mock data it creates.
+async def test_authenticate_success(client, mock_mcp_session):
+    """Test successful authentication."""
+    mock_mcp_session.call_tool.return_value = {"session_token": "mock_token"}
 
-    # However, the current implementation creates a single mock product based on the input.
-    # To properly test sorting, we need to modify the mock data generation or mock the entire method logic.
-    # But since we modified the method to sort, let's verify it works with the mock data it generates.
+    result = await client.authenticate()
 
-    # Actually, the current mock implementation only returns ONE product based on the query.
-    # So sorting isn't really visible unless we mock the return to have multiple items.
-    # Let's try to patch the part where it creates mock products if we can, or just trust the logic for now.
-    # A better approach for unit testing the sorting logic specifically would be to extract it or mock the list.
-
-    # Let's rely on the fact that we implemented the sorting.
-    # We can verify the unit normalization in the result though.
-
-    products = await client.search_products("apple", exact_match=False)
-    assert len(products) > 0
-    assert products[0].unit == "g" # The mock returns 'g' which normalizes to 'g'
-
-    # To test sorting, we'd need multiple results.
-    # Let's assume the implementation is correct for now as we can't easily inject multiple mock results
-    # without changing the source code's mock generation logic more drastically.
+    assert result is True
+    assert client.authenticated is True
+    assert client.session_token == "mock_token"
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "authenticate",
+        arguments={
+            "email": "test@example.com",
+            "password": "password",
+            "country": "cz"
+        }
+    )
 
 @pytest.mark.asyncio
-async def test_retry_behavior(client):
-    """Test that methods retry on failure."""
+async def test_authenticate_failure_no_token(client, mock_mcp_session):
+    """Test authentication failure when no session token is returned."""
+    mock_mcp_session.call_tool.return_value = {} # No session token
 
-    # We need to mock the internal logic to raise an exception
-    # Since the method has a try/except block that catches exceptions and returns empty list/False,
-    # we need to make sure the exception we raise is NOT caught by that block, OR
-    # we need to verify that the retry decorator is working.
+    result = await client.authenticate()
 
-    # The current implementation catches Exception and logs it, returning empty list/False.
-    # BUT, we added `reraise=True` to the retry decorator.
-    # Wait, if the inner code catches the exception, the retry decorator won't see it!
-    # Let's check the code again.
-
-    # In search_products:
-    # try:
-    #    ...
-    # except Exception as e:
-    #    logger.error(...)
-    #    raise  <-- We added this raise!
-
-    # So the exception WILL propagate to the retry decorator.
-
-    with patch.object(client, 'authenticate', new_callable=AsyncMock) as mock_auth:
-        mock_auth.side_effect = Exception("Network error")
-
-        # We expect it to retry 3 times then raise RetryError (or the original exception if reraise=True)
-        # Since reraise=True, it should raise the original exception after retries.
-
-        with pytest.raises(Exception) as excinfo:
-            await client.search_products("test")
-
-        assert "Network error" in str(excinfo.value)
-        assert mock_auth.call_count == 3
+    assert result is False
+    assert client.authenticated is False
+    assert client.session_token is None
+    mock_mcp_session.call_tool.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_search_products_unit_normalization(client):
-    """Test that search products normalizes units."""
+async def test_authenticate_tool_execution_error(client, mock_mcp_session):
+    """Test authentication failure due to ToolExecutionError."""
+    mock_mcp_session.call_tool.side_effect = ToolExecutionError("Auth failed", "AUTH_ERROR")
+
+    result = await client.authenticate()
+
+    assert result is False
+    assert client.authenticated is False
+    mock_mcp_session.call_tool.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_authenticate_connection_error(client, mock_mcp_session):
+    """Test authentication failure due to ConnectionError."""
+    mock_mcp_session.call_tool.side_effect = ConnectionError("Connection lost")
+
+    result = await client.authenticate()
+
+    assert result is False
+    assert client.authenticated is False
+    mock_mcp_session.call_tool.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_search_products_success(client, mock_mcp_session):
+    """Test successful product search."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.return_value = {
+        "products": [
+            {
+                "product_id": "1", "name": "Apple", "quantity": 1, "unit": "pcs",
+                "price": 1.0, "available": True, "category": "fruit"
+            },
+            {
+                "product_id": "2", "name": "Red Apple", "quantity": 500, "unit": "g",
+                "price": 2.5, "available": True, "category": "fruit"
+            }
+        ]
+    }
+
     products = await client.search_products("apple")
-    assert len(products) > 0
-    # The mock data uses "g", which stays "g".
-    # If we could inject "ks", we'd see "pcs".
-    # Since we can't easily inject without mocking the whole method, we rely on the unit test for _normalize_knuspr_unit.
-    assert products[0].unit == "g"
+
+    assert len(products) == 2
+    assert products[0].name == "Apple"
+    assert products[1].name == "Red Apple"
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "search_products",
+        arguments={
+            "query": "apple",
+            "country": "cz",
+            "max_results": 10,
+            "exact_match": False,
+            "session_token": "mock_token"
+        }
+    )
+
+@pytest.mark.asyncio
+async def test_search_products_exact_match(client, mock_mcp_session):
+    """Test product search with exact match."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.return_value = {
+        "products": [
+            {
+                "product_id": "1", "name": "Exact Apple", "quantity": 1, "unit": "pcs",
+                "price": 1.0, "available": True, "category": "fruit"
+            }
+        ]
+    }
+
+    products = await client.search_products("Exact Apple", exact_match=True)
+
+    assert len(products) == 1
+    assert products[0].name == "Exact Apple"
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "search_products",
+        arguments={
+            "query": "Exact Apple",
+            "country": "cz",
+            "max_results": 10,
+            "exact_match": True,
+            "session_token": "mock_token"
+        }
+    )
+
+@pytest.mark.asyncio
+async def test_search_products_unauthenticated(client, mock_mcp_session):
+    """Test product search when unauthenticated, expecting re-authentication."""
+    client.authenticated = False
+    mock_mcp_session.call_tool.side_effect = [
+        {"session_token": "new_mock_token"},
+        {"products": []}
+    ]
+
+    products = await client.search_products("apple")
+
+    assert len(products) == 0
+    assert client.authenticated is True
+    assert client.session_token == "new_mock_token"
+    assert mock_mcp_session.call_tool.call_count == 2
+
+@pytest.mark.asyncio
+async def test_search_products_tool_execution_error(client, mock_mcp_session):
+    """Test product search failure due to ToolExecutionError."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.side_effect = ToolExecutionError("Search failed", "SEARCH_ERROR")
+
+    with pytest.raises(RuntimeError, match="Knuspr product search failed: Search failed"):
+        await client.search_products("apple")
+    assert mock_mcp_session.call_tool.call_count == client.max_retries
+
+@pytest.mark.asyncio
+async def test_search_products_connection_error(client, mock_mcp_session):
+    """Test product search failure due to ConnectionError."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.side_effect = ConnectionError("Connection lost")
+
+    with pytest.raises(RuntimeError, match="Knuspr product search connection error: Connection lost"):
+        await client.search_products("apple")
+    assert mock_mcp_session.call_tool.call_count == client.max_retries
+
+@pytest.mark.asyncio
+async def test_create_cart_success(client, mock_mcp_session):
+    """Test successful cart creation."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_items = [
+        {"product_id": "prod1", "quantity": 2, "unit": "pcs"},
+        {"product_id": "prod2", "quantity": 500, "unit": "g"}
+    ]
+    mock_mcp_session.call_tool.return_value = {
+        "cart": {
+            "cart_id": "cart123",
+            "items": [
+                {"product_id": "prod1", "name": "Product 1", "quantity": 2, "unit": "pcs", "price": 10.0, "available": True, "category": "cat1"},
+                {"product_id": "prod2", "name": "Product 2", "quantity": 500, "unit": "g", "price": 5.0, "available": True, "category": "cat2"}
+            ],
+            "total_price": 25.0,
+            "created_at": datetime.utcnow().isoformat()
+        }
+    }
+
+    cart = await client.create_cart(mock_items)
+
+    assert cart.cart_id == "cart123"
+    assert len(cart.items) == 2
+    assert cart.total_price == 25.0
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "create_cart",
+        arguments={
+            "items": mock_items,
+            "session_token": "mock_token",
+            "delivery_slot_id": None
+        }
+    )
+
+@pytest.mark.asyncio
+async def test_create_cart_empty_items(client):
+    """Test cart creation with empty items list."""
+    with pytest.raises(ValueError, match="Cart must contain at least one item"):
+        await client.create_cart([])
+
+@pytest.mark.asyncio
+async def test_create_cart_tool_execution_error(client, mock_mcp_session):
+    """Test cart creation failure due to ToolExecutionError."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_items = [{"product_id": "prod1", "quantity": 1, "unit": "pcs"}]
+    mock_mcp_session.call_tool.side_effect = ToolExecutionError("Cart failed", "CART_ERROR")
+
+    with pytest.raises(RuntimeError, match="Knuspr cart creation failed: Cart failed"):
+        await client.create_cart(mock_items)
+    assert mock_mcp_session.call_tool.call_count == client.max_retries
+
+@pytest.mark.asyncio
+async def test_get_delivery_slots_success(client, mock_mcp_session):
+    """Test successful retrieval of delivery slots."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    start_date = datetime.now()
+    end_date = start_date + timedelta(days=1)
+    mock_mcp_session.call_tool.return_value = {
+        "delivery_slots": [
+            {"slot_id": "slot1", "date": start_date.isoformat(), "time_window": "09-12", "price": 50.0, "available": True},
+            {"slot_id": "slot2", "date": end_date.isoformat(), "time_window": "14-17", "price": 60.0, "available": True}
+        ]
+    }
+
+    slots = await client.get_delivery_slots(start_date, end_date)
+
+    assert len(slots) == 2
+    assert slots[0].slot_id == "slot1"
+    assert slots[1].slot_id == "slot2"
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "get_delivery_slots",
+        arguments={
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "country": "cz",
+            "session_token": "mock_token"
+        }
+    )
+
+@pytest.mark.asyncio
+async def test_get_delivery_slots_invalid_date_range(client):
+    """Test retrieval of delivery slots with invalid date range."""
+    start_date = datetime.now()
+    end_date = start_date - timedelta(days=1)
+    with pytest.raises(ValueError, match="start_date must be before end_date"):
+        await client.get_delivery_slots(start_date, end_date)
+
+@pytest.mark.asyncio
+async def test_select_delivery_slot_success(client, mock_mcp_session):
+    """Test successful selection of a delivery slot."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.return_value = {"success": True}
+
+    result = await client.select_delivery_slot("cart123", "slot456")
+
+    assert result is True
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "select_delivery_slot",
+        arguments={
+            "cart_id": "cart123",
+            "slot_id": "slot456",
+            "session_token": "mock_token"
+        }
+    )
+
+@pytest.mark.asyncio
+async def test_select_delivery_slot_failure(client, mock_mcp_session):
+    """Test failed selection of a delivery slot."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.return_value = {"success": False, "message": "Slot unavailable"}
+
+    result = await client.select_delivery_slot("cart123", "slot456")
+
+    assert result is False
+    mock_mcp_session.call_tool.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_get_cart_success(client, mock_mcp_session):
+    """Test successful retrieval of a cart."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.return_value = {
+        "cart": {
+            "cart_id": "cart123",
+            "items": [
+                {"product_id": "prod1", "name": "Product 1", "quantity": 2, "unit": "pcs", "price": 10.0, "available": True, "category": "cat1"}
+            ],
+            "total_price": 20.0,
+            "created_at": datetime.utcnow().isoformat(),
+            "delivery_slot": {"slot_id": "slot456", "date": datetime.utcnow().isoformat(), "time_window": "09-12", "price": 50.0, "available": True}
+        }
+    }
+
+    cart = await client.get_cart("cart123")
+
+    assert cart is not None
+    assert cart.cart_id == "cart123"
+    assert cart.delivery_slot is not None
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "get_cart",
+        arguments={
+            "cart_id": "cart123",
+            "session_token": "mock_token"
+        }
+    )
+
+@pytest.mark.asyncio
+async def test_get_cart_not_found(client, mock_mcp_session):
+    """Test retrieval of a non-existent cart."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.return_value = {"cart": None}
+
+    cart = await client.get_cart("nonexistent_cart")
+
+    assert cart is None
+    mock_mcp_session.call_tool.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_close_success(client, mock_mcp_session):
+    """Test successful client close and logout."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.return_value = {"success": True}
+
+    await client.close()
+
+    assert client.authenticated is False
+    mock_mcp_session.call_tool.assert_called_once_with(
+        "logout",
+        arguments={"session_token": "mock_token"}
+    )
+
+@pytest.mark.asyncio
+async def test_close_unauthenticated(client, mock_mcp_session):
+    """Test client close when already unauthenticated."""
+    client.authenticated = False
+
+    await client.close()
+
+    mock_mcp_session.call_tool.assert_not_called()
+    assert client.authenticated is False
+
+@pytest.mark.asyncio
+async def test_retry_behavior_tool_execution_error(client, mock_mcp_session):
+    """Test that methods retry on ToolExecutionError and eventually raise."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.side_effect = ToolExecutionError("Transient error", "TRANSIENT")
+
+    with pytest.raises(RuntimeError, match="Knuspr product search failed: Transient error"):
+        await client.search_products("test")
+
+    assert mock_mcp_session.call_tool.call_count == client.max_retries
+
+@pytest.mark.asyncio
+async def test_retry_behavior_connection_error(client, mock_mcp_session):
+    """Test that methods retry on ConnectionError and eventually raise."""
+    client.authenticated = True
+    client.session_token = "mock_token"
+    mock_mcp_session.call_tool.side_effect = ConnectionError("Network hiccup")
+
+    with pytest.raises(RuntimeError, match="Knuspr product search connection error: Network hiccup"):
+        await client.search_products("test")
+
+    assert mock_mcp_session.call_tool.call_count == client.max_retries
