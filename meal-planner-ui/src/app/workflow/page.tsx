@@ -19,6 +19,12 @@ interface WorkflowState {
   isLoading: boolean;
 }
 
+// Workflow step navigation constants
+const WORKFLOW_STEPS = ['cart-preview', 'delivery-selection', 'review'] as const;
+const getStepIndex = (step: WorkflowStep): number => WORKFLOW_STEPS.indexOf(step as typeof WORKFLOW_STEPS[number]);
+const isStepComplete = (step: WorkflowStep, currentStep: WorkflowStep): boolean => getStepIndex(step) < getStepIndex(currentStep);
+const isStepAccessible = (step: WorkflowStep, currentStep: WorkflowStep): boolean => getStepIndex(step) <= getStepIndex(currentStep);
+
 function WorkflowPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -32,16 +38,26 @@ function WorkflowPageContent() {
     isLoading: true,
   });
 
+  // Validate and parse meal plan ID
+  const validateMealPlanId = (id: string | null): number | null => {
+    if (!id) return null;
+    const parsed = parseInt(id, 10);
+    if (isNaN(parsed) || parsed <= 0) return null;
+    return parsed;
+  };
+
   // Fetch cart data on component mount
   useEffect(() => {
-    if (!mealPlanId) {
+    const validatedMealPlanId = validateMealPlanId(mealPlanId);
+
+    if (!validatedMealPlanId) {
       setState((prev) => ({
         ...prev,
         step: 'error',
         error: {
           code: 'MISSING_MEAL_PLAN',
           message: 'No meal plan specified',
-          details: 'Please select a meal plan to create a cart.',
+          details: 'Please select a valid meal plan to create a cart.',
           severity: 'error',
           suggestions: ['Go back and select a meal plan', 'Create a new meal plan first'],
         },
@@ -69,7 +85,7 @@ function WorkflowPageContent() {
               Authorization: `Bearer ${token}`,
             },
             body: JSON.stringify({
-              meal_plan_id: parseInt(mealPlanId, 10),
+              meal_plan_id: validatedMealPlanId,
               delivery_preferences: {
                 preferred_dates: [],
                 preferred_time_slot: 'afternoon',
@@ -118,11 +134,17 @@ function WorkflowPageContent() {
     };
 
     generateCart();
-  }, [mealPlanId]);
+  }, [mealPlanId, validatedMealPlanId]);
 
   const handleRetry = () => {
-    setState((prev) => ({ ...prev, step: 'loading', isLoading: true, error: null }));
-    window.location.reload();
+    setState((prev) => ({
+      ...prev,
+      step: 'loading',
+      isLoading: true,
+      error: null,
+      cartData: null,
+      selectedDeliverySlot: null,
+    }));
   };
 
   const handleDeliverySlotSelect = (slot: DeliverySlot) => {
@@ -212,53 +234,42 @@ function WorkflowPageContent() {
             { name: 'Cart Review', step: 'cart-preview' as const },
             { name: 'Delivery', step: 'delivery-selection' as const },
             { name: 'Complete', step: 'review' as const },
-          ].map((item, idx, arr) => (
-            <React.Fragment key={item.step}>
-              <button
-                onClick={() =>
-                  ['cart-preview', 'delivery-selection', 'review'].includes(state.step) &&
-                  ['cart-preview', 'delivery-selection', 'review'].indexOf(item.step) <=
-                    ['cart-preview', 'delivery-selection', 'review'].indexOf(state.step) &&
-                  setState((prev) => ({ ...prev, step: item.step }))
-                }
-                className={`flex flex-col items-center gap-2 flex-1 pb-6 relative text-sm font-medium ${
-                  state.step === item.step
-                    ? 'text-blue-600'
-                    : ['cart-preview', 'delivery-selection', 'review'].indexOf(item.step) <
-                        ['cart-preview', 'delivery-selection', 'review'].indexOf(state.step)
-                      ? 'text-green-600'
-                      : 'text-gray-400'
-                }`}
-              >
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold ${
-                    state.step === item.step
-                      ? 'border-blue-600 bg-blue-50'
-                      : ['cart-preview', 'delivery-selection', 'review'].indexOf(item.step) <
-                          ['cart-preview', 'delivery-selection', 'review'].indexOf(state.step)
-                        ? 'border-green-600 bg-green-50 text-green-600'
-                        : 'border-gray-300 bg-gray-100'
+          ].map((item, idx, arr) => {
+            const isCurrentStep = state.step === item.step;
+            const isComplete = isStepComplete(item.step, state.step);
+            const isAccessible = isStepAccessible(item.step, state.step) && WORKFLOW_STEPS.includes(state.step as typeof WORKFLOW_STEPS[number]);
+
+            return (
+              <React.Fragment key={item.step}>
+                <button
+                  onClick={() => isAccessible && setState((prev) => ({ ...prev, step: item.step }))}
+                  className={`flex flex-col items-center gap-2 flex-1 pb-6 relative text-sm font-medium ${
+                    isCurrentStep ? 'text-blue-600' : isComplete ? 'text-green-600' : 'text-gray-400'
                   }`}
                 >
-                  {['cart-preview', 'delivery-selection', 'review'].indexOf(item.step) <
-                  ['cart-preview', 'delivery-selection', 'review'].indexOf(state.step)
-                    ? '✓'
-                    : idx + 1}
-                </div>
-                {item.name}
-              </button>
-              {idx < arr.length - 1 && (
-                <div
-                  className={`h-0.5 w-8 mb-8 ${
-                    ['cart-preview', 'delivery-selection', 'review'].indexOf(state.step) >
-                    ['cart-preview', 'delivery-selection', 'review'].indexOf(item.step)
-                      ? 'bg-green-600'
-                      : 'bg-gray-300'
-                  }`}
-                />
-              )}
-            </React.Fragment>
-          ))}
+                  <div
+                    className={`flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold ${
+                      isCurrentStep
+                        ? 'border-blue-600 bg-blue-50'
+                        : isComplete
+                          ? 'border-green-600 bg-green-50 text-green-600'
+                          : 'border-gray-300 bg-gray-100'
+                    }`}
+                  >
+                    {isComplete ? '✓' : idx + 1}
+                  </div>
+                  {item.name}
+                </button>
+                {idx < arr.length - 1 && (
+                  <div
+                    className={`h-0.5 w-8 mb-8 ${
+                      isStepComplete(item.step, state.step) ? 'bg-green-600' : 'bg-gray-300'
+                    }`}
+                  />
+                )}
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {/* Content */}
