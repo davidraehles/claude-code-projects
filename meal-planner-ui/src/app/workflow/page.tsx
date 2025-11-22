@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Loader } from 'lucide-react';
@@ -19,7 +19,7 @@ interface WorkflowState {
   isLoading: boolean;
 }
 
-export default function WorkflowPage() {
+function WorkflowPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const mealPlanId = searchParams.get('meal_plan_id');
@@ -344,5 +344,26 @@ export default function WorkflowPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function WorkflowPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-4xl">
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">Loading Workflow...</h2>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <WorkflowPageContent />
+    </Suspense>
   );
 }
