@@ -20,7 +20,7 @@ from typing import AsyncIterator, Optional
 import asyncio
 import logging
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -39,14 +39,16 @@ class RecipeScrapeResult(BaseModel):
     source_type: str = Field(..., description="'html', 'api', or 'rss'")
     scraped_at: datetime = Field(default_factory=datetime.utcnow)
 
-    @validator("ingredients")
+    @field_validator("ingredients")
+    @classmethod
     def validate_ingredients(cls, v):
         """Ensure ingredients are non-empty strings"""
         if not v:
             raise ValueError("Must have at least one ingredient")
         return [ing.strip() for ing in v if ing.strip()]
 
-    @validator("instructions")
+    @field_validator("instructions")
+    @classmethod
     def validate_instructions(cls, v):
         """Ensure instructions are substantial"""
         cleaned = v.strip()

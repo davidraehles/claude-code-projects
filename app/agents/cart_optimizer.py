@@ -224,7 +224,7 @@ class CartOptimizerAgent:
                 await self.event_bus.publish(Event(
                     event_type=EventType.CART_CREATED,
                     correlation_id=meal_plan_id,  # Using meal_plan_id as correlation_id for now
-                    user_id=int(user_id) if user_id.isdigit() else None,
+                    user_id=int(user_id) if str(user_id).isdigit() else None,
                     payload={
                         "cart_id": cart.cart_id,
                         "meal_plan_id": meal_plan_id,
@@ -247,7 +247,7 @@ class CartOptimizerAgent:
                 await self.event_bus.publish(Event(
                     event_type=EventType.CART_CREATION_FAILED,
                     correlation_id=meal_plan_id,
-                    user_id=int(user_id) if user_id.isdigit() else None,
+                    user_id=int(user_id) if str(user_id).isdigit() else None,
                     payload={
                         "meal_plan_id": meal_plan_id,
                         "error": str(e)
@@ -386,7 +386,6 @@ class CartOptimizerAgent:
         try:
             # Create GroceryCart record
             cart = GroceryCart(
-                id=1, # Explicitly set ID for SQLite testing workaround
                 user_id=int(user_id),
                 meal_plan_id=int(meal_plan_id),
                 name=f"Knuspr Cart {datetime.utcnow().strftime('%Y-%m-%d')}",
@@ -403,7 +402,6 @@ class CartOptimizerAgent:
             for i, (section, items) in enumerate(items_by_section.items()):
                 for j, item in enumerate(items):
                     cart_item = CartItem(
-                        id=(i * 100) + j + 1, # Unique ID for each item
                         cart_id=cart.id,
                         name=item["name"],
                         quantity=item["quantity"],
