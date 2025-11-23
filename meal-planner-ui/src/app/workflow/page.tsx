@@ -134,7 +134,7 @@ function WorkflowPageContent() {
     };
 
     generateCart();
-  }, [mealPlanId, validatedMealPlanId]);
+  }, [mealPlanId]);
 
   const handleRetry = () => {
     setState((prev) => ({
