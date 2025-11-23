@@ -44,10 +44,10 @@
 
 #### 3. Meal Plan Generation
 **Status:** Production-ready ✅
-- `POST /api/v1/meal_plans` - Generate meal plan (Z3 constraint solver)
-- `GET /api/v1/meal_plans` - List user's meal plans
-- `GET /api/v1/meal_plans/{id}` - Get detailed meal plan with all meals
-- `DELETE /api/v1/meal_plans/{id}` - Delete meal plan
+- `POST /api/v1/meal-plans` - Generate meal plan (Z3 constraint solver)
+- `GET /api/v1/meal-plans` - List user's meal plans
+- `GET /api/v1/meal-plans/{id}` - Get detailed meal plan with all meals
+- `DELETE /api/v1/meal-plans/{id}` - Delete meal plan
 - **Code:** `app/api/v1/meal_plans.py` (418 lines, fully implemented)
 - **Agent:** `app/agents/meal_architect.py` (784 lines, fully implemented)
 - **Features:**
@@ -60,7 +60,7 @@
 
 #### 4. Grocery Cart Generation
 **Status:** MVP implemented ✅
-- `POST /api/v1/meal_plans/{id}/grocery-cart` - Generate grocery list
+- `POST /api/v1/meal-plans/{id}/grocery-cart` - Generate grocery list
 - **Code:** `app/api/v1/meal_plans.py` (lines 332-418)
 - **Features:**
   - Ingredient aggregation across recipes
@@ -175,7 +175,7 @@
 - **File:** `meal-planner-ui/src/app/generate/page.tsx`
 - **Tasks:**
   - Build multi-step form
-  - Connect to `/api/v1/meal_plans`
+  - Connect to `/api/v1/meal-plans`
   - Implement dietary restriction chips
   - Add loading state (10-15 seconds)
   - Display generated plan
@@ -184,7 +184,7 @@
 **Status:** UI exists, not connected ⚠️
 - **File:** `meal-planner-ui/src/app/grocery-carts/[id]/page.tsx`
 - **Tasks:**
-  - Fetch cart from `/api/v1/meal_plans/{id}/grocery-cart`
+  - Fetch cart from `/api/v1/meal-plans/{id}/grocery-cart`
   - Display categorized items
   - Add checkboxes for purchased items
   - Implement export functionality
@@ -241,7 +241,7 @@ curl -X POST https://claude-code-projects-production.up.railway.app/api/v1/recip
 # ✅ Returns: 202 Accepted (background processing)
 
 # Generate meal plan (requires auth token)
-curl -X POST https://claude-code-projects-production.up.railway.app/api/v1/meal_plans \
+curl -X POST https://claude-code-projects-production.up.railway.app/api/v1/meal-plans \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
