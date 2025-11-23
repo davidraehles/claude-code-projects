@@ -160,8 +160,8 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
 
       <DeliverySlotPicker
         slots={availableSlots}
-        selectedSlot={state.selectedSlot}
-        onSlotSelected={handleSlotSelected}
+        selected={state.selectedSlot?.slot_id}
+        onSelect={handleSlotSelected}
       />
 
       {state.selectedSlot && (
