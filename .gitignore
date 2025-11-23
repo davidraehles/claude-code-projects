@@ -16,6 +16,7 @@ eggs/
 .eggs/
 lib/
 !meal-planner-ui/src/lib/
+!meal-planner-ui/__tests__/lib/
 lib64/
 parts/
 sdist/
