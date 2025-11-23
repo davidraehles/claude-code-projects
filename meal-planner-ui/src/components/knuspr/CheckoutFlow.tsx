@@ -361,7 +361,7 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
         <div className="flex items-center justify-between">
           {(['cart', 'delivery', 'confirm'] as const).map((step, index) => {
             const stepOrder = ['cart', 'delivery', 'confirm'] as const;
-            const currentIndex = stepOrder.indexOf(state.currentStep);
+            const currentIndex = stepOrder.indexOf(state.currentStep as 'cart' | 'delivery' | 'confirm');
             const isComplete = currentIndex > index;
             const isCurrent = currentIndex === index;
 
