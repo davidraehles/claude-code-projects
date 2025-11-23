@@ -191,19 +191,19 @@ class ApiClient {
     token?: string | null
   ): Promise<MealPlan[]> {
     return this.request<MealPlan[]>(
-      `/api/v1/meal_plans?skip=${skip}&limit=${limit}`,
+      `/api/v1/meal-plans?skip=${skip}&limit=${limit}`,
       {},
       token
     )
   }
 
   async getMealPlan(id: number, token?: string | null): Promise<MealPlanDetail> {
-    return this.request<MealPlanDetail>(`/api/v1/meal_plans/${id}`, {}, token)
+    return this.request<MealPlanDetail>(`/api/v1/meal-plans/${id}`, {}, token)
   }
 
   async createMealPlan(data: MealPlanCreateRequest, token?: string | null): Promise<MealPlan> {
     return this.request<MealPlan>(
-      "/api/v1/meal_plans",
+      "/api/v1/meal-plans",
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -214,7 +214,7 @@ class ApiClient {
 
   async deleteMealPlan(id: number, token?: string | null): Promise<void> {
     return this.request<void>(
-      `/api/v1/meal_plans/${id}`,
+      `/api/v1/meal-plans/${id}`,
       {
         method: "DELETE",
       },
@@ -226,7 +226,7 @@ class ApiClient {
 
   async generateGroceryCart(mealPlanId: number, token?: string | null): Promise<GroceryCart> {
     return this.request<GroceryCart>(
-      `/api/v1/meal_plans/${mealPlanId}/grocery-cart`,
+      `/api/v1/meal-plans/${mealPlanId}/grocery-cart`,
       {
         method: "POST",
       },
