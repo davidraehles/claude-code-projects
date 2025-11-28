@@ -37,7 +37,7 @@ services:
   # FastAPI Application
   api:
     build:
-      context: .
+      context: ../backend
       dockerfile: Dockerfile
     container_name: recipe-api
     environment:
@@ -73,10 +73,10 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
-      - ./app:/app/app
-      - ./tests:/app/tests
-      - ./migrations:/app/migrations
-      - ./alembic.ini:/app/alembic.ini
+      - ../backend/app:/app/app
+      - ../backend/tests:/app/tests
+      - ../backend/migrations:/app/migrations
+      - ../backend/alembic.ini:/app/alembic.ini
     depends_on:
       db:
         condition: service_healthy

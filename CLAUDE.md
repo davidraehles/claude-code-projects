@@ -1,24 +1,61 @@
-# claude-code-projects Development Guidelines
+# AI Meal Planner - Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-10-21
-
-## Active Technologies
-- (001-landing-page-redesign)
+## Project Overview
+Multi-agent recipe management and meal planning application with:
+- **Backend**: FastAPI (Python 3.11+) with LangGraph workflows
+- **Frontend**: Next.js 16 with React 19, TypeScript, Tailwind CSS
+- **Database**: PostgreSQL with SQLAlchemy ORM
+- **Grocery Integration**: Knuspr MCP client for cart management
 
 ## Project Structure
 ```
-src/
-tests/
+backend/               # Python FastAPI backend
+  app/                 # Application code
+  tests/               # Backend tests (unit & integration)
+  scripts/             # Python scripts (seeding, etc.)
+  requirements.txt     # Python dependencies
+frontend/              # Next.js frontend
+  src/                 # React components & pages
+  e2e/                 # Playwright E2E tests
+  __tests__/           # Jest unit tests
+infrastructure/        # Docker, deployment configs, monitoring scripts
+docs/                  # Documentation
+specs/                 # Feature specifications
 ```
 
 ## Commands
-# Add commands for 
+
+### Backend
+```bash
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+pytest tests/
+```
+
+### Frontend
+```bash
+cd frontend
+npm install
+npm run dev
+npm test
+npx playwright test
+```
+
+### Infrastructure
+```bash
+cd infrastructure
+docker-compose up -d
+```
 
 ## Code Style
-: Follow standard conventions
+- **Python**: Black formatter, isort for imports, mypy for type checking
+- **TypeScript**: ESLint + Prettier, strict mode enabled
+- **Commits**: Conventional commits (feat:, fix:, chore:, etc.)
 
-## Recent Changes
-- 001-landing-page-redesign: Added
+## Active Features
+- 002-multi-agent-recipe-app: Recipe management with AI agents
+- 003-ai-meal-planner-chat: Chat-based meal planning interface
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
