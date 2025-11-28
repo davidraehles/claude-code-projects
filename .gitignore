@@ -15,8 +15,8 @@ downloads/
 eggs/
 .eggs/
 lib/
-!meal-planner-ui/src/lib/
-!meal-planner-ui/__tests__/lib/
+!frontend/src/lib/
+!frontend/__tests__/lib/
 lib64/
 parts/
 sdist/
@@ -74,18 +74,18 @@ venv.bak/
 logs/
 
 # Alembic
-# Keep migration files but ignore generated artifacts
-migrations/__pycache__/
-migrations/versions/__pycache__/
+backend/migrations/__pycache__/
+backend/migrations/versions/__pycache__/
 
-# Node.js (root level - actual project is in meal-planner-ui/)
+# Node.js
 node_modules/
-package-lock.json
-package.json
 
-# Playwright
-/test-results/
-/playwright-report/
-/blob-report/
-/playwright/.cache/
-/playwright/.auth/
+# Playwright (in frontend/)
+frontend/test-results/
+frontend/playwright-report/
+frontend/blob-report/
+frontend/playwright/.cache/
+frontend/playwright/.auth/
+
+# MyPy cache
+.mypy_cache/

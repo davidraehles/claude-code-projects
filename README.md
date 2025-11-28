@@ -28,12 +28,28 @@ This project includes the following slash commands for Claude Code:
 
 ```
 .
-├── .claude/commands/     # Claude Code slash commands
-├── .specify/             # Spec-Kit configuration and documentation
-│   ├── memory/          # Templates and reference documents
-│   └── README.md        # Spec-Kit documentation
-└── scripts/             # Shell scripts for feature management
-    └── bash/            # Bash scripts for setup and automation
+├── backend/              # FastAPI Python backend
+│   ├── app/             # Application code
+│   │   ├── agents/      # AI agents (cart optimizer, meal architect, etc.)
+│   │   ├── api/         # API routes
+│   │   ├── models/      # SQLAlchemy database models
+│   │   ├── services/    # Business logic services
+│   │   └── workflows/   # LangGraph workflow orchestration
+│   ├── migrations/      # Alembic database migrations
+│   ├── tests/           # Backend tests (unit & integration)
+│   └── scripts/         # Python scripts (seeding, verification)
+├── frontend/            # Next.js React frontend
+│   ├── src/             # Application source code
+│   ├── e2e/             # Playwright E2E tests
+│   └── __tests__/       # Jest unit tests
+├── infrastructure/      # DevOps & deployment configuration
+│   ├── docker/          # Docker configuration (Prometheus, Grafana)
+│   └── scripts/         # Deployment & monitoring scripts
+├── docs/                # Project documentation
+├── specs/               # Feature specifications (Spec-Kit)
+├── .claude/             # Claude Code configuration
+├── .kilocode/           # Kilocode workflow definitions
+└── .specify/            # Spec-Kit templates and memory
 ```
 
 ## Getting Started
