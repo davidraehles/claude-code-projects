@@ -37,11 +37,9 @@ def initialize_state_node(state: MealPlanningState) -> MealPlanningState:
         state["start_time"] = time.time()
 
         # Track node execution
-        state["nodes_executed"].append({
-            "name": "initialize",
-            "timestamp": time.time(),
-            "status": "started"
-        })
+        state["nodes_executed"].append(
+            {"name": "initialize", "timestamp": time.time(), "status": "started"}
+        )
 
         # Create meal plan record
         meal_plan = MealPlan(
@@ -55,7 +53,7 @@ def initialize_state_node(state: MealPlanningState) -> MealPlanningState:
             target_calories_per_day=state.get("target_calories_per_day"),
             target_budget=state.get("target_budget"),
             preferred_cuisines=state.get("preferred_cuisines"),
-            status="generating"
+            status="generating",
         )
 
         db.add(meal_plan)
@@ -66,11 +64,15 @@ def initialize_state_node(state: MealPlanningState) -> MealPlanningState:
 
         # Mark node as completed
         state["nodes_executed"][-1]["status"] = "completed"
-        state["nodes_executed"][-1]["duration_ms"] = int((time.time() - state["start_time"]) * 1000)
+        state["nodes_executed"][-1]["duration_ms"] = int(
+            (time.time() - state["start_time"]) * 1000
+        )
 
         return state
 
     except Exception as e:
+        import traceback
+
         state["errors"].append(f"Initialize failed: {str(e)}")
         state["nodes_executed"][-1]["status"] = "failed"
         state["nodes_executed"][-1]["error"] = str(e)
@@ -97,11 +99,9 @@ def validate_constraints_node(state: MealPlanningState) -> MealPlanningState:
     state["current_step"] = "validate"
 
     # Track node execution
-    state["nodes_executed"].append({
-        "name": "validate",
-        "timestamp": start_time,
-        "status": "started"
-    })
+    state["nodes_executed"].append(
+        {"name": "validate", "timestamp": start_time, "status": "started"}
+    )
 
     # Validate num_days
     if state["num_days"] < 1 or state["num_days"] > 30:
@@ -169,11 +169,9 @@ def fetch_recipes_node(state: MealPlanningState) -> MealPlanningState:
         state["current_step"] = "fetch_recipes"
 
         # Track node execution
-        state["nodes_executed"].append({
-            "name": "fetch_recipes",
-            "timestamp": start_time,
-            "status": "started"
-        })
+        state["nodes_executed"].append(
+            {"name": "fetch_recipes", "timestamp": start_time, "status": "started"}
+        )
 
         agent = MealArchitectAgent(db, use_workflow=False)
 
@@ -184,7 +182,7 @@ def fetch_recipes_node(state: MealPlanningState) -> MealPlanningState:
             user_id=state["user_id"],
             dietary_restrictions=state.get("dietary_restrictions"),
             excluded_ingredients=state.get("excluded_ingredients"),
-            min_recipes=min_recipes
+            min_recipes=min_recipes,
         )
 
         # Convert to dict format for state
@@ -197,14 +195,16 @@ def fetch_recipes_node(state: MealPlanningState) -> MealPlanningState:
                 "nutrition": r.nutrition,
                 "servings": r.servings,
                 "prep_time": r.prep_time,
-                "cook_time": r.cook_time
+                "cook_time": r.cook_time,
             }
             for r in recipes
         ]
 
         # Mark node as completed
         state["nodes_executed"][-1]["status"] = "completed"
-        state["nodes_executed"][-1]["duration_ms"] = int((time.time() - start_time) * 1000)
+        state["nodes_executed"][-1]["duration_ms"] = int(
+            (time.time() - start_time) * 1000
+        )
         state["nodes_executed"][-1]["recipes_found"] = len(state["candidate_recipes"])
         state["nodes_executed"][-1]["recipes_required"] = min_recipes
 
@@ -242,11 +242,9 @@ def solve_optimization_node(state: MealPlanningState) -> MealPlanningState:
         state["current_step"] = "solve_optimization"
 
         # Track node execution
-        state["nodes_executed"].append({
-            "name": "solve_optimization",
-            "timestamp": start_time,
-            "status": "started"
-        })
+        state["nodes_executed"].append(
+            {"name": "solve_optimization", "timestamp": start_time, "status": "started"}
+        )
 
         agent = MealArchitectAgent(db, use_workflow=False)
 
@@ -263,7 +261,7 @@ def solve_optimization_node(state: MealPlanningState) -> MealPlanningState:
                 nutrition=r_dict.get("nutrition"),
                 servings=r_dict.get("servings", 2),
                 prep_time=r_dict.get("prep_time", 0),
-                cook_time=r_dict.get("cook_time", 0)
+                cook_time=r_dict.get("cook_time", 0),
             )
             recipe_objects.append(recipe)
 
@@ -276,7 +274,7 @@ def solve_optimization_node(state: MealPlanningState) -> MealPlanningState:
             num_people=state["num_people"],
             meals_per_day=state["meals_per_day"],
             target_calories_per_day=state.get("target_calories_per_day"),
-            target_budget=state.get("target_budget")
+            target_budget=state.get("target_budget"),
         )
 
         solver_time_ms = int((time.time() - solver_start) * 1000)
@@ -285,12 +283,14 @@ def solve_optimization_node(state: MealPlanningState) -> MealPlanningState:
         state["solver_result"] = {
             "status": "solved" if solution else "unsolved",
             "solution": solution,
-            "time_ms": solver_time_ms
+            "time_ms": solver_time_ms,
         }
 
         # Mark node as completed
         state["nodes_executed"][-1]["status"] = "completed"
-        state["nodes_executed"][-1]["duration_ms"] = int((time.time() - start_time) * 1000)
+        state["nodes_executed"][-1]["duration_ms"] = int(
+            (time.time() - start_time) * 1000
+        )
         state["nodes_executed"][-1]["solver_status"] = state["solver_result"]["status"]
         state["nodes_executed"][-1]["solver_time_ms"] = solver_time_ms
 
@@ -328,11 +328,9 @@ def fallback_heuristic_node(state: MealPlanningState) -> MealPlanningState:
     state["fallback_used"] = True
 
     # Track node execution
-    state["nodes_executed"].append({
-        "name": "fallback_heuristic",
-        "timestamp": start_time,
-        "status": "started"
-    })
+    state["nodes_executed"].append(
+        {"name": "fallback_heuristic", "timestamp": start_time, "status": "started"}
+    )
 
     try:
         import random
@@ -364,7 +362,7 @@ def fallback_heuristic_node(state: MealPlanningState) -> MealPlanningState:
                     "recipe_id": recipes[recipe_idx]["id"],
                     "recipe_title": recipes[recipe_idx]["title"],
                     "day": day,
-                    "meal_type": meal_type
+                    "meal_type": meal_type,
                 }
 
                 meal_idx += 1
@@ -373,14 +371,16 @@ def fallback_heuristic_node(state: MealPlanningState) -> MealPlanningState:
             "status": "solved",
             "solution": solution,
             "time_ms": int((time.time() - start_time) * 1000),
-            "method": "heuristic"
+            "method": "heuristic",
         }
 
         state["warnings"].append("Z3 solver failed, used simple heuristic fallback")
 
         # Mark node as completed
         state["nodes_executed"][-1]["status"] = "completed"
-        state["nodes_executed"][-1]["duration_ms"] = int((time.time() - start_time) * 1000)
+        state["nodes_executed"][-1]["duration_ms"] = int(
+            (time.time() - start_time) * 1000
+        )
         state["nodes_executed"][-1]["meals_assigned"] = total_meals
 
         return state
@@ -417,24 +417,30 @@ def relax_constraints_node(state: MealPlanningState) -> MealPlanningState:
     state["retry_count"] = state.get("retry_count", 0) + 1
 
     # Track node execution
-    state["nodes_executed"].append({
-        "name": "relax_constraints",
-        "timestamp": start_time,
-        "status": "started",
-        "retry_number": state["retry_count"]
-    })
+    state["nodes_executed"].append(
+        {
+            "name": "relax_constraints",
+            "timestamp": start_time,
+            "status": "started",
+            "retry_number": state["retry_count"],
+        }
+    )
 
     # Strategy 1: Remove a dietary restriction (if any)
     if state.get("dietary_restrictions") and len(state["dietary_restrictions"]) > 0:
         removed = state["dietary_restrictions"].pop()
         state["relaxation_strategy"] = f"Removed dietary restriction: {removed}"
-        state["warnings"].append(f"Relaxed constraints: removed '{removed}' restriction")
+        state["warnings"].append(
+            f"Relaxed constraints: removed '{removed}' restriction"
+        )
 
     # Strategy 2: Remove an excluded ingredient (if any)
     elif state.get("excluded_ingredients") and len(state["excluded_ingredients"]) > 0:
         removed = state["excluded_ingredients"].pop()
         state["relaxation_strategy"] = f"Removed excluded ingredient: {removed}"
-        state["warnings"].append(f"Relaxed constraints: removed '{removed}' from exclusions")
+        state["warnings"].append(
+            f"Relaxed constraints: removed '{removed}' from exclusions"
+        )
 
     # Strategy 3: Increase calorie tolerance
     elif state.get("target_calories_per_day"):
@@ -442,7 +448,9 @@ def relax_constraints_node(state: MealPlanningState) -> MealPlanningState:
         # Remove calorie constraint entirely
         state["target_calories_per_day"] = None
         state["relaxation_strategy"] = "Removed calorie constraint"
-        state["warnings"].append(f"Relaxed constraints: removed {old_target} cal/day target")
+        state["warnings"].append(
+            f"Relaxed constraints: removed {old_target} cal/day target"
+        )
 
     # Strategy 4: Remove budget constraint
     elif state.get("target_budget"):
@@ -486,11 +494,9 @@ def store_meal_plan_node(state: MealPlanningState) -> MealPlanningState:
         state["current_step"] = "store_meal_plan"
 
         # Track node execution
-        state["nodes_executed"].append({
-            "name": "store_meal_plan",
-            "timestamp": start_time,
-            "status": "started"
-        })
+        state["nodes_executed"].append(
+            {"name": "store_meal_plan", "timestamp": start_time, "status": "started"}
+        )
 
         solution = state["solver_result"]["solution"]
 
@@ -498,16 +504,27 @@ def store_meal_plan_node(state: MealPlanningState) -> MealPlanningState:
         meal_plan = db.query(MealPlan).get(state["meal_plan_id"])
 
         # Store each meal
+
         for meal_key, meal_data in solution.items():
+            # Calculate calories and cost if available from recipe
+            # In a real implementation, we would fetch this from the recipe
+            # For now, we'll leave them as None or calculate if we had the recipe object
+
             meal_plan_recipe = MealPlanRecipe(
                 meal_plan_id=meal_plan.id,
                 recipe_id=meal_data["recipe_id"],
                 day_number=meal_data["day"],
                 meal_type=meal_data["meal_type"],
-                scheduled_date=meal_plan.start_date + timedelta(days=meal_data["day"] - 1),
-                servings=state["num_people"]
+                scheduled_date=meal_plan.start_date
+                + timedelta(days=meal_data["day"] - 1),
+                servings=state["num_people"],
             )
             db.add(meal_plan_recipe)
+
+        # Update meal plan metadata
+        meal_plan.total_recipes = len(solution)
+        # meal_plan.total_calories = total_calories
+        # meal_plan.total_cost = total_cost
 
         db.commit()
         db.refresh(meal_plan)
@@ -520,12 +537,14 @@ def store_meal_plan_node(state: MealPlanningState) -> MealPlanningState:
             "end_date": meal_plan.end_date.isoformat(),
             "num_people": meal_plan.num_people,
             "status": meal_plan.status,
-            "total_meals": len(solution)
+            "total_meals": len(solution),
         }
 
         # Mark node as completed
         state["nodes_executed"][-1]["status"] = "completed"
-        state["nodes_executed"][-1]["duration_ms"] = int((time.time() - start_time) * 1000)
+        state["nodes_executed"][-1]["duration_ms"] = int(
+            (time.time() - start_time) * 1000
+        )
         state["nodes_executed"][-1]["meals_stored"] = len(solution)
 
         return state
@@ -561,11 +580,9 @@ def finalize_node(state: MealPlanningState) -> MealPlanningState:
         state["current_step"] = "finalize"
 
         # Track node execution
-        state["nodes_executed"].append({
-            "name": "finalize",
-            "timestamp": start_time,
-            "status": "started"
-        })
+        state["nodes_executed"].append(
+            {"name": "finalize", "timestamp": start_time, "status": "started"}
+        )
 
         # Update meal plan status
         meal_plan = db.query(MealPlan).get(state["meal_plan_id"])
@@ -583,7 +600,9 @@ def finalize_node(state: MealPlanningState) -> MealPlanningState:
 
         # Mark node as completed
         state["nodes_executed"][-1]["status"] = "completed"
-        state["nodes_executed"][-1]["duration_ms"] = int((time.time() - start_time) * 1000)
+        state["nodes_executed"][-1]["duration_ms"] = int(
+            (time.time() - start_time) * 1000
+        )
 
         return state
 
@@ -618,11 +637,9 @@ def error_handler_node(state: MealPlanningState) -> MealPlanningState:
         state["current_step"] = "error_handler"
 
         # Track node execution
-        state["nodes_executed"].append({
-            "name": "error_handler",
-            "timestamp": start_time,
-            "status": "started"
-        })
+        state["nodes_executed"].append(
+            {"name": "error_handler", "timestamp": start_time, "status": "started"}
+        )
 
         # Determine failure reason
         if state["errors"]:
@@ -642,7 +659,9 @@ def error_handler_node(state: MealPlanningState) -> MealPlanningState:
 
         # Mark node as completed
         state["nodes_executed"][-1]["status"] = "completed"
-        state["nodes_executed"][-1]["duration_ms"] = int((time.time() - start_time) * 1000)
+        state["nodes_executed"][-1]["duration_ms"] = int(
+            (time.time() - start_time) * 1000
+        )
         state["nodes_executed"][-1]["failure_reason"] = state["failure_reason"]
 
         return state

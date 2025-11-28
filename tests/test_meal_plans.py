@@ -53,10 +53,21 @@ def test_db():
 def client(test_db):
     """Create test client."""
     from app.api.dependencies import get_current_user_id
+    from unittest.mock import patch
+
     app.dependency_overrides[get_current_user_id] = override_get_current_user_id
 
-    with TestClient(app) as test_client:
-        yield test_client
+    # Patch SessionLocal used in workflow nodes
+    # We need to patch it where it is imported/used.
+    # Since nodes import it inside the function, patching app.database.SessionLocal should work
+    # if we patch it before the node function is called.
+
+    def get_test_session():
+        return TestingSessionLocal()
+
+    with patch("app.database.SessionLocal", side_effect=get_test_session):
+        with TestClient(app) as test_client:
+            yield test_client
 
 
 @pytest.fixture
@@ -64,10 +75,7 @@ def test_user(test_db):
     """Create a test user."""
     db = TestingSessionLocal()
     user = User(
-        id=1,
-        email="test@example.com",
-        password_hash="hashed_password",
-        country="DE"
+        id=1, email="test@example.com", password_hash="hashed_password", country="DE"
     )
     db.add(user)
     db.commit()
@@ -80,13 +88,27 @@ def create_test_recipes(db, user_id, count=21):
     """Helper function to create test recipes."""
     recipes = []
     recipe_names = [
-        "Breakfast Oatmeal", "Scrambled Eggs", "Greek Yogurt Bowl",
-        "Pasta Carbonara", "Chicken Salad", "Vegetable Stir Fry",
-        "Grilled Salmon", "Beef Tacos", "Vegetable Curry",
-        "Mushroom Risotto", "Chicken Soup", "Quinoa Bowl",
-        "Fish and Chips", "Lentil Soup", "Turkey Sandwich",
-        "Veggie Pizza", "Chicken Tikka", "Spaghetti Bolognese",
-        "Caesar Salad", "Fried Rice", "Tomato Soup"
+        "Breakfast Oatmeal",
+        "Scrambled Eggs",
+        "Greek Yogurt Bowl",
+        "Pasta Carbonara",
+        "Chicken Salad",
+        "Vegetable Stir Fry",
+        "Grilled Salmon",
+        "Beef Tacos",
+        "Vegetable Curry",
+        "Mushroom Risotto",
+        "Chicken Soup",
+        "Quinoa Bowl",
+        "Fish and Chips",
+        "Lentil Soup",
+        "Turkey Sandwich",
+        "Veggie Pizza",
+        "Chicken Tikka",
+        "Spaghetti Bolognese",
+        "Caesar Salad",
+        "Fried Rice",
+        "Tomato Soup",
     ]
 
     for i in range(min(count, len(recipe_names))):
@@ -100,7 +122,7 @@ def create_test_recipes(db, user_id, count=21):
             servings=2,
             nutrition={"calories": 500},
             source_url=f"https://example.com/recipe-{i}",
-            source_type="html"
+            source_type="html",
         )
         db.add(recipe)
         recipes.append(recipe)
@@ -123,7 +145,7 @@ class TestMealPlanAPI:
             "start_date": "2025-11-18",
             "num_days": 3,
             "num_people": 2,
-            "meals_per_day": 3
+            "meals_per_day": 3,
         }
 
         response = client.post("/api/v1/meal-plans", json=request_data)
@@ -151,7 +173,7 @@ class TestMealPlanAPI:
             "dietary_restrictions": ["vegetarian"],
             "target_calories_per_day": 2000,
             "target_budget": 50.0,
-            "meals_per_day": 3
+            "meals_per_day": 3,
         }
 
         response = client.post("/api/v1/meal-plans", json=request_data)
@@ -170,7 +192,7 @@ class TestMealPlanAPI:
         request_data = {
             "start_date": "2025-11-18",
             "num_days": 50,  # Exceeds maximum of 30
-            "num_people": 2
+            "num_people": 2,
         }
 
         response = client.post("/api/v1/meal-plans", json=request_data)
@@ -194,7 +216,7 @@ class TestMealPlanAPI:
             "start_date": "2025-11-18",
             "num_days": 3,
             "num_people": 2,
-            "meals_per_day": 3
+            "meals_per_day": 3,
         }
         create_response = client.post("/api/v1/meal-plans", json=request_data)
         assert create_response.status_code == 202
@@ -217,7 +239,7 @@ class TestMealPlanAPI:
             "start_date": "2025-11-18",
             "num_days": 3,
             "num_people": 2,
-            "meals_per_day": 3
+            "meals_per_day": 3,
         }
         create_response = client.post("/api/v1/meal-plans", json=request_data)
         meal_plan_id = create_response.json()["id"]
@@ -249,7 +271,7 @@ class TestMealPlanAPI:
             "start_date": "2025-11-18",
             "num_days": 3,
             "num_people": 2,
-            "meals_per_day": 3
+            "meals_per_day": 3,
         }
         create_response = client.post("/api/v1/meal-plans", json=request_data)
         meal_plan_id = create_response.json()["id"]
@@ -273,7 +295,7 @@ class TestMealPlanAPI:
             "start_date": "2025-11-18",
             "num_days": 3,
             "num_people": 2,
-            "meals_per_day": 3
+            "meals_per_day": 3,
         }
         create_response = client.post("/api/v1/meal-plans", json=request_data)
         meal_plan_id = create_response.json()["id"]
