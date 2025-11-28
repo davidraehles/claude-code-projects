@@ -87,8 +87,3 @@ package.json
 /blob-report/
 /playwright/.cache/
 /playwright/.auth/
-
-# AI / Tooling
-.kilocode/
-.claude/
-.specify/

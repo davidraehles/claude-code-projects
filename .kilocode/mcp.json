@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "redis": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-redis",
+        "--url",
+        "redis://default:gjWuRAlGXbBvnWGoVwSUIUwWyBvkRCMv@switchback.proxy.rlwy.net:51029"
+      ]
+    }
+  }
+}
