@@ -21,14 +21,25 @@ router = APIRouter()
 # Pydantic schemas
 class MealPlanCreateRequest(BaseModel):
     """Schema for creating a meal plan."""
+
     start_date: date = Field(..., description="Start date of the meal plan")
     num_days: int = Field(..., ge=1, le=30, description="Number of days (1-30)")
     num_people: int = Field(2, ge=1, le=10, description="Number of people (1-10)")
-    dietary_restrictions: Optional[List[str]] = Field(None, description="Dietary restrictions")
-    excluded_ingredients: Optional[List[str]] = Field(None, description="Excluded ingredients")
-    target_calories_per_day: Optional[int] = Field(None, ge=1000, le=5000, description="Target calories per day")
-    target_budget: Optional[float] = Field(None, ge=0, description="Target budget in EUR")
-    preferred_cuisines: Optional[List[str]] = Field(None, description="Preferred cuisines")
+    dietary_restrictions: Optional[List[str]] = Field(
+        None, description="Dietary restrictions"
+    )
+    excluded_ingredients: Optional[List[str]] = Field(
+        None, description="Excluded ingredients"
+    )
+    target_calories_per_day: Optional[int] = Field(
+        None, ge=1000, le=5000, description="Target calories per day"
+    )
+    target_budget: Optional[float] = Field(
+        None, ge=0, description="Target budget in EUR"
+    )
+    preferred_cuisines: Optional[List[str]] = Field(
+        None, description="Preferred cuisines"
+    )
     meals_per_day: int = Field(3, ge=1, le=5, description="Meals per day (1-5)")
 
     class Config:
@@ -40,13 +51,14 @@ class MealPlanCreateRequest(BaseModel):
                 "dietary_restrictions": ["vegetarian"],
                 "target_calories_per_day": 2000,
                 "target_budget": 50.0,
-                "meals_per_day": 3
+                "meals_per_day": 3,
             }
         }
 
 
 class MealPlanResponse(BaseModel):
     """Schema for meal plan response."""
+
     id: int
     user_id: int
     name: str
@@ -70,6 +82,7 @@ class MealPlanResponse(BaseModel):
 
 class MealResponse(BaseModel):
     """Schema for a single meal."""
+
     meal_type: str
     recipe_id: int
     recipe_name: str
@@ -80,6 +93,7 @@ class MealResponse(BaseModel):
 
 class DayResponse(BaseModel):
     """Schema for a day in the meal plan."""
+
     day_number: int
     date: Optional[str]
     meals: List[MealResponse]
@@ -87,6 +101,7 @@ class DayResponse(BaseModel):
 
 class MealPlanDetailResponse(BaseModel):
     """Schema for detailed meal plan response."""
+
     meal_plan: MealPlanResponse
     days: List[DayResponse]
     statistics: dict
@@ -94,6 +109,7 @@ class MealPlanDetailResponse(BaseModel):
 
 class GroceryCartResponse(BaseModel):
     """Schema for grocery cart response."""
+
     id: int
     name: str
     total_items: int
@@ -107,6 +123,7 @@ class GroceryCartResponse(BaseModel):
 
 class CartItemResponse(BaseModel):
     """Schema for cart item response."""
+
     id: int
     name: str
     quantity: float
@@ -121,12 +138,13 @@ class CartItemResponse(BaseModel):
 
 # Meal Plan Endpoints
 
+
 @router.post("", response_model=MealPlanResponse, status_code=status.HTTP_202_ACCEPTED)
 async def create_meal_plan(
     request: MealPlanCreateRequest,
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_database),
-    user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Create a new meal plan.
@@ -156,7 +174,7 @@ async def create_meal_plan(
             target_calories_per_day=request.target_calories_per_day,
             target_budget=request.target_budget,
             preferred_cuisines=request.preferred_cuisines,
-            meals_per_day=request.meals_per_day
+            meals_per_day=request.meals_per_day,
         )
 
         return MealPlanResponse(
@@ -175,13 +193,13 @@ async def create_meal_plan(
             total_calories=meal_plan.total_calories,
             total_cost=meal_plan.total_cost,
             status=meal_plan.status,
-            created_at=meal_plan.created_at.isoformat()
+            created_at=meal_plan.created_at.isoformat(),
         )
 
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to generate meal plan: {str(e)}"
+            detail=f"Failed to generate meal plan: {str(e)}",
         )
 
 
@@ -191,7 +209,7 @@ async def list_meal_plans(
     limit: int = Query(10, ge=1, le=100),
     status_filter: Optional[str] = Query(None, description="Filter by status"),
     db: Session = Depends(get_database),
-    user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     List user's meal plans.
@@ -211,7 +229,9 @@ async def list_meal_plans(
     if status_filter:
         query = query.filter(MealPlan.status == status_filter)
 
-    meal_plans = query.order_by(MealPlan.created_at.desc()).offset(skip).limit(limit).all()
+    meal_plans = (
+        query.order_by(MealPlan.created_at.desc()).offset(skip).limit(limit).all()
+    )
 
     return [
         MealPlanResponse(
@@ -230,7 +250,7 @@ async def list_meal_plans(
             total_calories=mp.total_calories,
             total_cost=mp.total_cost,
             status=mp.status,
-            created_at=mp.created_at.isoformat()
+            created_at=mp.created_at.isoformat(),
         )
         for mp in meal_plans
     ]
@@ -240,7 +260,7 @@ async def list_meal_plans(
 async def get_meal_plan(
     meal_plan_id: int,
     db: Session = Depends(get_database),
-    user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Get detailed meal plan.
@@ -253,15 +273,16 @@ async def get_meal_plan(
     Returns:
         Detailed meal plan with all meals
     """
-    meal_plan = db.query(MealPlan).filter(
-        MealPlan.id == meal_plan_id,
-        MealPlan.user_id == user_id
-    ).first()
+    meal_plan = (
+        db.query(MealPlan)
+        .filter(MealPlan.id == meal_plan_id, MealPlan.user_id == user_id)
+        .first()
+    )
 
     if not meal_plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Meal plan {meal_plan_id} not found"
+            detail=f"Meal plan {meal_plan_id} not found",
         )
 
     agent = MealArchitectAgent(db)
@@ -284,17 +305,17 @@ async def get_meal_plan(
             total_calories=meal_plan.total_calories,
             total_cost=meal_plan.total_cost,
             status=meal_plan.status,
-            created_at=meal_plan.created_at.isoformat()
+            created_at=meal_plan.created_at.isoformat(),
         ),
         days=[
             DayResponse(
                 day_number=day["day_number"],
                 date=day["date"],
-                meals=[MealResponse(**meal) for meal in day["meals"]]
+                meals=[MealResponse(**meal) for meal in day["meals"]],
             )
             for day in summary["days"]
         ],
-        statistics=summary["statistics"]
+        statistics=summary["statistics"],
     )
 
 
@@ -302,7 +323,7 @@ async def get_meal_plan(
 async def delete_meal_plan(
     meal_plan_id: int,
     db: Session = Depends(get_database),
-    user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Delete a meal plan.
@@ -312,15 +333,16 @@ async def delete_meal_plan(
         db: Database session
         user_id: Current user ID
     """
-    meal_plan = db.query(MealPlan).filter(
-        MealPlan.id == meal_plan_id,
-        MealPlan.user_id == user_id
-    ).first()
+    meal_plan = (
+        db.query(MealPlan)
+        .filter(MealPlan.id == meal_plan_id, MealPlan.user_id == user_id)
+        .first()
+    )
 
     if not meal_plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Meal plan {meal_plan_id} not found"
+            detail=f"Meal plan {meal_plan_id} not found",
         )
 
     db.delete(meal_plan)
@@ -329,11 +351,12 @@ async def delete_meal_plan(
 
 # Grocery Cart Endpoints (simplified for MVP)
 
+
 @router.post("/{meal_plan_id}/grocery-cart", response_model=GroceryCartResponse)
 async def generate_grocery_cart(
     meal_plan_id: int,
     db: Session = Depends(get_database),
-    user_id: int = Depends(get_current_user_id)
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Generate grocery cart from meal plan.
@@ -346,15 +369,16 @@ async def generate_grocery_cart(
     Returns:
         Created grocery cart
     """
-    meal_plan = db.query(MealPlan).filter(
-        MealPlan.id == meal_plan_id,
-        MealPlan.user_id == user_id
-    ).first()
+    meal_plan = (
+        db.query(MealPlan)
+        .filter(MealPlan.id == meal_plan_id, MealPlan.user_id == user_id)
+        .first()
+    )
 
     if not meal_plan:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Meal plan {meal_plan_id} not found"
+            detail=f"Meal plan {meal_plan_id} not found",
         )
 
     # Create grocery cart
@@ -362,7 +386,7 @@ async def generate_grocery_cart(
         user_id=user_id,
         meal_plan_id=meal_plan_id,
         name=f"Groceries for {meal_plan.name}",
-        status="active"
+        status="active",
     )
 
     db.add(cart)
@@ -370,9 +394,11 @@ async def generate_grocery_cart(
     db.refresh(cart)
 
     # Get all recipes in meal plan
-    meal_plan_recipes = db.query(MealPlanRecipe).filter(
-        MealPlanRecipe.meal_plan_id == meal_plan_id
-    ).all()
+    meal_plan_recipes = (
+        db.query(MealPlanRecipe)
+        .filter(MealPlanRecipe.meal_plan_id == meal_plan_id)
+        .all()
+    )
 
     # Aggregate ingredients
     ingredient_quantities = {}
@@ -387,7 +413,7 @@ async def generate_grocery_cart(
                 ingredient_quantities[ingredient_str] = {
                     "quantity": 1.0,
                     "unit": "item",
-                    "recipe_ids": []
+                    "recipe_ids": [],
                 }
 
             ingredient_quantities[ingredient_str]["recipe_ids"].append(mpr.recipe_id)
@@ -399,7 +425,7 @@ async def generate_grocery_cart(
             name=ingredient_name,
             quantity=data["quantity"],
             unit=data["unit"],
-            recipe_ids=data["recipe_ids"]
+            recipe_ids=data["recipe_ids"],
         )
         db.add(cart_item)
 
@@ -413,5 +439,5 @@ async def generate_grocery_cart(
         total_items=cart.total_items,
         total_cost=cart.total_cost,
         status=cart.status,
-        created_at=cart.created_at.isoformat()
+        created_at=cart.created_at.isoformat(),
     )

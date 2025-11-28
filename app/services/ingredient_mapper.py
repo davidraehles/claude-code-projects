@@ -36,7 +36,6 @@ UNIT_CONVERSIONS = {
     "milliliter": 1,
     "l": 1000,
     "liter": 1000,
-
     # Weight conversions (to grams)
     "g": 1,
     "gram": 1,
@@ -46,7 +45,6 @@ UNIT_CONVERSIONS = {
     "ounce": 28.35,
     "lb": 453.6,
     "pound": 453.6,
-
     # Count (pass through)
     "pcs": 1,
     "piece": 1,
@@ -75,6 +73,7 @@ INGREDIENT_CATEGORIES = {
 @dataclass
 class ParsedIngredient:
     """Parsed ingredient with quantity and unit"""
+
     name: str
     quantity: float
     unit: str
@@ -113,7 +112,9 @@ class IngredientMapper:
 
         # Extract quantity and unit using regex
         # Pattern: [number] [unit]
-        match = re.match(r'^(\d+(?:\.\d+)?)\s*([a-z]+)?\s+(.+)$', original, re.IGNORECASE)
+        match = re.match(
+            r"^(\d+(?:\.\d+)?)\s*([a-z]+)?\s+(.+)$", original, re.IGNORECASE
+        )
 
         if match:
             quantity = float(match.group(1))
@@ -129,10 +130,7 @@ class IngredientMapper:
         name = self._clean_ingredient_name(name)
 
         return ParsedIngredient(
-            name=name,
-            quantity=quantity,
-            unit=unit,
-            original=original
+            name=name, quantity=quantity, unit=unit, original=original
         )
 
     def _clean_ingredient_name(self, name: str) -> str:
@@ -152,17 +150,34 @@ class IngredientMapper:
         """
         # Remove common descriptors
         descriptors = [
-            "fresh", "frozen", "canned", "dried", "raw", "cooked",
-            "minced", "chopped", "diced", "sliced", "grated",
-            "extra virgin", "pure", "whole", "ground", "powdered",
-            "organic", "unsalted", "salted"
+            "fresh",
+            "frozen",
+            "canned",
+            "dried",
+            "raw",
+            "cooked",
+            "minced",
+            "chopped",
+            "diced",
+            "sliced",
+            "grated",
+            "extra virgin",
+            "pure",
+            "whole",
+            "ground",
+            "powdered",
+            "organic",
+            "unsalted",
+            "salted",
         ]
 
         words = name.split()
         cleaned = [w for w in words if w.lower() not in descriptors]
         return " ".join(cleaned) if cleaned else name
 
-    def normalize_quantity(self, quantity: float, from_unit: str, to_unit: str = "g") -> Tuple[float, str]:
+    def normalize_quantity(
+        self, quantity: float, from_unit: str, to_unit: str = "g"
+    ) -> Tuple[float, str]:
         """
         Convert quantity from one unit to another with intelligent fallback.
 
@@ -196,19 +211,33 @@ class IngredientMapper:
 
         # Normalize common unit aliases
         unit_aliases = {
-            "cup": "cup", "cups": "cup",
-            "tbsp": "tbsp", "tablespoon": "tbsp",
-            "tsp": "tsp", "teaspoon": "tsp",
-            "ml": "ml", "milliliter": "ml",
-            "l": "l", "liter": "l",
-            "g": "g", "gram": "g",
-            "kg": "kg", "kilogram": "kg",
-            "oz": "oz", "ounce": "oz",
-            "lb": "lb", "pound": "lb",
-            "pcs": "pcs", "piece": "pcs", "pieces": "pcs",
-            "can": "can", "cans": "can",
-            "jar": "jar", "jars": "jar",
-            "bunch": "bunch", "bunches": "bunch",
+            "cup": "cup",
+            "cups": "cup",
+            "tbsp": "tbsp",
+            "tablespoon": "tbsp",
+            "tsp": "tsp",
+            "teaspoon": "tsp",
+            "ml": "ml",
+            "milliliter": "ml",
+            "l": "l",
+            "liter": "l",
+            "g": "g",
+            "gram": "g",
+            "kg": "kg",
+            "kilogram": "kg",
+            "oz": "oz",
+            "ounce": "oz",
+            "lb": "lb",
+            "pound": "lb",
+            "pcs": "pcs",
+            "piece": "pcs",
+            "pieces": "pcs",
+            "can": "can",
+            "cans": "can",
+            "jar": "jar",
+            "jars": "jar",
+            "bunch": "bunch",
+            "bunches": "bunch",
         }
 
         from_unit = unit_aliases.get(from_unit, from_unit)
@@ -228,11 +257,15 @@ class IngredientMapper:
 
         # If trying to convert between incompatible types, return original
         if (from_is_count and not to_is_count) or (to_is_count and not from_is_count):
-            logger.debug(f"Cannot convert between count and measure units: {from_unit} → {to_unit}, keeping original")
+            logger.debug(
+                f"Cannot convert between count and measure units: {from_unit} → {to_unit}, keeping original"
+            )
             return quantity, from_unit
 
         if (from_is_volume and to_is_weight) or (from_is_weight and to_is_volume):
-            logger.debug(f"Cannot directly convert volume ↔ weight without ingredient density: {from_unit} → {to_unit}")
+            logger.debug(
+                f"Cannot directly convert volume ↔ weight without ingredient density: {from_unit} → {to_unit}"
+            )
             return quantity, from_unit
 
         # Get conversion factors
@@ -284,9 +317,7 @@ class IngredientMapper:
         return max(fuzzy_score, sort_score)
 
     async def find_product(
-        self,
-        ingredient: ParsedIngredient,
-        min_confidence: float = 0.70
+        self, ingredient: ParsedIngredient, min_confidence: float = 0.70
     ) -> Optional[Dict]:
         """
         Find Knuspr product matching ingredient with variant matching.
@@ -306,9 +337,7 @@ class IngredientMapper:
         """
         # Search Knuspr for products
         products = await self.knuspr_client.search_products(
-            ingredient.name,
-            max_results=MAX_PRODUCT_SEARCH_RESULTS,
-            exact_match=False
+            ingredient.name, max_results=MAX_PRODUCT_SEARCH_RESULTS, exact_match=False
         )
 
         if not products:
@@ -328,7 +357,7 @@ class IngredientMapper:
                 similarity = min(1.0, similarity * AVAILABILITY_BOOST_MULTIPLIER)
 
             # Consider confidence score from MCP client
-            if hasattr(product, 'confidence') and product.confidence is not None:
+            if hasattr(product, "confidence") and product.confidence is not None:
                 similarity = (similarity + product.confidence) / 2
 
             if similarity >= min_confidence and similarity > best_score:
@@ -348,15 +377,16 @@ class IngredientMapper:
                 "price": best_match.price,
                 "category": best_match.category,
                 "available": best_match.available,
-                "confidence": best_score
+                "confidence": best_score,
             }
         else:
-            logger.warning(f"No good match found for '{ingredient.name}' (best score: {best_score:.2f})")
+            logger.warning(
+                f"No good match found for '{ingredient.name}' (best score: {best_score:.2f})"
+            )
             return None
 
     async def map_ingredients_to_products(
-        self,
-        ingredients: List[str]
+        self, ingredients: List[str]
     ) -> Tuple[List[Dict], List[str]]:
         """
         Map a list of recipe ingredients to Knuspr products.
@@ -384,9 +414,7 @@ class IngredientMapper:
                 if product:
                     # Normalize quantity to product unit if possible
                     normalized_qty, normalized_unit = self.normalize_quantity(
-                        parsed.quantity,
-                        parsed.unit,
-                        product["unit"]
+                        parsed.quantity, parsed.unit, product["unit"]
                     )
 
                     product["quantity"] = normalized_qty
