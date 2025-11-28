@@ -139,10 +139,10 @@ async def create_cart_from_meal_plan(
 
     # Convert country string to Enum if needed
     try:
-        country_enum = KnusprCountry(country)
+        country_enum = KnusprCountry(credentials.country)
     except ValueError:
         # Default to CZ if invalid
-        logger.warning(f"Invalid country code '{country}', defaulting to CZ")
+        logger.warning(f"Invalid country code '{credentials.country}', defaulting to CZ")
         country_enum = KnusprCountry.CZECH_REPUBLIC
 
     # Initialize MCP client to None for cleanup in finally block

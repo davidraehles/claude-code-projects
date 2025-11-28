@@ -5,7 +5,19 @@ Defines database schema for meal plans, recipes, and grocery carts.
 """
 
 from datetime import datetime, date
-from sqlalchemy import Column, BigInteger, String, Text, Integer, Float, Date, DateTime, Boolean, ForeignKey, Index
+from sqlalchemy import (
+    Column,
+    BigInteger,
+    String,
+    Text,
+    Integer,
+    Float,
+    Date,
+    DateTime,
+    Boolean,
+    ForeignKey,
+    Index,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -42,8 +54,17 @@ class MealPlan(Base):
 
     __tablename__ = "meal_plans"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    user_id = Column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     # Basic info
     name = Column(String(255), nullable=False)
@@ -71,13 +92,19 @@ class MealPlan(Base):
 
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     completed_at = Column(DateTime, nullable=True)
 
     # Relationships
     user = relationship("User", backref="meal_plans")
-    recipes = relationship("MealPlanRecipe", back_populates="meal_plan", cascade="all, delete-orphan")
-    grocery_carts = relationship("GroceryCart", back_populates="meal_plan", cascade="all, delete-orphan")
+    recipes = relationship(
+        "MealPlanRecipe", back_populates="meal_plan", cascade="all, delete-orphan"
+    )
+    grocery_carts = relationship(
+        "GroceryCart", back_populates="meal_plan", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<MealPlan(id={self.id}, name='{self.name}', status='{self.status}', recipes={self.total_recipes})>"
@@ -133,9 +160,23 @@ class MealPlanRecipe(Base):
 
     __tablename__ = "meal_plan_recipes"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    meal_plan_id = Column(BigInteger, ForeignKey("meal_plans.id", ondelete="CASCADE"), nullable=False, index=True)
-    recipe_id = Column(BigInteger, ForeignKey("recipes.id", ondelete="CASCADE"), nullable=False, index=True)
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    meal_plan_id = Column(
+        BigInteger,
+        ForeignKey("meal_plans.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    recipe_id = Column(
+        BigInteger,
+        ForeignKey("recipes.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     # Scheduling
     day_number = Column(Integer, nullable=False)
@@ -179,9 +220,23 @@ class GroceryCart(Base):
 
     __tablename__ = "grocery_carts"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    meal_plan_id = Column(BigInteger, ForeignKey("meal_plans.id", ondelete="CASCADE"), nullable=True, index=True)
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    user_id = Column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    meal_plan_id = Column(
+        BigInteger,
+        ForeignKey("meal_plans.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
 
     name = Column(String(255), nullable=False)
     status = Column(String(50), nullable=False, default="active", index=True)
@@ -196,13 +251,17 @@ class GroceryCart(Base):
 
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     ordered_at = Column(DateTime, nullable=True)
 
     # Relationships
     user = relationship("User", backref="grocery_carts")
     meal_plan = relationship("MealPlan", back_populates="grocery_carts")
-    items = relationship("CartItem", back_populates="cart", cascade="all, delete-orphan")
+    items = relationship(
+        "CartItem", back_populates="cart", cascade="all, delete-orphan"
+    )
 
     def __repr__(self) -> str:
         return f"<GroceryCart(id={self.id}, name='{self.name}', items={self.total_items}, status='{self.status}')>"
@@ -232,9 +291,20 @@ class CartItem(Base):
 
     __tablename__ = "cart_items"
 
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
-    cart_id = Column(BigInteger, ForeignKey("grocery_carts.id", ondelete="CASCADE"), nullable=False, index=True)
-    ingredient_id = Column(BigInteger, ForeignKey("ingredients.id", ondelete="SET NULL"), nullable=True)
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
+    cart_id = Column(
+        BigInteger,
+        ForeignKey("grocery_carts.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    ingredient_id = Column(
+        BigInteger, ForeignKey("ingredients.id", ondelete="SET NULL"), nullable=True
+    )
 
     # Item details
     name = Column(String(255), nullable=False)

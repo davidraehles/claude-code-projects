@@ -222,7 +222,7 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
                 .flat()
                 .reduce((sum, item) => sum + item.price * item.quantity, 0) +
                 (state.selectedSlot?.price || 0))
-              .toFixed(2)}
+                .toFixed(2)}
             </span>
           </div>
         </div>
@@ -361,28 +361,28 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
         <div className="flex items-center justify-between">
           {(['cart', 'delivery', 'confirm'] as const).map((step, index) => {
             const stepOrder = ['cart', 'delivery', 'confirm'] as const;
-            const currentIndex = stepOrder.indexOf(state.currentStep as 'cart' | 'delivery' | 'confirm');
+            const currentIndex = state.currentStep === 'complete'
+              ? stepOrder.length
+              : stepOrder.indexOf(state.currentStep as typeof stepOrder[number]);
             const isComplete = currentIndex > index;
             const isCurrent = currentIndex === index;
 
             return (
               <React.Fragment key={step}>
                 <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all ${
-                    isComplete
+                  className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold transition-all ${isComplete
                       ? 'bg-green-600 text-white'
                       : isCurrent
-                      ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                      : 'bg-gray-200 text-gray-600'
-                  }`}
+                        ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                        : 'bg-gray-200 text-gray-600'
+                    }`}
                 >
                   {isComplete ? '✓' : index + 1}
                 </div>
                 {index < 2 && (
                   <div
-                    className={`flex-1 h-1 mx-2 ${
-                      isComplete ? 'bg-green-600' : 'bg-gray-200'
-                    }`}
+                    className={`flex-1 h-1 mx-2 ${isComplete ? 'bg-green-600' : 'bg-gray-200'
+                      }`}
                   />
                 )}
               </React.Fragment>

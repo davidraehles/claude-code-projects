@@ -25,7 +25,7 @@ from app.monitoring.metrics import (
     cart_creation_total,
     cart_creation_duration_seconds,
     cart_value_eur,
-    cart_items_count
+    cart_items_count,
 )
 from app.services.knuspr_mcp_client import KnusprMCPClient
 from app.services.ingredient_mapper import IngredientMapper
@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MappedIngredient:
     """Ingredient with Knuspr product mapping"""
+
     original_ingredient: str
     product_id: str
     product_name: str
@@ -57,7 +58,13 @@ class CartOptimizerAgent:
     - Create and manage shopping carts
     """
 
-    def __init__(self, knuspr_client: KnusprMCPClient, ingredient_mapper: IngredientMapper, db, event_bus: Optional[EventBus] = None):
+    def __init__(
+        self,
+        knuspr_client: KnusprMCPClient,
+        ingredient_mapper: IngredientMapper,
+        db,
+        event_bus: Optional[EventBus] = None,
+    ):
         """
         Initialize Cart Optimizer Agent.
 
@@ -78,7 +85,7 @@ class CartOptimizerAgent:
         user_id: int,
         db,
         credential_manager,
-        delivery_preferences: Optional[Dict] = None
+        delivery_preferences: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         """
         Create Knuspr cart from meal plan.
@@ -118,7 +125,9 @@ class CartOptimizerAgent:
         """
         start_time = time.time()
         try:
-            logger.info(f"Creating cart from meal plan {meal_plan_id} for user {user_id}")
+            logger.info(
+                f"Creating cart from meal plan {meal_plan_id} for user {user_id}"
+            )
 
             # Ensure IDs are integers (they should be, but validate anyway)
             try:
@@ -135,21 +144,23 @@ class CartOptimizerAgent:
             logger.info(f"Extracted {len(ingredients)} ingredients from meal plan")
 
             # Step 2: Map ingredients to Knuspr products
-            mapped_products, unmapped = await self.ingredient_mapper.map_ingredients_to_products(
-                ingredients
+            mapped_products, unmapped = (
+                await self.ingredient_mapper.map_ingredients_to_products(ingredients)
             )
 
             if not mapped_products:
                 raise RuntimeError(f"Failed to map any ingredients to Knuspr products")
 
-            logger.info(f"Mapped {len(mapped_products)} products, {len(unmapped)} unavailable")
+            logger.info(
+                f"Mapped {len(mapped_products)} products, {len(unmapped)} unavailable"
+            )
 
             # Step 3: Create cart with mapped products
             cart_items = [
                 {
                     "product_id": p["product_id"],
                     "quantity": p["quantity"],
-                    "unit": p["unit"]
+                    "unit": p["unit"],
                 }
                 for p in mapped_products
             ]
@@ -160,7 +171,9 @@ class CartOptimizerAgent:
             # Step 4: Fetch available delivery slots
             start_date = datetime.utcnow()
             end_date = start_date + timedelta(days=7)
-            available_slots = await self.knuspr_client.get_delivery_slots(start_date, end_date)
+            available_slots = await self.knuspr_client.get_delivery_slots(
+                start_date, end_date
+            )
 
             if not available_slots:
                 logger.warning("No delivery slots available")
@@ -169,17 +182,20 @@ class CartOptimizerAgent:
 
             # Step 5: Select optimal delivery slot
             selected_slot = self._select_delivery_slot(
-                available_slots,
-                delivery_preferences or {}
+                available_slots, delivery_preferences or {}
             )
 
             if selected_slot:
-                await self.knuspr_client.select_delivery_slot(cart.cart_id, selected_slot.slot_id)
+                await self.knuspr_client.select_delivery_slot(
+                    cart.cart_id, selected_slot.slot_id
+                )
                 cart.delivery_slot = selected_slot
                 logger.info(f"Selected delivery slot: {selected_slot.slot_id}")
 
             # Step 6: Group items by section
-            items_by_section = self.ingredient_mapper.categorize_products(mapped_products)
+            items_by_section = self.ingredient_mapper.categorize_products(
+                mapped_products
+            )
 
             # Step 7: Store cart in database
             await self._store_cart_in_database(
@@ -188,7 +204,7 @@ class CartOptimizerAgent:
                 cart_id=cart.cart_id,
                 items_by_section=items_by_section,
                 total_price=cart.total_price,
-                delivery_slot=selected_slot
+                delivery_slot=selected_slot,
             )
 
             # Step 8: Return comprehensive cart summary
@@ -197,26 +213,34 @@ class CartOptimizerAgent:
                 "knuspr_url": f"{self.knuspr_client.get_domain()}/cart/{cart.cart_id}",
                 "total_price": cart.total_price,
                 "item_count": len(mapped_products),
-                "delivery_slot": {
-                    "slot_id": selected_slot.slot_id if selected_slot else None,
-                    "date": selected_slot.date.isoformat() if selected_slot else None,
-                    "time_window": selected_slot.time_window if selected_slot else None,
-                    "price": selected_slot.price if selected_slot else None,
-                } if selected_slot else None,
+                "delivery_slot": (
+                    {
+                        "slot_id": selected_slot.slot_id if selected_slot else None,
+                        "date": (
+                            selected_slot.date.isoformat() if selected_slot else None
+                        ),
+                        "time_window": (
+                            selected_slot.time_window if selected_slot else None
+                        ),
+                        "price": selected_slot.price if selected_slot else None,
+                    }
+                    if selected_slot
+                    else None
+                ),
                 "items_by_section": {
                     category: [
                         {
                             "name": p["name"],
                             "quantity": p["quantity"],
                             "unit": p["unit"],
-                            "price": p["price"]
+                            "price": p["price"],
                         }
                         for p in items
                     ]
                     for category, items in items_by_section.items()
                 },
                 "unavailable_items": unmapped,
-                "created_at": datetime.utcnow().isoformat()
+                "created_at": datetime.utcnow().isoformat(),
             }
 
             # Record metrics
@@ -228,18 +252,21 @@ class CartOptimizerAgent:
 
             # Publish event
             if self.event_bus:
-                await self.event_bus.publish(Event(
-                    event_type=EventType.CART_CREATED,
-                    correlation_id=str(meal_plan_id),  # Convert to string for event ID
-                    user_id=user_id,  # Already validated as integer
-                    payload={
-                        "cart_id": cart.cart_id,
-                        "meal_plan_id": meal_plan_id,
-                        "total_price": cart.total_price,
-                        "item_count": len(mapped_products)
-                    }
-                ))
-
+                await self.event_bus.publish(
+                    Event(
+                        event_type=EventType.CART_CREATED,
+                        correlation_id=str(
+                            meal_plan_id
+                        ),  # Convert to string for event ID
+                        user_id=user_id,  # Already validated as integer
+                        payload={
+                            "cart_id": cart.cart_id,
+                            "meal_plan_id": meal_plan_id,
+                            "total_price": cart.total_price,
+                            "item_count": len(mapped_products),
+                        },
+                    )
+                )
             logger.info(f"Cart creation complete: {result['cart_id']}")
             return result
 
@@ -251,22 +278,21 @@ class CartOptimizerAgent:
 
             # Publish failure event
             if self.event_bus:
-                await self.event_bus.publish(Event(
-                    event_type=EventType.CART_CREATION_FAILED,
-                    correlation_id=str(meal_plan_id),  # Convert to string for event ID
-                    user_id=user_id,  # Already validated as integer
-                    payload={
-                        "meal_plan_id": meal_plan_id,
-                        "error": str(e)
-                    }
-                ))
+                await self.event_bus.publish(
+                    Event(
+                        event_type=EventType.CART_CREATION_FAILED,
+                        correlation_id=str(
+                            meal_plan_id
+                        ),  # Convert to string for event ID
+                        user_id=user_id,  # Already validated as integer
+                        payload={"meal_plan_id": meal_plan_id, "error": str(e)},
+                    )
+                )
 
             raise
 
     def _select_delivery_slot(
-        self,
-        available_slots: List,
-        preferences: Dict
+        self, available_slots: List, preferences: Dict
     ) -> Optional[Any]:
         """
         Select optimal delivery slot based on preferences.
@@ -292,8 +318,7 @@ class CartOptimizerAgent:
         preferred_dates = preferences.get("preferred_dates", [])
         if preferred_dates:
             slots = [
-                s for s in slots
-                if any(s.date.date() == pd for pd in preferred_dates)
+                s for s in slots if any(s.date.date() == pd for pd in preferred_dates)
             ]
 
         # Filter by preferred time window
@@ -301,14 +326,13 @@ class CartOptimizerAgent:
         time_filters = {
             "morning": ("08:00", "12:00"),
             "afternoon": ("12:00", "18:00"),
-            "evening": ("18:00", "21:00")
+            "evening": ("18:00", "21:00"),
         }
 
         if time_slot in time_filters:
             start_time, end_time = time_filters[time_slot]
             slots = [
-                s for s in slots
-                if start_time <= s.time_window.split("-")[0] < end_time
+                s for s in slots if start_time <= s.time_window.split("-")[0] < end_time
             ]
 
         if not slots:
@@ -340,11 +364,12 @@ class CartOptimizerAgent:
 
         try:
             # Query recipes associated with the meal plan
-            recipes = self.db.query(Recipe).join(
-                MealPlanRecipe, Recipe.id == MealPlanRecipe.recipe_id
-            ).filter(
-                MealPlanRecipe.meal_plan_id == meal_plan_id
-            ).all()
+            recipes = (
+                self.db.query(Recipe)
+                .join(MealPlanRecipe, Recipe.id == MealPlanRecipe.recipe_id)
+                .filter(MealPlanRecipe.meal_plan_id == meal_plan_id)
+                .all()
+            )
 
             all_ingredients = []
             for recipe in recipes:
@@ -362,7 +387,9 @@ class CartOptimizerAgent:
 
             # Deduplicate
             unique_ingredients = list(set(all_ingredients))
-            logger.info(f"Found {len(unique_ingredients)} unique ingredients in {len(recipes)} recipes")
+            logger.info(
+                f"Found {len(unique_ingredients)} unique ingredients in {len(recipes)} recipes"
+            )
             return unique_ingredients
 
         except Exception as e:
@@ -376,7 +403,7 @@ class CartOptimizerAgent:
         cart_id: str,
         items_by_section: Dict,
         total_price: float,
-        delivery_slot: Optional[Any]
+        delivery_slot: Optional[Any],
     ) -> None:
         """
         Store cart information in PostgreSQL using transaction management.
@@ -412,7 +439,7 @@ class CartOptimizerAgent:
                     total_items=sum(len(items) for items in items_by_section.values()),
                     total_cost=total_price,
                     knuspr_cart_id=cart_id,
-                    knuspr_synced_at=datetime.utcnow()
+                    knuspr_synced_at=datetime.utcnow(),
                 )
                 self.db.add(cart)
                 self.db.flush()  # Get ID before adding items
@@ -429,28 +456,29 @@ class CartOptimizerAgent:
                             unit_price=item.get("price", 0),
                             total_price=item.get("price", 0) * item["quantity"],
                             knuspr_product_id=item.get("product_id"),
-                            is_purchased=False
+                            is_purchased=False,
                         )
                         self.db.add(cart_item)
 
                 # Commit the entire transaction atomically
                 self.db.commit()
-                logger.info(f"Successfully stored cart {cart.id} with {len(cart.items)} items in database")
+                logger.info(
+                    f"Successfully stored cart {cart.id} with {len(cart.items)} items in database"
+                )
 
             except Exception as db_error:
                 # Explicit rollback on any database error
                 self.db.rollback()
-                logger.error(f"Database transaction failed, rolling back: {str(db_error)}")
+                logger.error(
+                    f"Database transaction failed, rolling back: {str(db_error)}"
+                )
                 raise
 
         except Exception as e:
             logger.error(f"Failed to store cart in database: {str(e)}")
             raise
 
-    async def group_items_by_section(
-        self,
-        items: List[Dict]
-    ) -> Dict[str, List[Dict]]:
+    async def group_items_by_section(self, items: List[Dict]) -> Dict[str, List[Dict]]:
         """
         Group shopping cart items by store section.
 
@@ -472,9 +500,7 @@ class CartOptimizerAgent:
         return self.ingredient_mapper.categorize_products(items)
 
     async def regenerate_cart(
-        self,
-        cart_id: str,
-        changes: Dict[str, Any]
+        self, cart_id: str, changes: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
         Regenerate cart with changes (e.g., remove unavailable item, change slot).

@@ -41,7 +41,8 @@
       "SlashCommand(/speckit.constitution)",
       "Bash(npm test:*)",
       "Bash(npm run:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(git restore:*)"
     ],
     "deny": [],
     "ask": []

@@ -6,7 +6,18 @@ for efficient querying.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, Text, JSON, DateTime, ForeignKey, Index, UniqueConstraint, BigInteger
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Text,
+    JSON,
+    DateTime,
+    ForeignKey,
+    Index,
+    UniqueConstraint,
+    BigInteger,
+)
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -36,10 +47,19 @@ class Recipe(Base):
     __tablename__ = "recipes"
 
     # Primary key
-    id = Column(BigInteger, primary_key=True, autoincrement=True)
+    id = Column(
+        BigInteger().with_variant(Integer, "sqlite"),
+        primary_key=True,
+        autoincrement=True,
+    )
 
     # Foreign key to users table
-    user_id = Column(BigInteger, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    user_id = Column(
+        BigInteger,
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
     # Core recipe data
     title = Column(String(255), nullable=False, index=True)
@@ -55,15 +75,16 @@ class Recipe(Base):
     nutrition = Column(JSON, nullable=True, comment="Nutrition per serving")
 
     # Dietary information
-    dietary_tags = Column(JSON, nullable=True, comment="Dietary tags: vegan, vegetarian, gluten_free, etc.")
+    dietary_tags = Column(
+        JSON,
+        nullable=True,
+        comment="Dietary tags: vegan, vegetarian, gluten_free, etc.",
+    )
 
     # Source tracking
     source_url = Column(String(2000), nullable=False, unique=True, index=True)
     source_type = Column(
-        String(50),
-        nullable=False,
-        index=True,
-        comment="'html', 'api', or 'rss'"
+        String(50), nullable=False, index=True, comment="'html', 'api', or 'rss'"
     )
 
     # Duplicate management
@@ -71,7 +92,7 @@ class Recipe(Base):
         Integer,
         ForeignKey("recipes.id"),
         nullable=True,
-        comment="References parent if this is a duplicate"
+        comment="References parent if this is a duplicate",
     )
 
     # Relationships
@@ -81,12 +102,14 @@ class Recipe(Base):
         "Recipe",
         remote_side=[id],
         foreign_keys=[duplicate_of_id],
-        backref="parent_recipe"
+        backref="parent_recipe",
     )
 
     # Timestamps
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
-    last_updated = Column(DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_updated = Column(
+        DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     def __repr__(self) -> str:
         return f"<Recipe(id={self.id}, title='{self.title}', source_type='{self.source_type}')>"
@@ -108,7 +131,9 @@ class Recipe(Base):
             "source_type": self.source_type,
             "duplicate_of_id": self.duplicate_of_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
-            "last_updated": self.last_updated.isoformat() if self.last_updated else None,
+            "last_updated": (
+                self.last_updated.isoformat() if self.last_updated else None
+            ),
         }
 
 
