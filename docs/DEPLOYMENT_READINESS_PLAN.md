@@ -20,7 +20,7 @@
   - **API Endpoints:** 25+ endpoints fully functional
     - `/api/v1/auth/*` - Register, login, refresh, profile (4 endpoints)
     - `/api/v1/recipes/*` - CRUD, harvest from URL (5 endpoints, 481 lines)
-    - `/api/v1/meal_plans/*` - Generate, list, detail, delete (4 endpoints, 418 lines)
+    - `/api/v1/meal-plans/*` - Generate, list, detail, delete (4 endpoints, 418 lines)
     - `/api/v1/ingredients/*` - Classify, substitutes, allergens (6 endpoints, 250 lines)
     - `/api/v1/users/*` - Preferences, notifications (6 endpoints, 194 lines)
   - **Meal Architect Agent:** Z3 constraint solver (784 lines, fully implemented)
@@ -39,7 +39,7 @@
 - **Frontend Dependencies:** `node_modules` not installed locally (10 min fix)
 - **Frontend API Integration:** Pages exist but not wired to backend (2-3 hours)
   - Recipe import UI → `/api/v1/recipes/harvest` (needs wiring)
-  - Meal plan generator → `/api/v1/meal_plans` (needs wiring)
+  - Meal plan generator → `/api/v1/meal-plans` (needs wiring)
   - Dashboard → `/api/v1/recipes` (needs wiring)
   - Login/Signup → `/api/v1/auth/*` (needs wiring)
 - **Environment Variables:** Need `.env.local` for development (5 min setup)
@@ -122,7 +122,7 @@ curl -X GET https://claude-code-projects-production.up.railway.app/api/v1/recipe
 #### Task 2.3: Test Meal Plan Generation
 ```bash
 # Generate meal plan
-curl -X POST https://claude-code-projects-production.up.railway.app/api/v1/meal_plans \
+curl -X POST https://claude-code-projects-production.up.railway.app/api/v1/meal-plans \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -d '{
@@ -187,7 +187,7 @@ export async function login(email: string, password: string) {
 
 **File:** `meal-planner-ui/src/app/generate/page.tsx`
 - Multi-step form (preferences, constraints, review)
-- Connect to `/api/v1/meal_plans`
+- Connect to `/api/v1/meal-plans`
 - Show generated plan in calendar view
 - Allow meal swaps
 

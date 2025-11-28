@@ -1,6 +1,7 @@
 /**
  * API client for the Meal Planner backend.
  * Refactored to be immutable - token passed as parameter instead of mutation.
+ * Uses centralized endpoint constants to prevent typos and ensure consistency.
  */
 
 import type {
@@ -16,6 +17,14 @@ import type {
   GroceryCart,
   PaginatedResponse,
 } from "./types"
+import {
+  AUTH_ENDPOINTS,
+  RECIPE_ENDPOINTS,
+  MEAL_PLAN_ENDPOINTS,
+  GROCERY_CART_ENDPOINTS,
+  WORKFLOW_ENDPOINTS,
+  SYSTEM_ENDPOINTS,
+} from "./apiEndpoints"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 
@@ -73,21 +82,21 @@ class ApiClient {
   // ===== Auth Endpoints (no token required) =====
 
   async login(data: LoginRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>("/api/v1/auth/login", {
+    return this.request<AuthResponse>(AUTH_ENDPOINTS.LOGIN, {
       method: "POST",
       body: JSON.stringify(data),
     })
   }
 
   async signup(data: SignupRequest): Promise<AuthResponse> {
-    return this.request<AuthResponse>("/api/v1/auth/register", {
+    return this.request<AuthResponse>(AUTH_ENDPOINTS.REGISTER, {
       method: "POST",
       body: JSON.stringify(data),
     })
   }
 
   async getCurrentUser(token: string): Promise<any> {
-    return this.request("/api/v1/users/me", {}, token)
+    return this.request(AUTH_ENDPOINTS.ME, {}, token)
   }
 
   // ===== Recipe Endpoints (token required) =====
@@ -98,19 +107,19 @@ class ApiClient {
     token?: string | null
   ): Promise<PaginatedResponse<Recipe>> {
     return this.request<PaginatedResponse<Recipe>>(
-      `/api/v1/recipes?skip=${skip}&limit=${limit}`,
+      RECIPE_ENDPOINTS.LIST(skip, limit),
       {},
       token
     )
   }
 
   async getRecipe(id: number, token?: string | null): Promise<Recipe> {
-    return this.request<Recipe>(`/api/v1/recipes/${id}`, {}, token)
+    return this.request<Recipe>(RECIPE_ENDPOINTS.DETAIL(id), {}, token)
   }
 
   async createRecipe(data: RecipeCreateRequest, token?: string | null): Promise<Recipe> {
     return this.request<Recipe>(
-      "/api/v1/recipes",
+      RECIPE_ENDPOINTS.CREATE,
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -125,7 +134,7 @@ class ApiClient {
     token?: string | null
   ): Promise<Recipe> {
     return this.request<Recipe>(
-      `/api/v1/recipes/${id}`,
+      RECIPE_ENDPOINTS.UPDATE(id),
       {
         method: "PUT",
         body: JSON.stringify(data),
@@ -136,7 +145,7 @@ class ApiClient {
 
   async deleteRecipe(id: number, token?: string | null): Promise<void> {
     return this.request<void>(
-      `/api/v1/recipes/${id}`,
+      RECIPE_ENDPOINTS.DELETE(id),
       {
         method: "DELETE",
       },
@@ -146,7 +155,7 @@ class ApiClient {
 
   async importRecipe(data: RecipeImportRequest, token?: string | null): Promise<any> {
     return this.request<any>(
-      "/api/v1/recipes/harvest",
+      RECIPE_ENDPOINTS.HARVEST,
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -159,7 +168,7 @@ class ApiClient {
     const formData = new FormData()
     formData.append("file", file)
 
-    const url = `${this.baseURL}/api/v1/recipes/upload`
+    const url = `${this.baseURL}${RECIPE_ENDPOINTS.UPLOAD}`
     const headers: Record<string, string> = {}
 
     // Add Authorization header if token provided
@@ -191,19 +200,19 @@ class ApiClient {
     token?: string | null
   ): Promise<MealPlan[]> {
     return this.request<MealPlan[]>(
-      `/api/v1/meal_plans?skip=${skip}&limit=${limit}`,
+      MEAL_PLAN_ENDPOINTS.LIST(skip, limit),
       {},
       token
     )
   }
 
   async getMealPlan(id: number, token?: string | null): Promise<MealPlanDetail> {
-    return this.request<MealPlanDetail>(`/api/v1/meal_plans/${id}`, {}, token)
+    return this.request<MealPlanDetail>(MEAL_PLAN_ENDPOINTS.DETAIL(id), {}, token)
   }
 
   async createMealPlan(data: MealPlanCreateRequest, token?: string | null): Promise<MealPlan> {
     return this.request<MealPlan>(
-      "/api/v1/meal_plans",
+      MEAL_PLAN_ENDPOINTS.CREATE,
       {
         method: "POST",
         body: JSON.stringify(data),
@@ -214,7 +223,7 @@ class ApiClient {
 
   async deleteMealPlan(id: number, token?: string | null): Promise<void> {
     return this.request<void>(
-      `/api/v1/meal_plans/${id}`,
+      MEAL_PLAN_ENDPOINTS.DELETE(id),
       {
         method: "DELETE",
       },
@@ -226,7 +235,7 @@ class ApiClient {
 
   async generateGroceryCart(mealPlanId: number, token?: string | null): Promise<GroceryCart> {
     return this.request<GroceryCart>(
-      `/api/v1/meal_plans/${mealPlanId}/grocery-cart`,
+      MEAL_PLAN_ENDPOINTS.GROCERY_CART(mealPlanId),
       {
         method: "POST",
       },
@@ -235,7 +244,7 @@ class ApiClient {
   }
 
   async getGroceryCart(id: number, token?: string | null): Promise<GroceryCart> {
-    return this.request<GroceryCart>(`/api/v1/grocery-carts/${id}`, {}, token)
+    return this.request<GroceryCart>(GROCERY_CART_ENDPOINTS.DETAIL(id), {}, token)
   }
 
   // ===== Workflow Endpoints (token required) =====
@@ -263,7 +272,7 @@ class ApiClient {
     }
   }> {
     return this.request(
-      "/api/v1/workflows/meal-plan-with-groceries",
+      WORKFLOW_ENDPOINTS.MEAL_PLAN_WITH_GROCERIES,
       {
         method: "POST",
         body: JSON.stringify({
@@ -278,7 +287,7 @@ class ApiClient {
   // ===== Health Check =====
 
   async healthCheck(): Promise<{ status: string }> {
-    return this.request<{ status: string }>("/health")
+    return this.request<{ status: string }>(SYSTEM_ENDPOINTS.HEALTH)
   }
 }
 

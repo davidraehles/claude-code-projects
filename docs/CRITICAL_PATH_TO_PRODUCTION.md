@@ -151,7 +151,7 @@ tests/integration/test_meal_plan_to_cart_workflow.py::test_workflow_selects_deli
 
 *   **[HIGH] Meal Planner UI**
     *   *Action*: Build the multi-step generation form (Preferences -> Constraints -> Generation).
-    *   *Deliverable*: `/generate` page connected to `POST /api/v1/meal_plans`.
+    *   *Deliverable*: `/generate` page connected to `POST /api/v1/meal-plans`.
 
 *   **[HIGH] Cart Preview & Checkout UI**
     *   *Action*: Display the generated cart with "Missing Items" and "Delivery Slot" selection.
