@@ -20,7 +20,11 @@ import { Checkbox } from '@/components/ui/Checkbox'
 export default function MealPlanDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const mealPlanId = parseInt(params.id as string)
+
+  // Safely parse meal plan ID from params
+  const rawId = params?.id
+  const mealPlanId = typeof rawId === 'string' ? parseInt(rawId, 10) : NaN
+  const isValidId = !isNaN(mealPlanId) && mealPlanId > 0
 
   // Local state for delivery preferences modal
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
@@ -30,8 +34,8 @@ export default function MealPlanDetailPage() {
   // Auth state from context
   const { user, isLoading: authLoading } = useAuth()
 
-  // Data fetching with React Query
-  const { data: mealPlan, isLoading: mealPlanLoading, error: mealPlanError } = useMealPlan(mealPlanId)
+  // Data fetching with React Query - only fetch if ID is valid
+  const { data: mealPlan, isLoading: mealPlanLoading, error: mealPlanError } = useMealPlan(mealPlanId, isValidId)
 
   // Knuspr credentials status
   const { credentialStatus } = useKnusprCredentials()
@@ -81,6 +85,24 @@ export default function MealPlanDetailPage() {
     )
   }
 
+  // Handle invalid meal plan ID
+  if (!isValidId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <div className="text-center">
+            <span className="text-4xl mb-3 block">⚠️</span>
+            <h3 className="text-red-900 font-semibold mb-2">Invalid meal plan ID</h3>
+            <p className="text-red-700 mb-4">The meal plan ID provided is not valid.</p>
+            <Link href="/meal-plans">
+              <Button variant="outline">Back to Meal Plans</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -113,8 +135,8 @@ export default function MealPlanDetailPage() {
     return null
   }
 
-  // Days are already organized
-  const days = mealPlan.days.sort((a, b) => a.day_number - b.day_number)
+  // Days are already organized - ensure days array exists
+  const days = (mealPlan.days || []).sort((a, b) => a.day_number - b.day_number)
 
   return (
     <div className="min-h-screen bg-gray-50">
