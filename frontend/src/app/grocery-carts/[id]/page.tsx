@@ -25,13 +25,17 @@ import type { GroceryCart, GroceryItem } from '@/lib/types'
 
 export default function GroceryCartPage() {
   const params = useParams()
-  const cartId = parseInt(params.id as string)
+
+  // Safely parse cart ID from params
+  const rawId = params?.id
+  const cartId = typeof rawId === 'string' ? parseInt(rawId, 10) : NaN
+  const isValidId = !isNaN(cartId) && cartId > 0
 
   // Auth state from context
   const { user, isLoading: authLoading } = useAuth()
 
-  // Data fetching with React Query
-  const { data: cart, isLoading: cartLoading, error: cartError } = useGroceryCart(cartId)
+  // Data fetching with React Query - only fetch if ID is valid
+  const { data: cart, isLoading: cartLoading, error: cartError } = useGroceryCart(cartId, isValidId)
 
   // Local UI state - Persisted reducer with DevTools (ARCH-004 + ARCH-010 + ARCH-011)
   const [cartState, dispatch] = usePersistedReducer(groceryCartReducer, {
@@ -87,6 +91,24 @@ export default function GroceryCartPage() {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  // Handle invalid cart ID
+  if (!isValidId) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
+          <div className="text-center">
+            <span className="text-4xl mb-3 block">⚠️</span>
+            <h3 className="text-red-900 font-semibold mb-2">Invalid grocery cart ID</h3>
+            <p className="text-red-700 mb-4">The grocery cart ID provided is not valid.</p>
+            <Link href="/meal-plans">
+              <Button variant="outline">Back to Meal Plans</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (authLoading || loading) {
