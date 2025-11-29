@@ -97,7 +97,7 @@ class CheckoutRequest(BaseModel):
 
 # ============ API Endpoints ============
 
-@router.post("/", response_model=GroceryCartResponse)
+@router.post("", response_model=GroceryCartResponse)
 async def create_grocery_cart(
     request: CreateGroceryCartRequest,
     db: Session = Depends(get_database),
