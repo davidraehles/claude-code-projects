@@ -76,7 +76,7 @@ class DeleteCredentialsResponse(BaseModel):
 
 # ============ API Endpoints ============
 
-@router.post("/", response_model=CredentialStatusResponse, status_code=201)
+@router.post("", response_model=CredentialStatusResponse, status_code=201)
 async def save_knuspr_credentials(
     request: SaveCredentialsRequest,
     db: Session = Depends(get_database),
@@ -141,7 +141,7 @@ async def save_knuspr_credentials(
         raise HTTPException(status_code=500, detail="Failed to save credentials")
 
 
-@router.get("/", response_model=CredentialStatusResponse)
+@router.get("", response_model=CredentialStatusResponse)
 async def get_credential_status(
     db: Session = Depends(get_database),
     user_id: int = Depends(get_current_user_id)
@@ -253,7 +253,7 @@ async def verify_knuspr_credentials(
         raise HTTPException(status_code=500, detail="Failed to verify credentials")
 
 
-@router.delete("/", response_model=DeleteCredentialsResponse)
+@router.delete("", response_model=DeleteCredentialsResponse)
 async def delete_knuspr_credentials(
     db: Session = Depends(get_database),
     user_id: int = Depends(get_current_user_id),
