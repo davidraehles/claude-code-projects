@@ -1,47 +1,89 @@
 # Claude Code ReAct Agent System
 
-This directory contains the configuration and orchestration for a 7-agent ReAct (Reason + Act) system designed to parallelize development across the claude-code-projects features.
+This directory contains the configuration and orchestration for an 8-agent ReAct (Reason + Act) system designed to parallelize development across the AI Meal Planner application features.
 
-## Agent Types
+**Last Updated**: November 29, 2025
+**Total Agents**: 8
+**Configuration Format**: JSON (.json files)
+
+## Agent Overview
+
+This system includes 8 specialized agents working collaboratively:
 
 ### 1. Router Agent
-Orchestrates incoming requests, analyzes project context, decomposes tasks, and manages parallelization.
+**Role**: Orchestrator / Coordinator
+**Purpose**: Analyzes incoming requests, decomposes tasks, manages parallelization strategy
+**Model**: Haiku 4.5
+**Configuration**: [router-agent.json](./router-agent.json)
 
 ### 2. Spec Analyzer Agent
-Performs deep requirement analysis, identifies constraints, dependencies, and architectural implications.
+**Role**: Analysis / Reasoning
+**Purpose**: Deep requirement analysis, constraint identification, dependency mapping
+**Model**: Haiku 4.5
+**Configuration**: [spec-analyzer-agent.json](./spec-analyzer-agent.json)
 
 ### 3. Frontend Dev Agent
-Implements landing page features using TypeScript, React, Next.js, and Tailwind CSS.
+**Role**: Implementation / Development
+**Purpose**: React/Next.js component implementation with TypeScript and Tailwind CSS
+**Model**: Haiku 4.5
+**Configuration**: [frontend-dev-agent.json](./frontend-dev-agent.json)
+**Tech Stack**: TypeScript 5.x, React 19, Next.js 16, Tailwind CSS
 
 ### 4. Backend Dev Agent
-Implements recipe system using Python, FastAPI, SQLAlchemy, and agent orchestration frameworks.
+**Role**: Implementation / Development
+**Purpose**: Python/FastAPI implementation, SQLAlchemy models, agent workflows
+**Model**: Haiku 4.5
+**Configuration**: [backend-dev-agent.json](./backend-dev-agent.json)
+**Tech Stack**: Python 3.11+, FastAPI, SQLAlchemy, LangGraph
 
 ### 5. Testing & Quality Agent
-Generates comprehensive tests, ensures quality gates, accessibility compliance, and performance standards.
+**Role**: Quality Assurance / Testing
+**Purpose**: Comprehensive test generation, quality gates, accessibility compliance
+**Model**: Haiku 4.5
+**Configuration**: [testing-quality-agent.json](./testing-quality-agent.json)
+**Coverage Target**: 90%+ for all code
 
 ### 6. Documentation & Artifact Agent
-Keeps specification artifacts (spec.md, plan.md, tasks.md, ADRs) synchronized with code changes.
+**Role**: Documentation / Synchronization
+**Purpose**: Keeps specs, plans, and tasks synchronized with code changes
+**Model**: Haiku 4.5
+**Configuration**: [documentation-artifact-agent.json](./documentation-artifact-agent.json)
 
 ### 7. Integration & Validation Agent
-Performs final validation, build checks, integration testing, and pre-merge quality gates.
+**Role**: Quality Assurance / Integration / Release
+**Purpose**: Final validation, build checks, integration testing, merge readiness
+**Model**: Haiku 4.5
+**Configuration**: [integration-validation-agent.json](./integration-validation-agent.json)
+
+### 8. Agent Registry Manager
+**Role**: Registry / Management
+**Purpose**: Agent discovery, creation, deletion, and lifecycle management
+**Model**: Haiku 4.5
+**Configuration**: [agent-registry-manager.json](./agent-registry-manager.json)
 
 ## Parallelization Strategy
 
+The agent system enables parallel development at multiple levels:
+
 ### Level 1: Feature-Level
-- Feature 001 (Landing Page) and Feature 002 (Recipe System) can work independently
-- No shared code dependencies between features
+Multiple features can be developed independently:
+- **Feature 001** (Grocery Lists) - Backend + Frontend + Tests
+- **Feature 002** (Multi-Agent Recipe App) - Agent development
+- **Feature 003** (AI Chat) - Chat interface + Voice features
 
 ### Level 2: Component-Level
-Each feature can be decomposed into parallel work streams:
-- **Frontend**: Hero, Services, Contact, Navigation (4 parallel components)
-- **Backend**: Recipe Harvester, Ingredient, Meal Architect, Cart Optimizer agents (4 parallel agents)
+Each feature decomposes into parallel work streams:
+- **Frontend**: Components, pages, API integration (parallel development)
+- **Backend**: Models, endpoints, agents, workflows (parallel development)
+- **Tests**: Unit, integration, E2E (parallel with implementation)
 
 ### Level 3: Task-Level
-Tasks can execute in parallel:
+Individual tasks execute concurrently:
 - Code implementation
 - Test generation
 - Documentation updates
-- All running simultaneously
+- Quality checks
+- All running simultaneously across multiple agents
 
 ## ReAct Workflow
 
@@ -63,38 +105,60 @@ User Request
 Output (Code + Tests + Docs + Ready to Merge)
 ```
 
-## Usage with Claude Code
+## Using the Agent System
 
-This agent system is designed to work with Claude Code's task orchestration capabilities:
+### Agent Configuration
 
-```bash
-# Run a ReAct task
-claude task --agent router --prompt "Implement Hero section for landing page"
+All agents are configured as JSON files in this directory:
 
-# Run agents in parallel
-claude task --agents frontend backend testing --parallel
-
-# Validate before merge
-claude task --agent integration --mode final-check
+```
+.claude/agents/
+├── router-agent.json
+├── spec-analyzer-agent.json
+├── frontend-dev-agent.json
+├── backend-dev-agent.json
+├── testing-quality-agent.json
+├── documentation-artifact-agent.json
+├── integration-validation-agent.json
+└── agent-registry-manager.json
 ```
 
-## Custom Skills (Slash Commands)
+Each JSON file defines:
+- Agent name and description
+- When to use the agent (with examples)
+- Capabilities and tools
+- System prompt and behavior
+- Target features
 
-The agent system works with 13 custom skills defined in `.claude/commands/`:
+### Available Custom Commands
 
-- `/spec-analyze` - Analyze feature specifications
-- `/task-decompose` - Break tasks into parallel units
+The agent system integrates with custom slash commands in `.claude/commands/`:
+
+#### Development Commands
 - `/gen-component` - Generate React components with tests
 - `/gen-endpoint` - Generate FastAPI endpoints with migrations
-- `/gen-tests` - Generate test suites
-- `/validate-a11y` - Check accessibility compliance
-- `/check-types` - Full TypeScript validation
-- `/run-tests` - Execute test suites
-- `/performance-audit` - Lighthouse + performance checks
+- `/gen-tests` - Generate comprehensive test suites
+- `/check-types` - Run TypeScript and pyright type checking
+- `/run-tests` - Execute test suites (backend and frontend)
+
+#### Quality & Validation
+- `/validate-a11y` - Check WCAG 2.1 accessibility compliance
+- `/performance-audit` - Run Lighthouse and performance checks
+- `/commit-and-review` - Smart commits with validation
+
+#### Workflow & Planning
+- `/spec-analyze` - Analyze feature specifications
+- `/task-decompose` - Break tasks into parallel units
 - `/sync-artifacts` - Keep spec artifacts synchronized
 - `/update-task` - Update task status and progress
-- `/commit-and-review` - Smart commits with validation
 - `/parallel-build` - Run builds in parallel
+
+#### Spec-Kit Commands
+- `/speckit.specify` - Create feature specifications
+- `/speckit.plan` - Generate implementation plans
+- `/speckit.tasks` - Create task breakdowns
+- `/speckit.implement` - Execute implementations
+- `/speckit.analyze` - Cross-artifact analysis
 
 ## Key Benefits
 
