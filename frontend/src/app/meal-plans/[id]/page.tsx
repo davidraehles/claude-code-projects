@@ -181,7 +181,7 @@ export default function MealPlanDetailPage() {
       <main className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Page Header */}
         <div className="mb-8">
-          <Link href="/meal-plans" className="text-blue-600 hover:text-blue-700 text-sm mb-2 inline-block">
+          <Link href="/meal-plans" prefetch={false} className="text-blue-600 hover:text-blue-700 text-sm mb-2 inline-block">
             ← Back to Meal Plans
           </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">

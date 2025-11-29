@@ -55,7 +55,7 @@ class ApiClient {
     }
 
     // Add Authorization header if token provided
-    if (token) {
+    if (token && token.trim().length > 0) {
       headers["Authorization"] = `Bearer ${token}`
     }
 
