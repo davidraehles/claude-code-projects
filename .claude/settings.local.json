@@ -44,7 +44,13 @@
       "Bash(git checkout:*)",
       "Bash(git restore:*)",
       "Bash(/home/darae/claude-code-projects/.venv/bin/pytest:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git stash:*)",
+      "Bash(for file in /home/darae/claude-code-projects/.claude/agents/*.json)",
+      "Bash(do echo \"Validating $file\")",
+      "Bash(done)",
+      "Bash(do)",
+      "Bash(git -C /home/darae/claude-code-projects status --short)"
     ],
     "deny": [],
     "ask": []
