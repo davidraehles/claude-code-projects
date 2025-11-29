@@ -59,3 +59,9 @@ docker-compose up -d
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
+
+## Active Technologies
+- PostgreSQL (existing models: GroceryCart, CartItem, MealPlan, Recipe, Ingredient) (001-grocery-list-generation)
+
+## Recent Changes
+- 001-grocery-list-generation: Added PostgreSQL (existing models: GroceryCart, CartItem, MealPlan, Recipe, Ingredient)
