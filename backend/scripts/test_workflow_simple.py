@@ -43,7 +43,7 @@ try:
     )
 
     request = CreateGroceryCartRequest(
-        meal_plan_id="123",
+        meal_plan_id=123,
         delivery_preferences=prefs
     )
     print(f"✅ Request model created: meal_plan_id={request.meal_plan_id}")

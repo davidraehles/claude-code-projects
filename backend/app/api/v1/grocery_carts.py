@@ -78,7 +78,7 @@ class DeliveryPreferences(BaseModel):
 
 class CreateGroceryCartRequest(BaseModel):
     """Request to create grocery cart from meal plan"""
-    meal_plan_id: str = Field(..., description="ID of meal plan to convert")
+    meal_plan_id: int = Field(..., description="ID of meal plan to convert")
     delivery_preferences: Optional[DeliveryPreferences] = Field(
         default_factory=DeliveryPreferences,
         description="Delivery preferences"
@@ -164,22 +164,16 @@ async def create_grocery_cart(
     try:
         logger.info(f"Creating grocery cart from meal plan {request.meal_plan_id} for user {user_id}")
 
-        # Validate meal plan ID is an integer
-        try:
-            meal_plan_id = int(request.meal_plan_id)
-        except (ValueError, TypeError):
-            raise HTTPException(status_code=400, detail="Invalid meal plan ID format")
-
         # Validate meal plan exists and belongs to user
         meal_plan = db.query(MealPlan).filter(
-            MealPlan.id == meal_plan_id,
+            MealPlan.id == request.meal_plan_id,
             MealPlan.user_id == user_id
         ).first()
 
         if not meal_plan:
             raise HTTPException(
                 status_code=404,
-                detail=f"Meal plan {meal_plan_id} not found"
+                detail=f"Meal plan {request.meal_plan_id} not found"
             )
 
         if not meal_plan.total_recipes or meal_plan.total_recipes == 0:
@@ -220,13 +214,23 @@ async def create_grocery_cart(
             logger.warning(f"Invalid country code '{country}', defaulting to CZ")
             country_enum = KnusprCountry.CZECH_REPUBLIC
 
-        # Initialize Knuspr client and dependencies
+        # Initialize Knuspr client and dependencies with proper error handling
         try:
+            # Create Knuspr client first
             knuspr_client = KnusprMCPClient(
                 login_email=email,
                 login_password=password,
                 country=country_enum
             )
+        except Exception as client_error:
+            logger.error(f"Failed to initialize Knuspr MCP client: {str(client_error)}")
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to connect to Knuspr. Please check your credentials and try again."
+            )
+
+        # Initialize dependent services (client will be cleaned up in finally block if these fail)
+        try:
             ingredient_mapper = IngredientMapper(knuspr_client)
             event_bus = get_event_bus()
 
@@ -238,16 +242,10 @@ async def create_grocery_cart(
                 event_bus=event_bus
             )
         except Exception as init_error:
-            logger.error(f"Failed to initialize Knuspr client or dependencies: {str(init_error)}")
-            # Ensure client is set for cleanup
-            if knuspr_client is not None:
-                try:
-                    await knuspr_client.close()
-                except Exception:
-                    pass
+            logger.error(f"Failed to initialize cart optimizer dependencies: {str(init_error)}")
             raise HTTPException(
                 status_code=500,
-                detail="Failed to initialize Knuspr integration. Please try again later."
+                detail="Failed to initialize cart optimizer. Please try again later."
             )
 
         # Convert preferences to dict
@@ -255,7 +253,7 @@ async def create_grocery_cart(
 
         # Execute cart creation
         result = await agent.create_cart_from_meal_plan(
-            meal_plan_id=meal_plan_id,
+            meal_plan_id=request.meal_plan_id,
             user_id=user_id,
             delivery_preferences=prefs_dict
         )
@@ -341,14 +339,18 @@ async def get_grocery_cart(
         knuspr_domain = await get_knuspr_domain_for_user(db, user_id)
 
         # Build response
+        # NOTE: Delivery slot and unavailable items are not currently persisted
+        # See KNUSPR_INTEGRATION_SUMMARY.md "Known Limitations" section
+        # These fields are available in the cart creation response but not stored
+        # Future enhancement: Add delivery_slot_json and unavailable_items_json columns to grocery_carts table
         response = GroceryCartResponse(
             cart_id=cart.knuspr_cart_id,
             knuspr_url=f"{knuspr_domain}/cart/{cart.knuspr_cart_id}",
             total_price=cart.total_cost or 0.0,
             item_count=cart.total_items,
-            delivery_slot=None,  # TODO: Store delivery slot info in database
+            delivery_slot=None,  # Not persisted - enhancement needed
             items_by_section=items_by_section,
-            unavailable_items=[],  # TODO: Store unavailable items in database
+            unavailable_items=[],  # Not persisted - enhancement needed
             created_at=cart.created_at.isoformat()
         )
 
