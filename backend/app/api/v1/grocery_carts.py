@@ -16,8 +16,15 @@ from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from app.api.dependencies import get_database, get_current_user_id
+from app.models.meal_plan import GroceryCart, CartItem, MealPlan
+from app.agents.cart_optimizer import CartOptimizerAgent
+from app.services.knuspr_mcp_client import KnusprMCPClient, KnusprCountry
+from app.services.ingredient_mapper import IngredientMapper
+from app.services.credential_manager import CredentialManager
+from app.events.bus import get_event_bus
 
 logger = logging.getLogger(__name__)
 
@@ -123,99 +130,186 @@ async def create_grocery_cart(
         404: If meal plan not found
         400: If meal plan has no ingredients or cart creation fails
     """
+    knuspr_client = None
     try:
-        logger.info(f"Creating grocery cart from meal plan {request.meal_plan_id}")
+        logger.info(f"Creating grocery cart from meal plan {request.meal_plan_id} for user {user_id}")
 
-        # TODO: Implement with injected cart_optimizer agent
-        # cart = await cart_optimizer.create_cart_from_meal_plan(
-        #     meal_plan_id=request.meal_plan_id,
-        #     user_id=current_user.id,
-        #     delivery_preferences=request.delivery_preferences.dict(exclude_none=True)
-        # )
+        # Validate meal plan ID is an integer
+        try:
+            meal_plan_id = int(request.meal_plan_id)
+        except (ValueError, TypeError):
+            raise HTTPException(status_code=400, detail="Invalid meal plan ID format")
 
-        # For now, return mock response
-        mock_response = {
-            "cart_id": f"cart-{datetime.utcnow().timestamp()}",
-            "knuspr_url": "https://knuspr.cz/cart/mock-id",
-            "total_price": 1234.56,
-            "item_count": 23,
-            "delivery_slot": {
-                "slot_id": "slot-2025-11-20-15",
-                "date": (datetime.utcnow() + timedelta(days=2)).isoformat(),
-                "time_window": "15:00-18:00",
-                "price": 49.0,
-                "available": True
-            },
-            "items_by_section": {
-                "produce": [
-                    {"product_id": "p-1", "name": "Carrots 1kg", "quantity": 1, "unit": "pcs", "price": 25.0, "category": "produce"},
-                    {"product_id": "p-2", "name": "Onions 1kg", "quantity": 1, "unit": "pcs", "price": 20.0, "category": "produce"}
-                ],
-                "dairy": [
-                    {"product_id": "d-1", "name": "Milk 1L", "quantity": 1, "unit": "pcs", "price": 35.0, "category": "dairy"},
-                    {"product_id": "d-2", "name": "Butter 200g", "quantity": 1, "unit": "pcs", "price": 85.0, "category": "dairy"}
-                ],
-                "meat": [
-                    {"product_id": "m-1", "name": "Chicken Breast 600g", "quantity": 1, "unit": "pcs", "price": 180.0, "category": "meat"}
-                ],
-                "canned_goods": [
-                    {"product_id": "c-1", "name": "Kidney Beans 400g", "quantity": 2, "unit": "pcs", "price": 18.0, "category": "canned_goods"}
-                ]
-            },
-            "unavailable_items": [
-                "Exotic ingredient not available in CZ"
-            ],
-            "created_at": datetime.utcnow().isoformat()
-        }
+        # Validate meal plan exists and belongs to user
+        meal_plan = db.query(MealPlan).filter(
+            MealPlan.id == meal_plan_id,
+            MealPlan.user_id == user_id
+        ).first()
 
-        logger.info(f"Cart created: {mock_response['cart_id']}")
-        return GroceryCartResponse(**mock_response)
+        if not meal_plan:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Meal plan {meal_plan_id} not found"
+            )
 
+        if not meal_plan.total_recipes or meal_plan.total_recipes == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Meal plan must contain at least one recipe to generate a grocery cart"
+            )
+
+        # Get user's Knuspr credentials
+        credential_manager = CredentialManager()
+        credentials_tuple = await credential_manager.get_credentials(db, user_id)
+
+        if not credentials_tuple:
+            raise HTTPException(
+                status_code=400,
+                detail="Knuspr credentials not found. Please configure Knuspr integration first."
+            )
+
+        # Validate credentials structure
+        try:
+            email, password, country = credentials_tuple
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=400,
+                detail="Knuspr credentials are malformed. Please reconfigure your Knuspr integration."
+            )
+
+        if not email or not password or not country:
+            raise HTTPException(
+                status_code=400,
+                detail="Knuspr credentials are incomplete. Please reconfigure your Knuspr integration."
+            )
+
+        # Convert country to enum
+        try:
+            country_enum = KnusprCountry(country)
+        except ValueError:
+            logger.warning(f"Invalid country code '{country}', defaulting to CZ")
+            country_enum = KnusprCountry.CZECH_REPUBLIC
+
+        # Initialize Knuspr client and dependencies
+        knuspr_client = KnusprMCPClient(
+            login_email=email,
+            login_password=password,
+            country=country_enum
+        )
+        ingredient_mapper = IngredientMapper(knuspr_client)
+        event_bus = get_event_bus()
+
+        # Initialize cart optimizer agent
+        agent = CartOptimizerAgent(
+            knuspr_client=knuspr_client,
+            ingredient_mapper=ingredient_mapper,
+            db=db,
+            event_bus=event_bus
+        )
+
+        # Convert preferences to dict
+        prefs_dict = request.delivery_preferences.model_dump() if request.delivery_preferences else {}
+
+        # Execute cart creation
+        result = await agent.create_cart_from_meal_plan(
+            meal_plan_id=meal_plan_id,
+            user_id=user_id,
+            db=db,
+            credential_manager=credential_manager,
+            delivery_preferences=prefs_dict
+        )
+
+        logger.info(f"Cart created successfully: {result['cart_id']}")
+        return GroceryCartResponse(**result)
+
+    except HTTPException:
+        raise
     except ValueError as e:
         logger.error(f"Invalid meal plan: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except RuntimeError as e:
         logger.error(f"Cart creation failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to create grocery cart")
+        raise HTTPException(status_code=500, detail=f"Failed to create grocery cart: {str(e)}")
+    except Exception as e:
+        logger.exception(f"Unexpected error creating cart: {str(e)}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while creating the grocery cart")
+    finally:
+        # Cleanup Knuspr client
+        if knuspr_client is not None:
+            await knuspr_client.close()
 
 
 @router.get("/{cart_id}", response_model=GroceryCartResponse)
 async def get_grocery_cart(
     cart_id: str,
-    # current_user = Depends(get_current_user),  # TODO: Add auth
+    db: Session = Depends(get_database),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Retrieve grocery cart details.
 
     Args:
-        cart_id: ID of cart to retrieve
+        cart_id: Knuspr cart ID (stored in knuspr_cart_id column)
 
     Returns:
         GroceryCartResponse with cart details
 
     Raises:
-        404: If cart not found
+        404: If cart not found or doesn't belong to user
     """
     try:
-        logger.info(f"Retrieving cart {cart_id}")
+        logger.info(f"Retrieving cart {cart_id} for user {user_id}")
 
-        # TODO: Fetch from database
-        # cart = await db.query(GroceryCart).filter(GroceryCart.id == cart_id).first()
-        # if not cart:
-        #     raise HTTPException(status_code=404, detail="Cart not found")
+        # Fetch cart from database by knuspr_cart_id
+        cart = db.query(GroceryCart).filter(
+            GroceryCart.knuspr_cart_id == cart_id,
+            GroceryCart.user_id == user_id
+        ).first()
 
-        # For now, return mock response
-        return GroceryCartResponse(
-            cart_id=cart_id,
-            knuspr_url=f"https://knuspr.cz/cart/{cart_id}",
-            total_price=1234.56,
-            item_count=5,
-            items_by_section={"produce": [], "dairy": []},
-            created_at=datetime.utcnow().isoformat()
+        if not cart:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Cart {cart_id} not found or does not belong to user"
+            )
+
+        # Fetch cart items grouped by category
+        items = db.query(CartItem).filter(CartItem.cart_id == cart.id).all()
+
+        # Group items by section
+        items_by_section = {}
+        for item in items:
+            category = item.category or "other"
+            if category not in items_by_section:
+                items_by_section[category] = []
+
+            items_by_section[category].append({
+                "product_id": item.knuspr_product_id or "",
+                "name": item.name,
+                "quantity": item.quantity,
+                "unit": item.unit,
+                "price": item.unit_price or 0.0,
+                "category": category
+            })
+
+        # Build response
+        response = GroceryCartResponse(
+            cart_id=cart.knuspr_cart_id,
+            knuspr_url=f"https://www.knuspr.cz/cart/{cart.knuspr_cart_id}",  # TODO: Use correct domain based on country
+            total_price=cart.total_cost or 0.0,
+            item_count=cart.total_items,
+            delivery_slot=None,  # TODO: Store delivery slot info in database
+            items_by_section=items_by_section,
+            unavailable_items=[],  # TODO: Store unavailable items in database
+            created_at=cart.created_at.isoformat()
         )
 
+        logger.info(f"Retrieved cart {cart_id} with {cart.total_items} items")
+        return response
+
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to retrieve cart: {str(e)}")
+        logger.exception(f"Failed to retrieve cart {cart_id}: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to retrieve cart")
 
 
@@ -258,30 +352,48 @@ async def update_grocery_cart(
 @router.delete("/{cart_id}")
 async def delete_grocery_cart(
     cart_id: str,
-    # current_user = Depends(get_current_user),  # TODO: Add auth
+    db: Session = Depends(get_database),
+    user_id: int = Depends(get_current_user_id),
 ):
     """
     Delete grocery cart.
 
     Args:
-        cart_id: ID of cart to delete
+        cart_id: Knuspr cart ID (stored in knuspr_cart_id column)
 
     Returns:
         Success message
 
     Raises:
-        404: If cart not found
+        404: If cart not found or doesn't belong to user
     """
     try:
-        logger.info(f"Deleting cart {cart_id}")
+        logger.info(f"Deleting cart {cart_id} for user {user_id}")
 
-        # TODO: Delete from database
-        # await db.query(GroceryCart).filter(GroceryCart.id == cart_id).delete()
+        # Fetch cart from database
+        cart = db.query(GroceryCart).filter(
+            GroceryCart.knuspr_cart_id == cart_id,
+            GroceryCart.user_id == user_id
+        ).first()
 
+        if not cart:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Cart {cart_id} not found or does not belong to user"
+            )
+
+        # Delete cart (cascade will delete cart items)
+        db.delete(cart)
+        db.commit()
+
+        logger.info(f"Successfully deleted cart {cart_id}")
         return {"message": f"Cart {cart_id} deleted successfully"}
 
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Failed to delete cart: {str(e)}")
+        logger.exception(f"Failed to delete cart {cart_id}: {str(e)}")
+        db.rollback()
         raise HTTPException(status_code=500, detail="Failed to delete cart")
 
 
