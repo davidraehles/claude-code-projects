@@ -9,7 +9,6 @@ Usage:
     python scripts/test_workflow_simple.py
 """
 
-import asyncio
 import sys
 import os
 from datetime import date, timedelta
@@ -51,7 +50,7 @@ try:
 
     response = GroceryCartResponse(
         cart_id="test-cart-123",
-        knuspr_url="https://knuspr.cz/cart/test-cart-123",
+        knuspr_url="https://www.knuspr.cz/cart/test-cart-123",
         total_price=1234.56,
         item_count=10,
         delivery_slot=None,

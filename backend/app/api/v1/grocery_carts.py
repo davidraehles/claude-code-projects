@@ -21,7 +21,7 @@ from sqlalchemy import select
 from app.api.dependencies import get_database, get_current_user_id
 from app.models.meal_plan import GroceryCart, CartItem, MealPlan
 from app.agents.cart_optimizer import CartOptimizerAgent
-from app.services.knuspr_mcp_client import KnusprMCPClient, KnusprCountry
+from app.services.knuspr_mcp_client import KnusprMCPClient, KnusprCountry, KNUSPR_COUNTRY_DOMAINS
 from app.services.ingredient_mapper import IngredientMapper
 from app.services.credential_manager import CredentialManager
 from app.events.bus import get_event_bus
@@ -29,6 +29,36 @@ from app.events.bus import get_event_bus
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/grocery-carts", tags=["grocery-carts"])
+
+
+# ============ Helper Functions ============
+
+async def get_knuspr_domain_for_user(db: Session, user_id: int) -> str:
+    """
+    Get the Knuspr domain URL for a user based on their country.
+
+    Args:
+        db: Database session
+        user_id: User ID
+
+    Returns:
+        Knuspr domain URL (e.g., "https://www.knuspr.cz")
+        Defaults to Czech Republic if credentials not found or country invalid
+    """
+    try:
+        credential_manager = CredentialManager()
+        credentials_tuple = await credential_manager.get_credentials(db, user_id)
+
+        if credentials_tuple and len(credentials_tuple) >= 3:
+            country = credentials_tuple[2]  # Third element is country
+            domain = KNUSPR_COUNTRY_DOMAINS.get(country)
+            if domain:
+                return domain
+    except Exception as e:
+        logger.warning(f"Failed to get Knuspr domain for user {user_id}: {str(e)}")
+
+    # Default to Czech Republic
+    return KNUSPR_COUNTRY_DOMAINS[KnusprCountry.CZECH_REPUBLIC]
 
 
 # ============ Request/Response Models ============
@@ -191,21 +221,34 @@ async def create_grocery_cart(
             country_enum = KnusprCountry.CZECH_REPUBLIC
 
         # Initialize Knuspr client and dependencies
-        knuspr_client = KnusprMCPClient(
-            login_email=email,
-            login_password=password,
-            country=country_enum
-        )
-        ingredient_mapper = IngredientMapper(knuspr_client)
-        event_bus = get_event_bus()
+        try:
+            knuspr_client = KnusprMCPClient(
+                login_email=email,
+                login_password=password,
+                country=country_enum
+            )
+            ingredient_mapper = IngredientMapper(knuspr_client)
+            event_bus = get_event_bus()
 
-        # Initialize cart optimizer agent
-        agent = CartOptimizerAgent(
-            knuspr_client=knuspr_client,
-            ingredient_mapper=ingredient_mapper,
-            db=db,
-            event_bus=event_bus
-        )
+            # Initialize cart optimizer agent
+            agent = CartOptimizerAgent(
+                knuspr_client=knuspr_client,
+                ingredient_mapper=ingredient_mapper,
+                db=db,
+                event_bus=event_bus
+            )
+        except Exception as init_error:
+            logger.error(f"Failed to initialize Knuspr client or dependencies: {str(init_error)}")
+            # Ensure client is set for cleanup
+            if knuspr_client is not None:
+                try:
+                    await knuspr_client.close()
+                except Exception:
+                    pass
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to initialize Knuspr integration. Please try again later."
+            )
 
         # Convert preferences to dict
         prefs_dict = request.delivery_preferences.model_dump() if request.delivery_preferences else {}
@@ -214,8 +257,6 @@ async def create_grocery_cart(
         result = await agent.create_cart_from_meal_plan(
             meal_plan_id=meal_plan_id,
             user_id=user_id,
-            db=db,
-            credential_manager=credential_manager,
             delivery_preferences=prefs_dict
         )
 
@@ -223,15 +264,20 @@ async def create_grocery_cart(
         return GroceryCartResponse(**result)
 
     except HTTPException:
+        # Rollback any pending database transactions
+        db.rollback()
         raise
     except ValueError as e:
         logger.error(f"Invalid meal plan: {str(e)}")
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     except RuntimeError as e:
         logger.error(f"Cart creation failed: {str(e)}")
+        db.rollback()
         raise HTTPException(status_code=500, detail=f"Failed to create grocery cart: {str(e)}")
     except Exception as e:
         logger.exception(f"Unexpected error creating cart: {str(e)}")
+        db.rollback()
         raise HTTPException(status_code=500, detail="An unexpected error occurred while creating the grocery cart")
     finally:
         # Cleanup Knuspr client
@@ -291,10 +337,13 @@ async def get_grocery_cart(
                 "category": category
             })
 
+        # Get correct domain based on user's country
+        knuspr_domain = await get_knuspr_domain_for_user(db, user_id)
+
         # Build response
         response = GroceryCartResponse(
             cart_id=cart.knuspr_cart_id,
-            knuspr_url=f"https://www.knuspr.cz/cart/{cart.knuspr_cart_id}",  # TODO: Use correct domain based on country
+            knuspr_url=f"{knuspr_domain}/cart/{cart.knuspr_cart_id}",
             total_price=cart.total_cost or 0.0,
             item_count=cart.total_items,
             delivery_slot=None,  # TODO: Store delivery slot info in database

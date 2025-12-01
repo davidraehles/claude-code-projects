@@ -22,7 +22,7 @@ Requirements:
 import asyncio
 import os
 import sys
-from datetime import datetime, date, timedelta
+from datetime import date, timedelta
 from dotenv import load_dotenv
 
 # Add project root to path
@@ -127,7 +127,7 @@ async def test_knuspr_integration():
                 email="test@example.com",
                 username="testuser",
                 full_name="Test User",
-                hashed_password="test_hash"  # Not used for this test
+                hashed_password="unused_password_hash"  # Not used for this test
             )
             db.add(test_user)
             db.commit()
@@ -273,8 +273,6 @@ async def test_knuspr_integration():
         result = await agent.create_cart_from_meal_plan(
             meal_plan_id=test_meal_plan.id,
             user_id=test_user.id,
-            db=db,
-            credential_manager=credential_manager,
             delivery_preferences=delivery_preferences
         )
 
