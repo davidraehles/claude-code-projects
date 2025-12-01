@@ -39,7 +39,7 @@ export function Header({ userEmail }: HeaderProps) {
                 Recipes
               </Button>
             </Link>
-            <Link href="/meal-plans">
+              <Link href="/meal-plans" prefetch={false}>
               <Button variant="ghost" size="sm">
                 Meal Plans
               </Button>

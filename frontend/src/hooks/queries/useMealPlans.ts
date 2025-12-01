@@ -35,7 +35,7 @@ export function useMealPlans(skip: number = 0, limit: number = 20) {
       }
       return api.getMealPlans(skip, limit, token)
     },
-    enabled: !!token,
+    enabled: !!token && token.trim().length > 0,
   })
 }
 
@@ -53,7 +53,7 @@ export function useMealPlan(id: number, enabled: boolean = true) {
       }
       return api.getMealPlan(id, token)
     },
-    enabled: !!token && enabled,
+    enabled: !!token && token.trim().length > 0 && enabled,
   })
 }
 

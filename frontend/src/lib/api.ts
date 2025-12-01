@@ -55,7 +55,7 @@ class ApiClient {
     }
 
     // Add Authorization header if token provided
-    if (token) {
+    if (token && token.trim().length > 0) {
       headers["Authorization"] = `Bearer ${token}`
     }
 
@@ -172,7 +172,7 @@ class ApiClient {
     const headers: Record<string, string> = {}
 
     // Add Authorization header if token provided
-    if (token) {
+    if (token && token.trim().length > 0) {
       headers["Authorization"] = `Bearer ${token}`
     }
 
