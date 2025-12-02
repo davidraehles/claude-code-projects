@@ -50,7 +50,9 @@
       "Bash(do echo \"Validating $file\")",
       "Bash(done)",
       "Bash(do)",
-      "Bash(git -C /home/darae/claude-code-projects status --short)"
+      "Bash(git -C /home/darae/claude-code-projects status --short)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr close:*)"
     ],
     "deny": [],
     "ask": []
