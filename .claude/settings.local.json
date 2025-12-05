@@ -60,7 +60,20 @@
       "Bash(npx eslint:*)",
       "Bash(node:*)",
       "Bash(wc:*)",
-      "Bash(python scripts/test_query_performance.py:*)"
+      "Bash(python scripts/test_query_performance.py:*)",
+      "Bash(find:*)",
+      "Bash(source:*)",
+      "Bash(DB_HOST=custom.host DB_PORT=5433 DB_USER=testuser DB_PASSWORD=testpass DB_NAME=testdb alembic upgrade:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker compose:*)",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker/loki/loki-config.yml )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker/promtail/promtail-config.yml )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker-compose.yml )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/scripts/log_retention_policy.sh )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker/loki/rules/alerts.yml )",
+      "Bash(/home/darae/claude-code-projects/docs/LOG_RETENTION_POLICY.md)",
+      "Bash(test:*)",
+      "Bash(/home/darae/claude-code-projects/QUICK_START_BACKUP.md <<'EOF'\n# Quick Start: Database Backup & Migration\n\n## Database Migrations\n\n```bash\n# Create migration\ncd backend\nalembic revision --autogenerate -m \"description\"\n\n# Apply migrations\nalembic upgrade head\n\n# Rollback\nalembic downgrade -1\n\n# Check status\nalembic current\n```\n\nFull guide: `/backend/docs/DATABASE_MIGRATION_GUIDE.md`\n\n## Railway Backups Setup\n\n### One-Time Setup\n```bash\n# Set environment variables\nexport DATABASE_URL=\"postgresql://...\"\nexport AWS_ACCESS_KEY_ID=\"your_key\"\nexport AWS_SECRET_ACCESS_KEY=\"your_secret\"\nexport S3_BUCKET_NAME=\"my-railway-backups\"\n\n# Run setup\n./infrastructure/scripts/setup_railway_backups.sh --setup\n```\n\n### Daily Operations\n```bash\n# Create backup\n./infrastructure/scripts/setup_railway_backups.sh --backup\n\n# List backups\n./infrastructure/scripts/setup_railway_backups.sh --list\n\n# Restore\n./infrastructure/scripts/setup_railway_backups.sh --restore hourly/backup.sql.gz\n```\n\n### Automated Backups (Cron)\n```bash\n# Add to crontab (runs hourly)\n0 * * * * /path/to/setup_railway_backups.sh --backup >> /var/log/backup.log 2>&1\n```\n\n## Testing\n\n```bash\ncd backend\nexport TEST_DB_NAME=recipe_app_test\npytest tests/integration/test_db_backup_restore.py -v\n```\n\n## Documentation\n\n- **DATABASE_MIGRATION_GUIDE.md** - Complete migration procedures (983 lines)\n- **BACKUP_SETUP_README.md** - Full setup and usage guide (889 lines)\n- **setup_railway_backups.sh** - Production backup script (1004 lines)\n- **test_db_backup_restore.py** - Comprehensive tests (1003 lines)\n\n## Emergency Procedures\n\n### Restore Production Database\n```bash\n# 1. List backups\n./infrastructure/scripts/setup_railway_backups.sh --list\n\n# 2. Download latest\naws s3 cp s3://bucket/daily/railway_backup_TIMESTAMP.sql.gz ./\n\n# 3. Restore\ngunzip railway_backup_TIMESTAMP.sql.gz\npsql $DATABASE_URL < railway_backup_TIMESTAMP.sql\n```\n\n### Rollback Migration\n```bash\n# Check current\nalembic current\n\n# Rollback one version\nalembic downgrade -1\n\n# Verify\nalembic current\n```\n\n## Support\n\nSee `/backend/docs/BACKUP_SETUP_README.md` for:\n- Troubleshooting\n- AWS configuration\n- Security best practices\n- Performance optimization\nEOF)"
     ],
     "deny": [],
     "ask": []

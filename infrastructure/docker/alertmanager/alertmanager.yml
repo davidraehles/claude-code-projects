@@ -1,0 +1,217 @@
+global:
+  # Global configuration
+  resolve_timeout: 5m
+
+  # PagerDuty integration key (set via environment variable)
+  pagerduty_url: 'https://events.pagerduty.com/v2/enqueue'
+
+  # Slack webhook URL (set via environment variable)
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+# Templates for notification formatting
+templates:
+  - '/etc/alertmanager/templates/*.yml'
+
+# Route tree for alert routing
+route:
+  # Default receiver for all alerts
+  receiver: 'slack-alerts'
+
+  # Group alerts by these labels
+  group_by: ['alertname', 'service', 'severity']
+
+  # Wait before sending initial notification (allows grouping)
+  group_wait: 30s
+
+  # Wait before sending notification about new alerts in group
+  group_interval: 5m
+
+  # Wait before re-sending notification for unresolved alerts
+  repeat_interval: 4h
+
+  # Child routes for specific alert handling
+  routes:
+    # Critical alerts - P1 (Immediate PagerDuty + Slack + SMS)
+    - match:
+        severity: critical
+      receiver: 'pagerduty-critical'
+      group_wait: 10s
+      repeat_interval: 15m
+      continue: true  # Continue to other routes
+
+    - match:
+        severity: critical
+      receiver: 'slack-critical'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # High severity alerts - P2 (PagerDuty + Slack)
+    - match:
+        severity: high
+      receiver: 'pagerduty-high'
+      group_wait: 30s
+      repeat_interval: 1h
+      continue: true
+
+    - match:
+        severity: high
+      receiver: 'slack-incidents'
+      group_wait: 30s
+      repeat_interval: 1h
+
+    # Medium severity alerts - P3 (Slack only, summarized)
+    - match:
+        severity: medium
+      receiver: 'slack-alerts'
+      group_wait: 2m
+      group_interval: 10m
+      repeat_interval: 6h
+
+    # Low severity alerts - P4 (Slack only, hourly digest)
+    - match:
+        severity: low
+      receiver: 'slack-alerts'
+      group_wait: 1h
+      group_interval: 1h
+      repeat_interval: 24h
+
+    # Business metrics alerts (informational)
+    - match:
+        category: business
+      receiver: 'slack-business-metrics'
+      group_wait: 5m
+      repeat_interval: 12h
+
+    # Deployment notifications
+    - match:
+        category: deployment
+      receiver: 'slack-deployments'
+      group_wait: 30s
+      repeat_interval: 1h
+
+# Inhibition rules (suppress alerts based on other alerts)
+inhibit_rules:
+  # Inhibit warning if critical alert is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'service', 'instance']
+
+  # Inhibit high severity if critical is firing
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'high'
+    equal: ['alertname', 'service']
+
+  # Inhibit all alerts if maintenance mode is active
+  - source_match:
+      alertname: 'MaintenanceMode'
+    target_match_re:
+      severity: '.*'
+    equal: ['service']
+
+# Receivers configuration
+receivers:
+  # PagerDuty - Critical (P1)
+  - name: 'pagerduty-critical'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_CRITICAL_KEY}'
+        severity: 'critical'
+        description: '{{ .CommonAnnotations.summary }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          service: '{{ .GroupLabels.service }}'
+          alertname: '{{ .GroupLabels.alertname }}'
+          description: '{{ .CommonAnnotations.description }}'
+          runbook_url: '{{ .CommonAnnotations.runbook_url }}'
+        client: 'AI Meal Planner Monitoring'
+        client_url: '{{ .ExternalURL }}'
+
+  # PagerDuty - High (P2)
+  - name: 'pagerduty-high'
+    pagerduty_configs:
+      - service_key: '${PAGERDUTY_HIGH_KEY}'
+        severity: 'error'
+        description: '{{ .CommonAnnotations.summary }}'
+        details:
+          firing: '{{ .Alerts.Firing | len }}'
+          resolved: '{{ .Alerts.Resolved | len }}'
+          service: '{{ .GroupLabels.service }}'
+          alertname: '{{ .GroupLabels.alertname }}'
+          description: '{{ .CommonAnnotations.description }}'
+          runbook_url: '{{ .CommonAnnotations.runbook_url }}'
+        client: 'AI Meal Planner Monitoring'
+        client_url: '{{ .ExternalURL }}'
+
+  # Slack - Critical alerts (#incident-response)
+  - name: 'slack-critical'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_INCIDENT}'
+        channel: '#incident-response'
+        username: 'AlertManager'
+        icon_emoji: ':rotating_light:'
+        title: 'CRITICAL ALERT - {{ .GroupLabels.alertname }}'
+        title_link: '{{ .ExternalURL }}'
+        text: '{{ template "slack.critical.text" . }}'
+        actions:
+          - type: button
+            text: 'View Runbook'
+            url: '{{ .CommonAnnotations.runbook_url }}'
+          - type: button
+            text: 'View Metrics'
+            url: 'http://localhost:3000/d/api-health-v1'
+          - type: button
+            text: 'View Logs'
+            url: 'http://localhost:3000/explore'
+        send_resolved: true
+
+  # Slack - Incident response (#incident-response)
+  - name: 'slack-incidents'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_INCIDENT}'
+        channel: '#incident-response'
+        username: 'AlertManager'
+        icon_emoji: ':warning:'
+        title: 'HIGH SEVERITY - {{ .GroupLabels.alertname }}'
+        title_link: '{{ .ExternalURL }}'
+        text: '{{ template "slack.incident.text" . }}'
+        send_resolved: true
+
+  # Slack - General alerts (#alerts)
+  - name: 'slack-alerts'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_ALERTS}'
+        channel: '#alerts'
+        username: 'AlertManager'
+        icon_emoji: ':bell:'
+        title: '{{ .GroupLabels.severity | toUpper }} - {{ .GroupLabels.alertname }}'
+        title_link: '{{ .ExternalURL }}'
+        text: '{{ template "slack.default.text" . }}'
+        send_resolved: true
+
+  # Slack - Business metrics (#business-metrics)
+  - name: 'slack-business-metrics'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_BUSINESS}'
+        channel: '#business-metrics'
+        username: 'Business Metrics Bot'
+        icon_emoji: ':chart_with_upwards_trend:'
+        title: 'Business Metric Alert - {{ .GroupLabels.alertname }}'
+        title_link: 'http://localhost:3000/d/business-metrics-v1'
+        text: '{{ template "slack.business.text" . }}'
+        send_resolved: true
+
+  # Slack - Deployments (#deployments)
+  - name: 'slack-deployments'
+    slack_configs:
+      - api_url: '${SLACK_WEBHOOK_DEPLOYMENTS}'
+        channel: '#deployments'
+        username: 'Deployment Bot'
+        icon_emoji: ':rocket:'
+        title: 'Deployment - {{ .GroupLabels.service }}'
+        title_link: '{{ .ExternalURL }}'
+        text: '{{ template "slack.deployment.text" . }}'
+        send_resolved: true

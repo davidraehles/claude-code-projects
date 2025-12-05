@@ -100,12 +100,77 @@ services:
       - "9090:9090"
     volumes:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./docker/prometheus/alerts.yml:/etc/prometheus/alerts.yml
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
     depends_on:
       - api
+
+  # PostgreSQL Exporter (for database metrics)
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: recipe-postgres-exporter
+    environment:
+      DATA_SOURCE_NAME: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-recipe_app}?sslmode=disable"
+    ports:
+      - "9187:9187"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Redis Exporter (for cache metrics)
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: recipe-redis-exporter
+    environment:
+      REDIS_ADDR: "redis:6379"
+    ports:
+      - "9121:9121"
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Node Exporter (for system metrics)
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: recipe-node-exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+
+  # Loki (for log aggregation)
+  loki:
+    image: grafana/loki:latest
+    container_name: recipe-loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./docker/loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+
+  # Promtail (for log shipping)
+  promtail:
+    image: grafana/promtail:latest
+    container_name: recipe-promtail
+    volumes:
+      - ./docker/promtail/promtail-config.yml:/etc/promtail/config.yml
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
 
   # Grafana (for metrics visualization)
   grafana:
@@ -114,18 +179,142 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_INSTALL_PLUGINS: ""
+      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards
       - ./docker/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
     depends_on:
       - prometheus
+      - loki
+
+  # Database Backup Service
+  # Runs automated backups on a schedule
+  db-backup:
+    image: postgres:15-alpine
+    container_name: recipe-db-backup
+    environment:
+      # Database connection (connects to db service)
+      DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-recipe_app}"
+
+      # Backup configuration
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-30}
+
+      # AWS S3 configuration (optional - set these for S3 uploads)
+      S3_BUCKET: ${S3_BUCKET:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+    volumes:
+      # Mount backup scripts
+      - ../infrastructure/scripts/backup_database.sh:/usr/local/bin/backup_database.sh:ro
+      - ../infrastructure/scripts/restore_database.sh:/usr/local/bin/restore_database.sh:ro
+
+      # Mount backup storage directory
+      - backup_data:/backups
+
+      # Mount crontab for scheduling
+      - ./docker/backup/crontab:/etc/crontabs/root:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    # Install required dependencies and start cron
+    command: >
+      sh -c "
+        echo 'Installing backup dependencies...' &&
+        apk add --no-cache aws-cli bash gzip &&
+        echo 'Making backup scripts executable...' &&
+        chmod +x /usr/local/bin/backup_database.sh &&
+        chmod +x /usr/local/bin/restore_database.sh &&
+        echo 'Creating backup directory...' &&
+        mkdir -p /backups &&
+        echo 'Starting cron daemon...' &&
+        crond -f -l 2
+      "
+    restart: unless-stopped
+
+  # Alertmanager (for alert routing and notifications)
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: recipe-alertmanager
+    ports:
+      - "9093:9093"
+    environment:
+      # PagerDuty integration keys
+      PAGERDUTY_CRITICAL_KEY: ${PAGERDUTY_CRITICAL_KEY:-}
+      PAGERDUTY_HIGH_KEY: ${PAGERDUTY_HIGH_KEY:-}
+
+      # Slack webhook URLs
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      SLACK_WEBHOOK_INCIDENT: ${SLACK_WEBHOOK_INCIDENT:-}
+      SLACK_WEBHOOK_ALERTS: ${SLACK_WEBHOOK_ALERTS:-}
+      SLACK_WEBHOOK_BUSINESS: ${SLACK_WEBHOOK_BUSINESS:-}
+      SLACK_WEBHOOK_DEPLOYMENTS: ${SLACK_WEBHOOK_DEPLOYMENTS:-}
+    volumes:
+      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./docker/alertmanager/slack-template.yml:/etc/alertmanager/templates/slack-template.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Jaeger (for distributed tracing)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: recipe-jaeger
+    environment:
+      # Collector configuration
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+      COLLECTOR_OTLP_ENABLED: "true"
+
+      # Storage configuration (memory for development, use Elasticsearch/Cassandra for production)
+      SPAN_STORAGE_TYPE: "memory"
+
+      # Query service configuration
+      QUERY_BASE_PATH: "/jaeger"
+
+      # Sampling configuration
+      SAMPLING_STRATEGIES_FILE: /etc/jaeger/sampling-strategies.json
+
+      # Retention (for memory storage)
+      MEMORY_MAX_TRACES: ${JAEGER_MEMORY_MAX_TRACES:-100000}
+    ports:
+      # Jaeger UI
+      - "16686:16686"
+      # Jaeger collector (HTTP)
+      - "14268:14268"
+      # Jaeger collector (gRPC)
+      - "14250:14250"
+      # Jaeger agent (Thrift compact)
+      - "6831:6831/udp"
+      # Jaeger agent (Thrift binary)
+      - "6832:6832/udp"
+      # Zipkin compatible endpoint
+      - "9411:9411"
+      # OTLP gRPC
+      - "4317:4317"
+      # OTLP HTTP
+      - "4318:4318"
+    volumes:
+      - jaeger_data:/tmp
+      - ./docker/jaeger/sampling-strategies.json:/etc/jaeger/sampling-strategies.json:ro
+    restart: unless-stopped
 
 volumes:
   postgres_data:
   redis_data:
   prometheus_data:
   grafana_data:
+  loki_data:
+  backup_data:
+  alertmanager_data:
+  jaeger_data:

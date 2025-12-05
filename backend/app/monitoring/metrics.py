@@ -182,6 +182,46 @@ background_task_duration_seconds = Histogram(
     buckets=(1.0, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0, 600.0)
 )
 
+# Circuit Breaker Metrics
+circuit_breaker_state = Gauge(
+    'circuit_breaker_state',
+    'Circuit breaker state (0=closed, 1=half_open, 2=open)',
+    ['name']
+)
+
+circuit_breaker_requests_total = Counter(
+    'circuit_breaker_requests_total',
+    'Total requests through circuit breaker',
+    ['name', 'result']  # result: success, failure, rejected
+)
+
+circuit_breaker_state_transitions_total = Counter(
+    'circuit_breaker_state_transitions_total',
+    'Total circuit breaker state transitions',
+    ['name', 'from_state', 'to_state']
+)
+
+# Database Connection Pool Metrics
+db_connection_pool_active = Gauge(
+    'db_connection_pool_active',
+    'Number of active database connections in the pool'
+)
+
+db_connection_pool_size = Gauge(
+    'db_connection_pool_size',
+    'Total size of the database connection pool'
+)
+
+db_connection_pool_checked_out = Gauge(
+    'db_connection_pool_checked_out',
+    'Number of database connections currently checked out'
+)
+
+db_connection_pool_overflow = Gauge(
+    'db_connection_pool_overflow',
+    'Number of overflow connections in use'
+)
+
 
 # Helper functions for common metric patterns
 
@@ -242,3 +282,49 @@ def track_agent_operation(agent: str, operation: str, status: str, duration: flo
     """
     agent_operations_total.labels(agent=agent, operation=operation, status=status).inc()
     agent_operation_duration_seconds.labels(agent=agent, operation=operation).observe(duration)
+
+
+def update_circuit_breaker_metrics(breaker_name: str, metrics_dict: dict):
+    """
+    Update circuit breaker metrics from a circuit breaker instance.
+
+    Args:
+        breaker_name: Name of the circuit breaker
+        metrics_dict: Dictionary with circuit breaker metrics
+    """
+    # Map state to numeric value
+    state_map = {"closed": 0, "half_open": 1, "open": 2}
+    state_value = state_map.get(metrics_dict.get("state", "closed"), 0)
+
+    circuit_breaker_state.labels(name=breaker_name).set(state_value)
+
+    # Update request counters
+    circuit_breaker_requests_total.labels(
+        name=breaker_name,
+        result="success"
+    )._value.set(metrics_dict.get("successful_requests", 0))
+
+    circuit_breaker_requests_total.labels(
+        name=breaker_name,
+        result="failure"
+    )._value.set(metrics_dict.get("failed_requests", 0))
+
+    circuit_breaker_requests_total.labels(
+        name=breaker_name,
+        result="rejected"
+    )._value.set(metrics_dict.get("rejected_requests", 0))
+
+
+def update_db_pool_metrics(pool_size: int, checked_out: int, overflow: int = 0):
+    """
+    Update database connection pool metrics.
+
+    Args:
+        pool_size: Total pool size
+        checked_out: Number of connections checked out
+        overflow: Number of overflow connections in use
+    """
+    db_connection_pool_size.set(pool_size)
+    db_connection_pool_checked_out.set(checked_out)
+    db_connection_pool_active.set(checked_out)
+    db_connection_pool_overflow.set(overflow)

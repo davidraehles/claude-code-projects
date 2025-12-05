@@ -19,6 +19,11 @@ from app.models.meal_plan import (
     GroceryCart,
     CartItem,
 )
+from app.models.rate_limit import (
+    RateLimitPolicy,
+    RateLimitOverride,
+    RateLimitWhitelist,
+)
 
 __all__ = [
     "User",
@@ -32,4 +37,7 @@ __all__ = [
     "MealPlanRecipe",
     "GroceryCart",
     "CartItem",
+    "RateLimitPolicy",
+    "RateLimitOverride",
+    "RateLimitWhitelist",
 ]

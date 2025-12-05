@@ -195,6 +195,74 @@ The `env.py` file automatically reads database configuration from environment va
 
 **Priority**: Environment variables > alembic.ini
 
+### Configuration Details
+
+Database connection is configured via the following environment variables:
+
+| Variable | Description | Default Value |
+|----------|-------------|---------------|
+| `DB_USER` | Database username | `postgres` |
+| `DB_PASSWORD` | Database password | `postgres` |
+| `DB_HOST` | Database host | `localhost` |
+| `DB_PORT` | Database port | `5432` |
+| `DB_NAME` | Database name | `recipe_app` |
+| `TEST_DB_NAME` | Test database name (overrides DB_NAME) | None |
+
+### Security Notes
+
+1. **No Hardcoded Credentials**: The `alembic.ini` file contains only a placeholder URL (`driver://user:pass@localhost/dbname`). Actual database credentials are read from environment variables in `migrations/env.py`.
+
+2. **Production Safety**: Always set environment variables explicitly in production. The default values are only intended for local development.
+
+3. **Test Isolation**: Use `TEST_DB_NAME` to run tests against a separate database without affecting your development data.
+
+### Usage Examples
+
+#### Development (using defaults)
+```bash
+# Uses default values: postgres:postgres@localhost:5432/recipe_app
+alembic upgrade head
+```
+
+#### Custom Configuration
+```bash
+# Set environment variables for custom database
+export DB_USER=myuser
+export DB_PASSWORD=mypassword
+export DB_HOST=db.example.com
+export DB_PORT=5432
+export DB_NAME=mydb
+
+alembic upgrade head
+```
+
+#### Testing
+```bash
+# Use a separate test database
+export TEST_DB_NAME=recipe_app_test
+alembic upgrade head
+```
+
+#### Production
+```bash
+# Set all environment variables explicitly (no defaults)
+export DB_USER=prod_user
+export DB_PASSWORD=secure_prod_password
+export DB_HOST=prod-db.example.com
+export DB_PORT=5432
+export DB_NAME=production_db
+
+alembic upgrade head
+```
+
+#### Docker Compose
+The `infrastructure/docker-compose.yml` automatically passes environment variables to the API service, which runs migrations on startup:
+
+```bash
+cd infrastructure
+docker compose up -d
+```
+
 ## Additional Resources
 
 - [Alembic Documentation](https://alembic.sqlalchemy.org/)

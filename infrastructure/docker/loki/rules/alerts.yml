@@ -1,0 +1,81 @@
+groups:
+  - name: loki_error_alerts
+    interval: 1m
+    rules:
+      # Alert on high error log rate (> 100 errors/minute for 5 minutes)
+      - alert: HighErrorLogRate
+        expr: |
+          sum(rate({service="recipe-meal-planning-api", level="error"}[5m])) > 1.67
+        for: 5m
+        labels:
+          severity: critical
+          component: logging
+        annotations:
+          summary: "High error log rate detected in application"
+          description: "Error log rate is {{ $value }} errors/sec (threshold: 100/min). Application may be experiencing critical issues."
+          query: '{service="recipe-meal-planning-api", level="error"}'
+          runbook: "Check Grafana Explore with query: {service=\"recipe-meal-planning-api\", level=\"error\"} for error details"
+
+      # Alert on sustained error log rate (> 50 errors/minute for 10 minutes)
+      - alert: SustainedErrorLogRate
+        expr: |
+          sum(rate({service="recipe-meal-planning-api", level="error"}[10m])) > 0.83
+        for: 10m
+        labels:
+          severity: warning
+          component: logging
+        annotations:
+          summary: "Sustained error log rate detected"
+          description: "Error log rate is {{ $value }} errors/sec (threshold: 50/min). Monitor for escalation."
+          query: '{service="recipe-meal-planning-api", level="error"}'
+
+      # Alert on database errors in logs
+      - alert: DatabaseErrorsInLogs
+        expr: |
+          sum(count_over_time({service="recipe-meal-planning-api"} |= "database" |= "error" [5m])) > 10
+        for: 5m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database errors detected in application logs"
+          description: "{{ $value }} database-related errors in last 5 minutes"
+          query: '{service="recipe-meal-planning-api"} |= "database" |= "error"'
+
+      # Alert on authentication failures in logs
+      - alert: AuthenticationFailuresInLogs
+        expr: |
+          sum(count_over_time({service="recipe-meal-planning-api"} |~ "authentication|login" |= "failed|error" [5m])) > 20
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High number of authentication failures"
+          description: "{{ $value }} authentication failures detected in last 5 minutes"
+          query: '{service="recipe-meal-planning-api"} |~ "authentication|login" |= "failed|error"'
+
+      # Alert on API timeout errors
+      - alert: APITimeoutErrors
+        expr: |
+          sum(count_over_time({service="recipe-meal-planning-api"} |= "timeout" [10m])) > 5
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "API timeout errors detected"
+          description: "{{ $value }} timeout errors in last 10 minutes"
+          query: '{service="recipe-meal-planning-api"} |= "timeout"'
+
+      # Alert on no logs received
+      - alert: NoLogsReceived
+        expr: |
+          absent_over_time({service="recipe-meal-planning-api"}[10m])
+        for: 10m
+        labels:
+          severity: critical
+          component: logging
+        annotations:
+          summary: "No logs received from API service"
+          description: "No logs from recipe-meal-planning-api in last 10 minutes. Service may be down or logging is broken."
