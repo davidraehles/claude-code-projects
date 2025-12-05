@@ -1,0 +1,210 @@
+groups:
+  - name: api_alerts
+    interval: 30s
+    rules:
+      # Critical: High error rate
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Warning: High latency
+      - alert: HighLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High latency detected (p95 > 1s)"
+          description: "P95 latency is {{ $value }}s (threshold: 1s)"
+
+      # Critical: Database down
+      - alert: DatabaseDown
+        expr: up{job="postgres"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database is down"
+          description: "PostgreSQL database has been down for more than 1 minute"
+
+      # Critical: Redis down
+      - alert: RedisDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: cache
+        annotations:
+          summary: "Redis cache is down"
+          description: "Redis has been down for more than 1 minute"
+
+      # Critical: High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 80
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "High memory usage detected"
+          description: "Memory usage is {{ $value | humanize }}% (threshold: 80%)"
+
+      # Warning: High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage detected"
+          description: "CPU usage is {{ $value | humanize }}% (threshold: 80%)"
+
+      # Critical: Low disk space
+      - alert: LowDiskSpace
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100 < 10
+        for: 5m
+        labels:
+          severity: critical
+          component: infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Disk space available is {{ $value | humanize }}% (threshold: 10%)"
+
+      # Warning: High failed authentication rate
+      - alert: HighFailedAuthRate
+        expr: rate(http_requests_total{status="401"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "High failed authentication rate"
+          description: "Failed authentication rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+      # Warning: Rate limit exceeded
+      - alert: RateLimitExceeded
+        expr: rate(http_requests_total{status="429"}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High rate of rate-limited requests"
+          description: "Rate limit exceeded rate is {{ $value | humanizePercentage }} (threshold: 5%)"
+
+      # Critical: High workflow failure rate
+      - alert: HighWorkflowFailureRate
+        expr: rate(workflow_executions_total{status="failed"}[10m]) / rate(workflow_executions_total[10m]) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          component: workflows
+        annotations:
+          summary: "High workflow failure rate"
+          description: "Workflow failure rate is {{ $value | humanizePercentage }} (threshold: 10%)"
+
+  - name: database_alerts
+    interval: 30s
+    rules:
+      # Warning: Slow queries
+      - alert: SlowDatabaseQueries
+        expr: rate(db_query_duration_seconds_sum[5m]) / rate(db_query_duration_seconds_count[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "Slow database queries detected"
+          description: "Average query duration is {{ $value }}s (threshold: 1s)"
+
+      # Critical: Database connection pool exhaustion
+      - alert: DatabaseConnectionPoolExhausted
+        expr: db_connection_pool_active / db_connection_pool_size > 0.9
+        for: 3m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection pool nearly exhausted"
+          description: "Connection pool usage is {{ $value | humanizePercentage }} (threshold: 90%)"
+
+      # Warning: High database error rate
+      - alert: HighDatabaseErrorRate
+        expr: rate(db_errors_total[5m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: database
+        annotations:
+          summary: "High database error rate"
+          description: "Database error rate is {{ $value }} errors/sec"
+
+  - name: application_alerts
+    interval: 30s
+    rules:
+      # Warning: API service unhealthy
+      - alert: APIServiceUnhealthy
+        expr: up{job="recipe-api"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: api
+        annotations:
+          summary: "API service is unhealthy"
+          description: "API service has been down for more than 2 minutes"
+
+      # Warning: High request queue depth
+      - alert: HighRequestQueueDepth
+        expr: http_requests_in_progress > 100
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High number of requests in progress"
+          description: "{{ $value }} requests are currently in progress (threshold: 100)"
+
+      # Critical: Agent system failure
+      - alert: AgentSystemFailure
+        expr: sum(rate(agent_execution_errors_total[5m])) by (agent_type) > 0.5
+        for: 5m
+        labels:
+          severity: critical
+          component: agents
+        annotations:
+          summary: "Agent system experiencing high failure rate"
+          description: "Agent {{ $labels.agent_type }} error rate is {{ $value }} errors/sec"
+
+  - name: business_metrics_alerts
+    interval: 60s
+    rules:
+      # Warning: Low recipe harvest success rate
+      - alert: LowRecipeHarvestSuccessRate
+        expr: rate(recipe_harvests_successful[1h]) / rate(recipe_harvests_total[1h]) < 0.8
+        for: 30m
+        labels:
+          severity: warning
+          component: business
+        annotations:
+          summary: "Low recipe harvest success rate"
+          description: "Recipe harvest success rate is {{ $value | humanizePercentage }} (threshold: 80%)"
+
+      # Info: No user activity
+      - alert: NoUserActivity
+        expr: increase(user_registrations_total[1h]) == 0 and increase(recipe_views_total[1h]) == 0
+        for: 2h
+        labels:
+          severity: info
+          component: business
+        annotations:
+          summary: "No user activity detected"
+          description: "No user registrations or recipe views in the last 2 hours"
