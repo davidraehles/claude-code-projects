@@ -233,10 +233,7 @@ app.add_middleware(CorrelationIdMiddleware)
 # Input validation middleware (EARLY - validate and sanitize input)
 app.add_middleware(InputValidationMiddleware)
 
-# CSRF protection middleware (exempt health, metrics, and docs endpoints)
-app.add_middleware(CSRFMiddleware, exempt_paths=["/health", "/health/live", "/health/ready", "/metrics", "/api/docs", "/api/redoc", "/"])
-
-# Security headers middleware (after RequestId, before rate limiting)
+# Security headers middleware (after input validation, before rate limiting)
 from app.middleware.security_headers import SecurityHeadersMiddleware
 app.add_middleware(
     SecurityHeadersMiddleware,
@@ -244,7 +241,7 @@ app.add_middleware(
     hsts_max_age=31536000  # 1 year
 )
 
-# Rate limiting middleware (after security headers)
+# Rate limiting middleware (BEFORE CSRF - blocks abusive requests early)
 from app.middleware.rate_limit_middleware import RateLimitMiddleware
 # Get Redis client for rate limiting if available
 try:
@@ -261,6 +258,9 @@ app.add_middleware(
     default_window=int(os.getenv("RATE_LIMIT_WINDOW", "60")),
     enable_rate_limiting=os.getenv("ENABLE_RATE_LIMITING", "true").lower() == "true"
 )
+
+# CSRF protection middleware (AFTER rate limiting - exempt health, metrics, and docs endpoints)
+app.add_middleware(CSRFMiddleware, exempt_paths=["/health", "/health/live", "/health/ready", "/metrics", "/api/docs", "/api/redoc", "/"])
 
 # Prometheus metrics middleware (should be last to measure total request time)
 from app.monitoring.middleware import PrometheusMiddleware

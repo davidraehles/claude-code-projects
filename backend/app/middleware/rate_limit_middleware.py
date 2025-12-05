@@ -17,7 +17,7 @@ them automatically to all incoming requests.
 
 import logging
 import re
-from typing import Callable, Optional, Dict, Tuple
+from typing import Callable, Optional, Dict, Tuple, Pattern
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
@@ -68,8 +68,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             redis_client=redis_client
         )
 
-        # Endpoint-specific rate limiters
-        self.endpoint_limiters: Dict[str, RateLimiter] = {}
+        # Endpoint-specific rate limiters with pre-compiled regex patterns
+        self.endpoint_limiters: Dict[Pattern, RateLimiter] = {}
         self._configure_endpoint_limits()
 
         logger.info(
@@ -84,41 +84,30 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         Different endpoints can have different rate limits based on
         their resource intensity and security requirements.
+        Patterns are pre-compiled at initialization for performance.
         """
-        # Stricter limits for authentication endpoints (handled by AuthRateLimiter)
-        # These are already protected, so we apply generous limits here
-        self.endpoint_limiters[r"^/api/v1/auth/login$"] = RateLimiter(
-            max_requests=20,  # 20 attempts per minute
-            window_seconds=60,
-            redis_client=self.redis_client
-        )
+        # Define endpoint patterns and their rate limit configurations
+        patterns = [
+            # Stricter limits for authentication endpoints (handled by AuthRateLimiter)
+            # These are already protected, so we apply generous limits here
+            (r"^/api/v1/auth/login$", 20, 60),       # 20 attempts per minute
+            (r"^/api/v1/auth/register$", 10, 60),    # 10 attempts per minute
+            # Stricter limits for expensive workflow operations
+            (r"^/api/v1/workflows/.*$", 10, 300),    # 10 requests per 5 minutes
+            # Moderate limits for search endpoints
+            (r"^/api/v1/recipes/search$", 30, 60),   # 30 searches per minute
+            # Generous limits for read-only endpoints
+            (r"^/api/v1/recipes/\d+$", 60, 60),      # 60 requests per minute
+        ]
 
-        self.endpoint_limiters[r"^/api/v1/auth/register$"] = RateLimiter(
-            max_requests=10,  # 10 attempts per minute
-            window_seconds=60,
-            redis_client=self.redis_client
-        )
-
-        # Stricter limits for expensive workflow operations
-        self.endpoint_limiters[r"^/api/v1/workflows/.*$"] = RateLimiter(
-            max_requests=10,  # 10 requests per 5 minutes
-            window_seconds=300,
-            redis_client=self.redis_client
-        )
-
-        # Moderate limits for search endpoints
-        self.endpoint_limiters[r"^/api/v1/recipes/search$"] = RateLimiter(
-            max_requests=30,  # 30 searches per minute
-            window_seconds=60,
-            redis_client=self.redis_client
-        )
-
-        # Generous limits for read-only endpoints
-        self.endpoint_limiters[r"^/api/v1/recipes/\d+$"] = RateLimiter(
-            max_requests=60,  # 60 requests per minute
-            window_seconds=60,
-            redis_client=self.redis_client
-        )
+        # Pre-compile regex patterns and create rate limiters
+        for pattern_str, max_requests, window_seconds in patterns:
+            compiled_pattern = re.compile(pattern_str)
+            self.endpoint_limiters[compiled_pattern] = RateLimiter(
+                max_requests=max_requests,
+                window_seconds=window_seconds,
+                redis_client=self.redis_client
+            )
 
     def _get_limiter_for_path(self, path: str) -> RateLimiter:
         """
