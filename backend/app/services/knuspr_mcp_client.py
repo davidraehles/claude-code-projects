@@ -170,6 +170,46 @@ class KnusprCart:
             self.created_at = datetime.utcnow()
 
 
+@dataclass
+class BatchItemResult:
+    """Result for a single item in batch operation"""
+    name: str
+    quantity: float
+    unit: str
+    success: bool
+    knuspr_product_id: Optional[str] = None
+    knuspr_product_name: Optional[str] = None
+    error_message: Optional[str] = None
+    match_confidence: float = 0.0
+    retry_count: int = 0
+
+
+@dataclass
+class BatchAddResult:
+    """Result of batch add operation"""
+    total_items: int
+    succeeded_items: List[BatchItemResult]
+    failed_items: List[BatchItemResult]
+    partial_matches: List[BatchItemResult]
+    cart_id: Optional[str] = None
+    cart_url: Optional[str] = None
+
+    @property
+    def success_count(self) -> int:
+        """Number of successfully added items"""
+        return len(self.succeeded_items)
+
+    @property
+    def failure_count(self) -> int:
+        """Number of failed items"""
+        return len(self.failed_items)
+
+    @property
+    def partial_count(self) -> int:
+        """Number of partial matches"""
+        return len(self.partial_matches)
+
+
 class KnusprMCPClient:
     """
     Knuspr MCP Client - Wrapper around Knuspr grocery API
@@ -648,6 +688,192 @@ class KnusprMCPClient:
         except ConnectionError as exc:
             logger.error(f"Cart retrieval connection error: {exc}")
             raise RuntimeError(f"Knuspr cart retrieval connection error: {exc}")
+
+    async def add_items_batch(
+        self,
+        items: List[Dict[str, Any]],
+        batch_size: int = 10,
+        max_retries: int = 3
+    ) -> BatchAddResult:
+        """
+        Add multiple items to Knuspr cart in batches with retry logic.
+
+        This method:
+        1. Authenticates if not already authenticated
+        2. Searches for each item to get Knuspr product IDs
+        3. Batches items into groups for efficient API calls
+        4. Retries failed items up to max_retries times
+        5. Returns detailed results with success/failure tracking
+
+        Args:
+            items: List of dicts with keys:
+                - name: str (ingredient name)
+                - quantity: float
+                - unit: str (g, ml, pcs, etc.)
+                - category: str (optional)
+            batch_size: Number of items to process per batch (default: 10)
+            max_retries: Maximum retry attempts for failed items (default: 3)
+
+        Returns:
+            BatchAddResult with succeeded_items, failed_items, and partial_matches
+
+        Raises:
+            RuntimeError: If authentication fails
+            ValueError: If items list is empty
+        """
+        if not items:
+            raise ValueError("Items list cannot be empty")
+
+        await self._ensure_session()
+
+        logger.info(f"Starting batch add operation for {len(items)} items")
+
+        succeeded_items: List[BatchItemResult] = []
+        failed_items: List[BatchItemResult] = []
+        partial_matches: List[BatchItemResult] = []
+
+        # Track cart creation
+        cart_id: Optional[str] = None
+        cart_items_to_add: List[Dict[str, Any]] = []
+
+        # Process items in batches
+        for i in range(0, len(items), batch_size):
+            batch = items[i:i + batch_size]
+            logger.debug(f"Processing batch {i // batch_size + 1} with {len(batch)} items")
+
+            for item in batch:
+                item_name = item.get("name", "")
+                item_quantity = item.get("quantity", 1.0)
+                item_unit = item.get("unit", "pcs")
+                retry_count = 0
+
+                # Search for product with retries
+                product_found = False
+                best_match: Optional[KnusprProduct] = None
+
+                while retry_count < max_retries and not product_found:
+                    try:
+                        # Search for product
+                        logger.debug(f"Searching for product: {item_name} (attempt {retry_count + 1})")
+                        products = await self.search_products(
+                            ingredient_name=item_name,
+                            max_results=5,
+                            exact_match=False
+                        )
+
+                        if not products:
+                            logger.warning(f"No products found for: {item_name}")
+                            retry_count += 1
+                            await asyncio.sleep(0.5 * retry_count)  # Exponential backoff
+                            continue
+
+                        # Get best match (first result is usually best)
+                        best_match = products[0]
+
+                        # Check match quality
+                        if best_match.confidence >= 0.8:
+                            # High confidence match
+                            product_found = True
+                            logger.info(f"Found product for {item_name}: {best_match.name} (confidence: {best_match.confidence})")
+                        elif best_match.confidence >= 0.5:
+                            # Partial match
+                            product_found = True
+                            logger.info(f"Partial match for {item_name}: {best_match.name} (confidence: {best_match.confidence})")
+                        else:
+                            # Low confidence, retry
+                            retry_count += 1
+                            await asyncio.sleep(0.5 * retry_count)
+                            continue
+
+                    except Exception as e:
+                        logger.error(f"Error searching for {item_name}: {str(e)}")
+                        retry_count += 1
+                        await asyncio.sleep(0.5 * retry_count)
+                        continue
+
+                # Process result
+                if best_match and product_found:
+                    # Prepare item for cart
+                    cart_item = {
+                        "product_id": best_match.product_id,
+                        "quantity": item_quantity,
+                        "unit": item_unit
+                    }
+                    cart_items_to_add.append(cart_item)
+
+                    result = BatchItemResult(
+                        name=item_name,
+                        quantity=item_quantity,
+                        unit=item_unit,
+                        success=True,
+                        knuspr_product_id=best_match.product_id,
+                        knuspr_product_name=best_match.name,
+                        match_confidence=best_match.confidence,
+                        retry_count=retry_count
+                    )
+
+                    if best_match.confidence >= 0.8:
+                        succeeded_items.append(result)
+                    else:
+                        partial_matches.append(result)
+                else:
+                    # Failed to find product
+                    failed_items.append(BatchItemResult(
+                        name=item_name,
+                        quantity=item_quantity,
+                        unit=item_unit,
+                        success=False,
+                        error_message=f"Product not found after {max_retries} attempts",
+                        retry_count=retry_count
+                    ))
+
+        # Create cart with all successfully matched items
+        if cart_items_to_add:
+            try:
+                logger.info(f"Creating cart with {len(cart_items_to_add)} items")
+                knuspr_cart = await self.create_cart(cart_items_to_add)
+                cart_id = knuspr_cart.cart_id
+
+                # Generate cart URL
+                domain = self.get_domain()
+                cart_url = f"{domain}/cart/{cart_id}" if cart_id else None
+
+                logger.info(f"Cart created successfully: {cart_id}")
+            except Exception as e:
+                logger.error(f"Failed to create cart: {str(e)}")
+                # Move all items to failed
+                for item in succeeded_items + partial_matches:
+                    failed_items.append(BatchItemResult(
+                        name=item.name,
+                        quantity=item.quantity,
+                        unit=item.unit,
+                        success=False,
+                        error_message=f"Cart creation failed: {str(e)}",
+                        retry_count=item.retry_count
+                    ))
+                succeeded_items.clear()
+                partial_matches.clear()
+                cart_id = None
+                cart_url = None
+        else:
+            cart_url = None
+            logger.warning("No items to add to cart")
+
+        result = BatchAddResult(
+            total_items=len(items),
+            succeeded_items=succeeded_items,
+            failed_items=failed_items,
+            partial_matches=partial_matches,
+            cart_id=cart_id,
+            cart_url=cart_url
+        )
+
+        logger.info(
+            f"Batch operation complete: {result.success_count} succeeded, "
+            f"{result.partial_count} partial matches, {result.failure_count} failed"
+        )
+
+        return result
 
     async def close(self):
         """Clean up resources and logout from Knuspr"""
