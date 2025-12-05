@@ -34,6 +34,7 @@ from app.utils.circuit_breaker import (
     CircuitBreakerError,
     get_circuit_breaker
 )
+from app.middleware.correlation_id import get_correlation_id
 
 logger = logging.getLogger(__name__)
 
@@ -83,10 +84,18 @@ class ProtectedKnusprMCPClient:
         Returns:
             True if authentication successful, False otherwise
         """
+        correlation_id = get_correlation_id()
         try:
+            logger.debug(
+                "Authenticating with Knuspr API",
+                extra={"correlation_id": correlation_id}
+            )
             return await self.breaker.call(self.client.authenticate)
         except CircuitBreakerError:
-            logger.warning("Cannot authenticate: circuit breaker is OPEN")
+            logger.warning(
+                "Cannot authenticate: circuit breaker is OPEN",
+                extra={"correlation_id": correlation_id}
+            )
             return False
 
     async def search_products(
@@ -109,6 +118,15 @@ class ProtectedKnusprMCPClient:
         Raises:
             CircuitBreakerError: If circuit is open
         """
+        correlation_id = get_correlation_id()
+        logger.debug(
+            "Searching products",
+            extra={
+                "correlation_id": correlation_id,
+                "ingredient": ingredient_name,
+                "max_results": max_results
+            }
+        )
         return await self.breaker.call(
             self.client.search_products,
             ingredient_name,
@@ -134,6 +152,15 @@ class ProtectedKnusprMCPClient:
         Raises:
             CircuitBreakerError: If circuit is open
         """
+        correlation_id = get_correlation_id()
+        logger.info(
+            "Creating Knuspr cart",
+            extra={
+                "correlation_id": correlation_id,
+                "item_count": len(items),
+                "has_delivery_slot": delivery_slot_id is not None
+            }
+        )
         return await self.breaker.call(
             self.client.create_cart,
             items,
@@ -158,6 +185,15 @@ class ProtectedKnusprMCPClient:
         Raises:
             CircuitBreakerError: If circuit is open
         """
+        correlation_id = get_correlation_id()
+        logger.debug(
+            "Getting delivery slots",
+            extra={
+                "correlation_id": correlation_id,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat()
+            }
+        )
         return await self.breaker.call(
             self.client.get_delivery_slots,
             start_date,

@@ -19,17 +19,20 @@ from pythonjsonlogger import jsonlogger
 # Context variable for request ID (thread-safe)
 request_id_context: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
 
+# Context variable for correlation ID (thread-safe)
+correlation_id_context: ContextVar[Optional[str]] = ContextVar("correlation_id", default=None)
+
 
 class RequestIdFilter(logging.Filter):
     """
-    Logging filter that adds request_id to log records.
+    Logging filter that adds request_id and correlation_id to log records.
 
-    Uses contextvars for thread-safe request ID storage.
+    Uses contextvars for thread-safe request ID and correlation ID storage.
     """
 
     def filter(self, record: logging.LogRecord) -> bool:
         """
-        Add request_id to the log record.
+        Add request_id and correlation_id to the log record.
 
         Args:
             record: Log record to modify
@@ -38,6 +41,7 @@ class RequestIdFilter(logging.Filter):
             bool: Always True (don't filter out records)
         """
         record.request_id = request_id_context.get() or "N/A"
+        record.correlation_id = correlation_id_context.get() or "N/A"
         return True
 
 
@@ -84,6 +88,10 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         # Add request ID if present
         if hasattr(record, "request_id"):
             log_record["request_id"] = record.request_id
+
+        # Add correlation ID if present
+        if hasattr(record, "correlation_id"):
+            log_record["correlation_id"] = record.correlation_id
 
 
 def setup_logging() -> None:
@@ -199,3 +207,28 @@ def get_request_id() -> Optional[str]:
         Optional[str]: Current request ID or None
     """
     return request_id_context.get()
+
+
+def set_correlation_id(correlation_id: str) -> None:
+    """
+    Set the correlation ID for the current context.
+
+    Args:
+        correlation_id: Unique correlation identifier
+    """
+    correlation_id_context.set(correlation_id)
+
+
+def clear_correlation_id() -> None:
+    """Clear the correlation ID from the current context."""
+    correlation_id_context.set(None)
+
+
+def get_correlation_id() -> Optional[str]:
+    """
+    Get the current correlation ID.
+
+    Returns:
+        Optional[str]: Current correlation ID or None
+    """
+    return correlation_id_context.get()

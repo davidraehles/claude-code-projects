@@ -14,9 +14,16 @@ from fastapi.responses import JSONResponse
 
 from app.database import engine, Base
 from app.logging_config import setup_logging, get_logger
-from app.health import check_dependencies, check_liveness, check_readiness
+from app.health import (
+    check_dependencies,
+    check_liveness,
+    check_readiness,
+    check_dependencies_deep,
+    get_dependency_details,
+)
 from app.schemas.error import ErrorResponse, ErrorType, AppException
 from app.middleware.request_id import RequestIdMiddleware
+from app.middleware.correlation_id import CorrelationIdMiddleware
 from app.middleware.csrf_middleware import CSRFMiddleware
 from app.middleware.input_validation import InputValidationMiddleware
 
@@ -170,13 +177,16 @@ app.add_middleware(
     allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-CSRF-Token"],
-    expose_headers=["X-Request-ID", "X-CSRF-Token"],
+    allow_headers=["Content-Type", "Authorization", "X-Request-ID", "X-Correlation-ID", "X-CSRF-Token"],
+    expose_headers=["X-Request-ID", "X-Correlation-ID", "X-CSRF-Token"],
     max_age=600,  # Cache preflight requests for 10 minutes
 )
 
 # Request ID middleware for distributed tracing (FIRST - adds request ID to all requests)
 app.add_middleware(RequestIdMiddleware)
+
+# Correlation ID middleware for end-to-end request tracking (EARLY - after request ID)
+app.add_middleware(CorrelationIdMiddleware)
 
 # Input validation middleware (EARLY - validate and sanitize input)
 app.add_middleware(InputValidationMiddleware)
@@ -269,6 +279,39 @@ async def health_check():
         HealthCheckResponse: Aggregated health status
     """
     return await check_dependencies()
+
+
+@app.get("/health/deep", tags=["System"])
+async def deep_health_check():
+    """
+    Deep health check with comprehensive dependency metrics.
+
+    Performs detailed checks on all system components including:
+    - Database connection and pool metrics
+    - Redis connectivity and memory usage
+    - Circuit breaker states
+    - System resources (CPU, memory, disk)
+
+    Note: This endpoint may take up to 5 seconds to complete.
+
+    Returns:
+        HealthCheckResponse: Detailed health status with metrics
+    """
+    return await check_dependencies_deep()
+
+
+@app.get("/health/dependencies", tags=["System"])
+async def dependency_health():
+    """
+    Get detailed dependency status and metrics.
+
+    Returns comprehensive information about all system dependencies
+    including latency, error rates, and resource usage.
+
+    Returns:
+        dict: Detailed dependency health information
+    """
+    return await get_dependency_details()
 
 
 # Root endpoint

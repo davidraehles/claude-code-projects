@@ -238,6 +238,77 @@ services:
       "
     restart: unless-stopped
 
+  # Alertmanager (for alert routing and notifications)
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: recipe-alertmanager
+    ports:
+      - "9093:9093"
+    environment:
+      # PagerDuty integration keys
+      PAGERDUTY_CRITICAL_KEY: ${PAGERDUTY_CRITICAL_KEY:-}
+      PAGERDUTY_HIGH_KEY: ${PAGERDUTY_HIGH_KEY:-}
+
+      # Slack webhook URLs
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      SLACK_WEBHOOK_INCIDENT: ${SLACK_WEBHOOK_INCIDENT:-}
+      SLACK_WEBHOOK_ALERTS: ${SLACK_WEBHOOK_ALERTS:-}
+      SLACK_WEBHOOK_BUSINESS: ${SLACK_WEBHOOK_BUSINESS:-}
+      SLACK_WEBHOOK_DEPLOYMENTS: ${SLACK_WEBHOOK_DEPLOYMENTS:-}
+    volumes:
+      - ./docker/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - ./docker/alertmanager/slack-template.yml:/etc/alertmanager/templates/slack-template.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+      - '--web.external-url=http://localhost:9093'
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  # Jaeger (for distributed tracing)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: recipe-jaeger
+    environment:
+      # Collector configuration
+      COLLECTOR_ZIPKIN_HOST_PORT: ":9411"
+      COLLECTOR_OTLP_ENABLED: "true"
+
+      # Storage configuration (memory for development, use Elasticsearch/Cassandra for production)
+      SPAN_STORAGE_TYPE: "memory"
+
+      # Query service configuration
+      QUERY_BASE_PATH: "/jaeger"
+
+      # Sampling configuration
+      SAMPLING_STRATEGIES_FILE: /etc/jaeger/sampling-strategies.json
+
+      # Retention (for memory storage)
+      MEMORY_MAX_TRACES: ${JAEGER_MEMORY_MAX_TRACES:-100000}
+    ports:
+      # Jaeger UI
+      - "16686:16686"
+      # Jaeger collector (HTTP)
+      - "14268:14268"
+      # Jaeger collector (gRPC)
+      - "14250:14250"
+      # Jaeger agent (Thrift compact)
+      - "6831:6831/udp"
+      # Jaeger agent (Thrift binary)
+      - "6832:6832/udp"
+      # Zipkin compatible endpoint
+      - "9411:9411"
+      # OTLP gRPC
+      - "4317:4317"
+      # OTLP HTTP
+      - "4318:4318"
+    volumes:
+      - jaeger_data:/tmp
+      - ./docker/jaeger/sampling-strategies.json:/etc/jaeger/sampling-strategies.json:ro
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
@@ -245,3 +316,5 @@ volumes:
   grafana_data:
   loki_data:
   backup_data:
+  alertmanager_data:
+  jaeger_data:

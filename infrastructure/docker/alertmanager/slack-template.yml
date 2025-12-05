@@ -1,0 +1,237 @@
+{{ define "__alertmanager_url" }}{{ .ExternalURL }}{{ end }}
+{{ define "__grafana_url" }}http://localhost:3000{{ end }}
+{{ define "__loki_url" }}http://localhost:3000/explore{{ end }}
+
+{{ define "__alert_severity_emoji" -}}
+  {{- if eq .Labels.severity "critical" -}}
+    :red_circle:
+  {{- else if eq .Labels.severity "high" -}}
+    :large_orange_diamond:
+  {{- else if eq .Labels.severity "medium" -}}
+    :warning:
+  {{- else if eq .Labels.severity "low" -}}
+    :information_source:
+  {{- else -}}
+    :bell:
+  {{- end -}}
+{{- end }}
+
+{{ define "__alert_status_emoji" -}}
+  {{- if eq .Status "firing" -}}
+    :fire:
+  {{- else if eq .Status "resolved" -}}
+    :white_check_mark:
+  {{- else -}}
+    :question:
+  {{- end -}}
+{{- end }}
+
+{{ define "__alert_severity_color" -}}
+  {{- if eq .Labels.severity "critical" -}}
+    danger
+  {{- else if eq .Labels.severity "high" -}}
+    warning
+  {{- else if eq .Labels.severity "medium" -}}
+    warning
+  {{- else if eq .Labels.severity "low" -}}
+    good
+  {{- else -}}
+    #439FE0
+  {{- end -}}
+{{- end }}
+
+<!-- Critical Alert Template -->
+{{ define "slack.critical.text" }}
+{{ template "__alert_severity_emoji" . }} *CRITICAL ALERT FIRING* {{ template "__alert_status_emoji" . }}
+
+*Service:* {{ .GroupLabels.service }}
+*Alert:* {{ .GroupLabels.alertname }}
+*Severity:* {{ .GroupLabels.severity | toUpper }}
+*Firing Alerts:* {{ .Alerts.Firing | len }}
+
+*Description:*
+{{ range .Alerts.Firing }}
+  • {{ .Annotations.description }}
+{{ end }}
+
+*Affected Endpoints:*
+{{ range .Alerts.Firing }}
+  • {{ .Labels.endpoint | default "N/A" }}
+{{ end }}
+
+*Impact:*
+{{ range .Alerts.Firing }}
+  • {{ .Annotations.impact | default "Service degradation or outage" }}
+{{ end }}
+
+*Runbook:* {{ .CommonAnnotations.runbook_url | default "https://github.com/your-org/runbooks" }}
+*Metrics Dashboard:* {{ template "__grafana_url" . }}/d/api-health-v1
+*Logs:* {{ template "__loki_url" . }}
+
+*Action Required:* @on-call - Immediate attention required!
+
+---
+*Prometheus Alert:* {{ template "__alertmanager_url" . }}
+{{ end }}
+
+<!-- Incident Alert Template -->
+{{ define "slack.incident.text" }}
+{{ template "__alert_severity_emoji" . }} *HIGH SEVERITY INCIDENT* {{ template "__alert_status_emoji" . }}
+
+*Service:* {{ .GroupLabels.service }}
+*Alert:* {{ .GroupLabels.alertname }}
+*Severity:* {{ .GroupLabels.severity | toUpper }}
+*Status:* {{ if .Alerts.Firing }}FIRING{{ else }}RESOLVED{{ end }}
+
+*Summary:*
+{{ .CommonAnnotations.summary | default "High severity issue detected" }}
+
+{{ if .Alerts.Firing }}
+*Firing Alerts ({{ .Alerts.Firing | len }}):*
+{{ range .Alerts.Firing }}
+  • *{{ .Labels.alertname }}* - {{ .Annotations.description }}
+    Started: {{ .StartsAt.Format "2006-01-02 15:04:05 MST" }}
+{{ end }}
+{{ end }}
+
+{{ if .Alerts.Resolved }}
+*Resolved Alerts ({{ .Alerts.Resolved | len }}):*
+{{ range .Alerts.Resolved }}
+  • *{{ .Labels.alertname }}* - Resolved
+    Duration: {{ .StartsAt.Format "15:04" }} - {{ .EndsAt.Format "15:04" }}
+{{ end }}
+{{ end }}
+
+*Resources:*
+• Runbook: {{ .CommonAnnotations.runbook_url | default "N/A" }}
+• Dashboard: {{ template "__grafana_url" . }}/d/{{ .GroupLabels.dashboard | default "api-health-v1" }}
+• Logs: {{ template "__loki_url" . }}
+
+{{ if .Alerts.Firing }}
+*Recommended Actions:*
+1. Check service health and error rates
+2. Review recent deployments
+3. Examine logs for error patterns
+4. Escalate if not resolved within 15 minutes
+{{ end }}
+
+---
+{{ template "__alertmanager_url" . }}
+{{ end }}
+
+<!-- Default Alert Template -->
+{{ define "slack.default.text" }}
+{{ template "__alert_severity_emoji" . }} *{{ .GroupLabels.severity | toUpper }} ALERT* {{ template "__alert_status_emoji" . }}
+
+*Service:* {{ .GroupLabels.service | default "Unknown" }}
+*Alert Name:* {{ .GroupLabels.alertname }}
+*Status:* {{ if .Alerts.Firing }}Firing ({{ .Alerts.Firing | len }}){{ else }}Resolved ({{ .Alerts.Resolved | len }}){{ end }}
+
+{{ if .Alerts.Firing }}
+*Firing:*
+{{ range .Alerts.Firing }}
+  • {{ .Annotations.summary | default .Annotations.description }}
+{{ end }}
+{{ end }}
+
+{{ if .Alerts.Resolved }}
+*Resolved:*
+{{ range .Alerts.Resolved }}
+  • {{ .Labels.alertname }} - Resolved after {{ sub .EndsAt.Unix .StartsAt.Unix | humanizeDuration }}
+{{ end }}
+{{ end }}
+
+*Details:*
+{{ range .Alerts }}
+  • {{ .Annotations.description }}
+{{ end }}
+
+*Links:*
+• Metrics: {{ template "__grafana_url" . }}
+• Logs: {{ template "__loki_url" . }}
+{{ if .CommonAnnotations.runbook_url }}• Runbook: {{ .CommonAnnotations.runbook_url }}{{ end }}
+
+---
+{{ template "__alertmanager_url" . }}
+{{ end }}
+
+<!-- Business Metrics Template -->
+{{ define "slack.business.text" }}
+:chart_with_upwards_trend: *Business Metric Alert*
+
+*Metric:* {{ .GroupLabels.alertname }}
+*Status:* {{ if .Alerts.Firing }}Threshold Exceeded{{ else }}Back to Normal{{ end }}
+
+{{ if .Alerts.Firing }}
+*Current Values:*
+{{ range .Alerts.Firing }}
+  • {{ .Annotations.summary }}
+  • Value: {{ .Annotations.current_value | default "N/A" }}
+  • Threshold: {{ .Annotations.threshold | default "N/A" }}
+{{ end }}
+
+*Business Impact:*
+{{ range .Alerts.Firing }}
+  • {{ .Annotations.impact | default "Potential impact on business KPIs" }}
+{{ end }}
+{{ end }}
+
+{{ if .Alerts.Resolved }}
+*Resolved:*
+{{ range .Alerts.Resolved }}
+  • {{ .Labels.alertname }} returned to normal levels
+{{ end }}
+{{ end }}
+
+*Dashboard:* {{ template "__grafana_url" . }}/d/business-metrics-v1
+
+---
+_This is an automated business metrics alert from AI Meal Planner monitoring system_
+{{ end }}
+
+<!-- Deployment Template -->
+{{ define "slack.deployment.text" }}
+:rocket: *Deployment Notification*
+
+*Service:* {{ .GroupLabels.service }}
+*Environment:* {{ .GroupLabels.environment | default "production" }}
+*Status:* {{ if .Alerts.Firing }}In Progress / Issue Detected{{ else }}Completed Successfully{{ end }}
+
+{{ if .Alerts.Firing }}
+:warning: *Issues Detected:*
+{{ range .Alerts.Firing }}
+  • {{ .Annotations.description }}
+{{ end }}
+
+*Health Checks:*
+{{ range .Alerts.Firing }}
+  • {{ .Labels.health_check | default "Unknown" }}: {{ .Annotations.health_status | default "FAILED" }}
+{{ end }}
+
+*Action Required:*
+1. Verify deployment logs
+2. Check service health endpoints
+3. Review rollback procedures if needed
+{{ else }}
+:white_check_mark: *Deployment Successful*
+
+*Details:*
+{{ range .Alerts.Resolved }}
+  • {{ .Annotations.summary }}
+  • Version: {{ .Labels.version | default "N/A" }}
+  • Duration: {{ sub .EndsAt.Unix .StartsAt.Unix | humanizeDuration }}
+{{ end }}
+
+*Post-Deployment Checks:*
+• All health checks: :white_check_mark: Passed
+• Error rate: Within normal range
+• Latency: Within SLA
+{{ end }}
+
+*Monitoring:*
+• Dashboard: {{ template "__grafana_url" . }}/d/api-health-v1
+• Logs: {{ template "__loki_url" . }}
+
+---
+{{ template "__alertmanager_url" . }}
+{{ end }}
