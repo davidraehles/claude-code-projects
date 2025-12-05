@@ -5,6 +5,7 @@
  * Refactored to use Auth Context, React Query hooks, and Action/Intent Layer (ARCH-004).
  */
 
+import React from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
@@ -21,6 +22,10 @@ import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
+import { ViewToggle } from '@/components/grocery/ViewToggle'
+import { RecipeView } from '@/components/grocery/RecipeView'
+import { CategoryView } from '@/components/grocery/CategoryView'
+import { UnmatchedItemsAlert } from '@/components/grocery/UnmatchedItemsAlert'
 import type { GroceryCart, GroceryItem } from '@/lib/types'
 
 export default function GroceryCartPage() {
@@ -47,6 +52,7 @@ export default function GroceryCartPage() {
     serialize: (persisted) => {
       const serializable = {
         checkedItems: Array.from(persisted.checkedItems),
+        viewMode: persisted.viewMode,
       }
       return JSON.stringify(serializable)
     },
@@ -55,6 +61,7 @@ export default function GroceryCartPage() {
       const parsed = JSON.parse(json)
       return {
         checkedItems: new Set<string>(parsed.checkedItems || []),
+        viewMode: parsed.viewMode || 'category',
       }
     },
     validate: (state): state is GroceryCartState => {
@@ -62,7 +69,9 @@ export default function GroceryCartPage() {
         state !== null &&
         typeof state === 'object' &&
         'checkedItems' in state &&
-        state.checkedItems instanceof Set
+        state.checkedItems instanceof Set &&
+        'viewMode' in state &&
+        (state.viewMode === 'recipe' || state.viewMode === 'category')
       )
     },
   })
@@ -71,6 +80,24 @@ export default function GroceryCartPage() {
   const loading = cartLoading
   const error = cartError?.message || null
   const checkedCount = selectCheckedCount(cartState)
+
+  // Handle view mode changes with sessionStorage persistence
+  const handleViewChange = (newView: 'recipe' | 'category') => {
+    dispatch({ type: 'SET_VIEW_MODE', payload: { viewMode: newView } })
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(`grocery-cart-view-${cartId}`, newView)
+    }
+  }
+
+  // Initialize view mode from sessionStorage on mount
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && isValidId) {
+      const savedView = sessionStorage.getItem(`grocery-cart-view-${cartId}`)
+      if (savedView === 'recipe' || savedView === 'category') {
+        dispatch({ type: 'SET_VIEW_MODE', payload: { viewMode: savedView } })
+      }
+    }
+  }, [cartId, isValidId])
 
   // Print grocery list
   const handlePrint = () => {
@@ -81,7 +108,7 @@ export default function GroceryCartPage() {
   const handleExport = () => {
     if (!cart) return
 
-    const text = generateTextExport(cart, cartState.checkedItems)
+    const text = generateTextExport(cart, cartState.checkedItems, cartState.viewMode)
     const blob = new Blob([text], { type: 'text/plain' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -143,9 +170,6 @@ export default function GroceryCartPage() {
     return null
   }
 
-  // Group items by category
-  const itemsByCategory = groupItemsByCategory(cart.items)
-  const categories = Object.keys(itemsByCategory).sort()
   const totalCount = cart.items.length
 
   return (
@@ -212,62 +236,42 @@ export default function GroceryCartPage() {
           </p>
         </div>
 
-        {/* Items by Category */}
-        <div className="space-y-6">
-          {categories.map((category) => (
-            <Card key={category}>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <span className="mr-2">{getCategoryIcon(category)}</span>
-                  {category}
-                  <span className="ml-2 text-sm font-normal text-gray-500">
-                    ({itemsByCategory[category].length} items)
-                  </span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {itemsByCategory[category].map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-start space-x-3 print:py-1"
-                    >
-                      <div className="print:hidden">
-                        <Checkbox
-                          label=""
-                          checked={selectIsItemChecked(cartState, item.ingredient)}
-                          onChange={() => dispatch({ type: 'USER_TOGGLED_ITEM', payload: item.ingredient })}
-                        />
-                      </div>
-                      <div className="flex-1 print:flex print:justify-between">
-                        <div className="flex items-baseline space-x-2">
-                          <span
-                            className={`font-medium ${
-                              selectIsItemChecked(cartState, item.ingredient)
-                                ? 'line-through text-gray-400'
-                                : 'text-gray-900'
-                            } print:text-black print:no-underline`}
-                          >
-                            {item.ingredient}
-                          </span>
-                          <span className="text-sm text-gray-600 print:text-black">
-                            {item.quantity}
-                          </span>
-                        </div>
-                        {item.estimated_cost && (
-                          <span className="text-sm text-gray-500 ml-auto print:text-black">
-                            ${item.estimated_cost.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
-                      <div className="hidden print:block w-6 h-6 border-2 border-gray-400" />
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        {/* Unmatched Items Alert */}
+        {(cart.unmatched_items?.length ?? 0) > 0 || (cart.unavailable_items?.length ?? 0) > 0 ? (
+          <div className="mb-6 print:hidden">
+            <UnmatchedItemsAlert
+              items={[...(cart.unmatched_items || []), ...(cart.unavailable_items || [])]}
+              cartId={cart.id}
+            />
+          </div>
+        ) : null}
+
+        {/* View Toggle */}
+        <div className="mb-6 print:hidden">
+          <ViewToggle
+            currentView={cartState.viewMode}
+            onViewChange={handleViewChange}
+          />
         </div>
+
+        {/* Items Display - Conditional based on view mode */}
+        {cartState.viewMode === 'recipe' ? (
+          <RecipeView
+            items={cart.items}
+            checkedItems={cartState.checkedItems}
+            onItemToggle={(ingredient) =>
+              dispatch({ type: 'USER_TOGGLED_ITEM', payload: ingredient })
+            }
+          />
+        ) : (
+          <CategoryView
+            items={cart.items}
+            checkedItems={cartState.checkedItems}
+            onItemToggle={(ingredient) =>
+              dispatch({ type: 'USER_TOGGLED_ITEM', payload: ingredient })
+            }
+          />
+        )}
 
         {/* Summary */}
         {cart.items.some((item) => item.estimated_cost) && (
@@ -305,62 +309,81 @@ export default function GroceryCartPage() {
   )
 }
 
-// Helper: Group items by category
-function groupItemsByCategory(items: GroceryItem[]): { [key: string]: GroceryItem[] } {
-  const grouped: { [key: string]: GroceryItem[] } = {}
-
-  items.forEach((item) => {
-    const category = item.category || 'Other'
-    if (!grouped[category]) {
-      grouped[category] = []
-    }
-    grouped[category].push(item)
-  })
-
-  return grouped
-}
-
-// Helper: Get category icon
-function getCategoryIcon(category: string): string {
-  const icons: { [key: string]: string } = {
-    Produce: '🥬',
-    Dairy: '🥛',
-    Meat: '🥩',
-    Seafood: '🐟',
-    Bakery: '🍞',
-    Pantry: '🥫',
-    Frozen: '🧊',
-    Beverages: '🥤',
-    Snacks: '🍿',
-    Other: '📦',
-  }
-  return icons[category] || '📦'
-}
-
 // Helper: Generate text export
-function generateTextExport(cart: GroceryCart, checkedItems: Set<string>): string {
+function generateTextExport(
+  cart: GroceryCart,
+  checkedItems: Set<string>,
+  viewMode: 'recipe' | 'category'
+): string {
   const lines: string[] = []
 
   lines.push('=' + '='.repeat(50))
   lines.push('GROCERY SHOPPING LIST')
   lines.push(`Meal Plan #${cart.meal_plan_id}`)
+  lines.push(`View: ${viewMode === 'recipe' ? 'Recipe View' : 'Category View'}`)
   lines.push(`Generated: ${new Date(cart.created_at).toLocaleString()}`)
   lines.push('=' + '='.repeat(50))
   lines.push('')
 
-  const itemsByCategory = groupItemsByCategory(cart.items)
-  const categories = Object.keys(itemsByCategory).sort()
-
-  categories.forEach((category) => {
-    lines.push(`\n${category.toUpperCase()} (${itemsByCategory[category].length} items)`)
-    lines.push('-'.repeat(50))
-
-    itemsByCategory[category].forEach((item) => {
-      const checked = checkedItems.has(item.ingredient) ? '[✓]' : '[ ]'
-      const cost = item.estimated_cost ? ` - $${item.estimated_cost.toFixed(2)}` : ''
-      lines.push(`${checked} ${item.ingredient} - ${item.quantity}${cost}`)
+  if (viewMode === 'recipe') {
+    // Group by recipe
+    const itemsByRecipe: { [key: string]: GroceryItem[] } = {}
+    cart.items.forEach((item) => {
+      if (item.recipe_sources && item.recipe_sources.length > 0) {
+        item.recipe_sources.forEach((source) => {
+          if (!itemsByRecipe[source.recipe_name]) {
+            itemsByRecipe[source.recipe_name] = []
+          }
+          itemsByRecipe[source.recipe_name].push(item)
+        })
+      } else {
+        const otherKey = 'Other Items'
+        if (!itemsByRecipe[otherKey]) {
+          itemsByRecipe[otherKey] = []
+        }
+        itemsByRecipe[otherKey].push(item)
+      }
     })
-  })
+
+    const recipes = Object.keys(itemsByRecipe).sort()
+    recipes.forEach((recipe) => {
+      lines.push(`\n${recipe.toUpperCase()} (${itemsByRecipe[recipe].length} ingredients)`)
+      lines.push('-'.repeat(50))
+
+      itemsByRecipe[recipe].forEach((item) => {
+        const checked = checkedItems.has(item.ingredient) ? '[✓]' : '[ ]'
+        const cost = item.estimated_cost ? ` - $${item.estimated_cost.toFixed(2)}` : ''
+        const category = item.category ? ` (${item.category})` : ''
+        lines.push(`${checked} ${item.ingredient} - ${item.quantity}${category}${cost}`)
+      })
+    })
+  } else {
+    // Group by category
+    const itemsByCategory: { [key: string]: GroceryItem[] } = {}
+    cart.items.forEach((item) => {
+      const category = item.category || 'Uncategorized'
+      if (!itemsByCategory[category]) {
+        itemsByCategory[category] = []
+      }
+      itemsByCategory[category].push(item)
+    })
+
+    const categories = Object.keys(itemsByCategory).sort()
+    categories.forEach((category) => {
+      lines.push(`\n${category.toUpperCase()} (${itemsByCategory[category].length} items)`)
+      lines.push('-'.repeat(50))
+
+      itemsByCategory[category].forEach((item) => {
+        const checked = checkedItems.has(item.ingredient) ? '[✓]' : '[ ]'
+        const cost = item.estimated_cost ? ` - $${item.estimated_cost.toFixed(2)}` : ''
+        const recipes =
+          item.recipe_sources && item.recipe_sources.length > 0
+            ? ` [${item.recipe_sources.map((s) => s.recipe_name).join(', ')}]`
+            : ''
+        lines.push(`${checked} ${item.ingredient} - ${item.quantity}${recipes}${cost}`)
+      })
+    })
+  }
 
   lines.push('')
   lines.push('=' + '='.repeat(50))

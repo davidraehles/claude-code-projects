@@ -10,6 +10,7 @@
  */
 export interface GroceryCartState {
   checkedItems: Set<string>
+  viewMode: 'recipe' | 'category'
 }
 
 /**
@@ -20,6 +21,7 @@ export type GroceryCartAction =
   | { type: 'USER_CHECKED_ALL_ITEMS'; payload: string[] }
   | { type: 'USER_UNCHECKED_ALL_ITEMS' }
   | { type: 'CART_RESET' }
+  | { type: 'SET_VIEW_MODE'; payload: { viewMode: 'recipe' | 'category' } }
 
 /**
  * Initial state factory
@@ -27,6 +29,7 @@ export type GroceryCartAction =
 export function getInitialCartState(): GroceryCartState {
   return {
     checkedItems: new Set<string>(),
+    viewMode: 'category',
   }
 }
 
@@ -72,6 +75,12 @@ export function groceryCartReducer(
 
     case 'CART_RESET':
       return getInitialCartState()
+
+    case 'SET_VIEW_MODE':
+      return {
+        ...state,
+        viewMode: action.payload.viewMode,
+      }
 
     default:
       return state

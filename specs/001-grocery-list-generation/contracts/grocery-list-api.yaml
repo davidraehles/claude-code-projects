@@ -4,33 +4,47 @@ info:
   description: |
     API endpoints for creating grocery carts from meal plans with ingredient aggregation,
     recipe/category views, and Knuspr integration.
+
+    This specification defines the workflow endpoints for automated grocery list generation,
+    including meal plan to cart conversion, cart management, and Knuspr cart integration.
   version: 1.0.0
   contact:
     name: Meal Planner API Team
 
 servers:
-  - url: http://localhost:8000/api/v1
+  - url: http://localhost:8000
     description: Local development
-  - url: https://api.mealplanner.com/api/v1
+  - url: https://api.mealplanner.com
     description: Production
 
 tags:
-  - name: grocery-carts
-    description: Grocery cart management
   - name: workflows
-    description: End-to-end workflows (meal plan → Knuspr cart)
+    description: End-to-end workflows for grocery cart generation
 
 paths:
-  /grocery-carts:
+  /api/v1/workflows/carts/from-meal-plan:
     post:
       tags:
-        - grocery-carts
+        - workflows
       summary: Create grocery cart from meal plan
       description: |
         Generates a grocery cart with aggregated ingredients from a meal plan.
-        Ingredients are scaled based on meal plan settings (num_people, servings).
-        Same ingredients from multiple recipes are combined with source tracking.
-      operationId: createGroceryCart
+
+        **Workflow Steps:**
+        1. Fetches all recipes from the specified meal plan
+        2. Extracts and aggregates ingredients (combining duplicates if enabled)
+        3. Scales quantities based on meal plan settings (num_people, servings)
+        4. Creates a grocery cart with categorized items
+        5. Returns cart with recipe source tracking for each ingredient
+
+        **Aggregation Logic:**
+        - When `aggregate_duplicates` is true, same ingredients from different recipes are combined
+        - Recipe sources are preserved to enable recipe-view and category-view modes
+        - Quantities are scaled based on the meal plan's number of people
+
+        **Unmatched Ingredients:**
+        - Returns list of ingredients that couldn't be processed (e.g., missing unit conversions)
+      operationId: createGroceryCartFromMealPlan
       security:
         - bearerAuth: []
       requestBody:
@@ -43,46 +57,123 @@ paths:
                 - meal_plan_id
               properties:
                 meal_plan_id:
-                  type: integer
-                  description: ID of the meal plan to generate cart from
-                  example: 42
-            example:
-              meal_plan_id: 42
+                  type: string
+                  description: Unique identifier of the meal plan to generate cart from
+                  example: "mp-42abc"
+                aggregate_duplicates:
+                  type: boolean
+                  description: |
+                    Whether to combine same ingredients from different recipes.
+                    If true, "tomatoes" from Recipe A and Recipe B are merged into one line item.
+                    If false, they appear as separate items with recipe attribution.
+                  default: true
+                  example: true
+            examples:
+              withAggregation:
+                summary: Standard cart with ingredient aggregation
+                value:
+                  meal_plan_id: "mp-42abc"
+                  aggregate_duplicates: true
+              withoutAggregation:
+                summary: Cart with per-recipe ingredient breakdown
+                value:
+                  meal_plan_id: "mp-42abc"
+                  aggregate_duplicates: false
       responses:
         '201':
           description: Cart created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GroceryCart'
+                type: object
+                required:
+                  - cart_id
+                  - items
+                  - unmatched_ingredients
+                properties:
+                  cart_id:
+                    type: string
+                    description: Unique identifier of the created grocery cart
+                    example: "cart-123xyz"
+                  items:
+                    type: array
+                    description: List of cart items with aggregated quantities
+                    items:
+                      $ref: '#/components/schemas/CartItem'
+                  unmatched_ingredients:
+                    type: array
+                    description: Ingredients that couldn't be processed (e.g., missing units, invalid format)
+                    items:
+                      type: string
+                    example: ["edible flowers", "a pinch of saffron"]
+              examples:
+                successResponse:
+                  summary: Successful cart creation with 5 items
+                  value:
+                    cart_id: "cart-123xyz"
+                    items:
+                      - id: "item-001"
+                        ingredient_name: "Tomatoes"
+                        quantity: 6.0
+                        unit: "pcs"
+                        recipe_ids: ["recipe-1", "recipe-3"]
+                        category: "Produce"
+                        matched_product_id: null
+                      - id: "item-002"
+                        ingredient_name: "Flour"
+                        quantity: 500.0
+                        unit: "g"
+                        recipe_ids: ["recipe-2"]
+                        category: "Pantry"
+                        matched_product_id: null
+                    unmatched_ingredients: []
         '400':
-          description: Invalid request (meal plan not found, no recipes, etc.)
+          description: Invalid request
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
                 mealPlanNotFound:
+                  summary: Meal plan does not exist
                   value:
-                    detail: "Meal plan with ID 42 not found"
+                    detail: "Meal plan with ID 'mp-42abc' not found"
                     status_code: 400
+                    error_code: "MEAL_PLAN_NOT_FOUND"
                 noRecipes:
+                  summary: Meal plan has no recipes
                   value:
-                    detail: "Meal plan has no recipes"
+                    detail: "Meal plan 'mp-42abc' has no recipes"
                     status_code: 400
+                    error_code: "EMPTY_MEAL_PLAN"
+                invalidMealPlanId:
+                  summary: Invalid meal plan ID format
+                  value:
+                    detail: "Invalid meal_plan_id format"
+                    status_code: 400
+                    error_code: "INVALID_INPUT"
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /grocery-carts/{cart_id}:
+  /api/v1/workflows/carts/{cart_id}:
     get:
       tags:
-        - grocery-carts
-      summary: Retrieve grocery cart
+        - workflows
+      summary: Get grocery cart details
       description: |
-        Get grocery cart with all items, including recipe sources for each ingredient.
-        Frontend uses this to render recipe vs. category views.
+        Retrieves complete grocery cart information including all items and metadata.
+
+        **Use Cases:**
+        - Display cart in frontend (recipe view or category view)
+        - Check cart status before Knuspr sync
+        - Retrieve cart history for user
+
+        **View Modes:**
+        The `view_mode` field indicates how the frontend should display items:
+        - `recipe`: Group items by recipe
+        - `category`: Group items by food category (Produce, Dairy, etc.)
       operationId: getGroceryCart
       security:
         - bearerAuth: []
@@ -91,101 +182,128 @@ paths:
           in: path
           required: true
           schema:
-            type: integer
-          description: Grocery cart ID
-          example: 123
+            type: string
+          description: Unique identifier of the grocery cart
+          example: "cart-123xyz"
       responses:
         '200':
           description: Cart retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/GroceryCart'
+                type: object
+                required:
+                  - id
+                  - items
+                  - created_at
+                  - view_mode
+                properties:
+                  id:
+                    type: string
+                    description: Unique cart identifier
+                    example: "cart-123xyz"
+                  items:
+                    type: array
+                    description: List of cart items
+                    items:
+                      $ref: '#/components/schemas/CartItem'
+                  created_at:
+                    type: string
+                    format: date-time
+                    description: Timestamp when cart was created
+                    example: "2025-12-02T14:30:00Z"
+                  view_mode:
+                    type: string
+                    enum: [recipe, category]
+                    description: Preferred display mode for frontend
+                    default: recipe
+                    example: "recipe"
+                  meal_plan_id:
+                    type: string
+                    description: Source meal plan (if cart was generated from one)
+                    example: "mp-42abc"
+                  status:
+                    type: string
+                    enum: [draft, ready, synced]
+                    description: Cart status
+                    example: "ready"
+                  knuspr_cart_url:
+                    type: string
+                    format: uri
+                    nullable: true
+                    description: Link to Knuspr cart (if synced)
+                    example: "https://knuspr.de/cart/abc123"
+              examples:
+                recipeViewMode:
+                  summary: Cart in recipe view mode
+                  value:
+                    id: "cart-123xyz"
+                    items:
+                      - id: "item-001"
+                        ingredient_name: "Tomatoes"
+                        quantity: 6.0
+                        unit: "pcs"
+                        recipe_ids: ["recipe-1", "recipe-3"]
+                        category: "Produce"
+                        matched_product_id: null
+                    created_at: "2025-12-02T14:30:00Z"
+                    view_mode: "recipe"
+                    meal_plan_id: "mp-42abc"
+                    status: "ready"
+                    knuspr_cart_url: null
         '404':
           description: Cart not found
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
+              example:
+                detail: "Cart with ID 'cart-123xyz' not found"
+                status_code: 404
+                error_code: "CART_NOT_FOUND"
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
-    put:
-      tags:
-        - grocery-carts
-      summary: Update grocery cart items
-      description: |
-        Update cart items (e.g., user removes items before Knuspr sync).
-        This endpoint replaces the entire items list.
-      operationId: updateGroceryCart
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: cart_id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                items:
-                  type: array
-                  items:
-                    $ref: '#/components/schemas/CartItemUpdate'
-      responses:
-        '200':
-          description: Cart updated successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/GroceryCart'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-    delete:
-      tags:
-        - grocery-carts
-      summary: Delete grocery cart
-      operationId: deleteGroceryCart
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: cart_id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '204':
-          description: Cart deleted successfully
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '401':
-          $ref: '#/components/responses/Unauthorized'
-
-  /workflows/cart-from-meal-plan:
+  /api/v1/workflows/carts/{cart_id}/fill-knuspr:
     post:
       tags:
         - workflows
-      summary: End-to-end workflow - Create Knuspr cart from meal plan
+      summary: Fill Knuspr cart with grocery items
       description: |
-        Complete workflow that:
-        1. Generates aggregated grocery list from meal plan
-        2. Matches ingredients to Knuspr products
-        3. Creates Knuspr cart via MCP client
-        4. Returns cart with Knuspr URL and pricing
+        Syncs the grocery cart to Knuspr by matching ingredients to products and adding them to the user's Knuspr cart.
 
-        Requires Knuspr credentials to be configured.
-      operationId: createKnusprCartFromMealPlan
+        **Workflow Steps:**
+        1. Authenticates with Knuspr using provided credentials
+        2. Matches each cart item to Knuspr products (via product search API)
+        3. Adds matched products to Knuspr cart
+        4. Returns match statistics and list of unmatched items
+
+        **Matching Logic:**
+        - Uses fuzzy matching for ingredient names
+        - Prioritizes exact matches, falls back to closest alternatives
+        - Respects quantity and unit conversions
+
+        **Security:**
+        - Credentials are used only for this request and not stored
+        - Knuspr session tokens are short-lived
+        - Credentials are transmitted over HTTPS only
+
+        **Progress Tracking:**
+        - Returns progress percentage (0-100)
+        - Use WebSocket or polling for real-time updates on long operations
+      operationId: fillKnusprCart
       security:
         - bearerAuth: []
+      parameters:
+        - name: cart_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier of the grocery cart to sync
+          example: "cart-123xyz"
       requestBody:
         required: true
         content:
@@ -193,34 +311,136 @@ paths:
             schema:
               type: object
               required:
-                - meal_plan_id
+                - credentials
               properties:
-                meal_plan_id:
-                  type: integer
-                  description: Meal plan ID
-                  example: 42
-                delivery_preferences:
-                  $ref: '#/components/schemas/DeliveryPreferences'
+                credentials:
+                  $ref: '#/components/schemas/KnusprCredentials'
+                match_preferences:
+                  type: object
+                  description: Optional preferences for product matching
+                  properties:
+                    prefer_organic:
+                      type: boolean
+                      description: Prefer organic products when available
+                      default: false
+                    max_price_per_item:
+                      type: number
+                      format: float
+                      description: Maximum price per item in EUR (null = no limit)
+                      nullable: true
+                      example: 10.0
+            examples:
+              basicSync:
+                summary: Basic Knuspr sync with credentials
+                value:
+                  credentials:
+                    email: "user@example.com"
+                    password: "securePassword123"
+              withPreferences:
+                summary: Sync with organic preference
+                value:
+                  credentials:
+                    email: "user@example.com"
+                    password: "securePassword123"
+                  match_preferences:
+                    prefer_organic: true
+                    max_price_per_item: 15.0
       responses:
-        '202':
-          description: Workflow accepted and in progress
+        '200':
+          description: Knuspr cart filled successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WorkflowResponse'
+                type: object
+                required:
+                  - success
+                  - matched_items
+                  - unmatched_items
+                  - progress
+                properties:
+                  success:
+                    type: boolean
+                    description: Overall success status
+                    example: true
+                  matched_items:
+                    type: integer
+                    description: Number of items successfully matched and added to Knuspr cart
+                    example: 18
+                  unmatched_items:
+                    type: array
+                    description: Ingredients that couldn't be matched to Knuspr products
+                    items:
+                      type: string
+                    example: ["edible flowers", "saffron threads"]
+                  progress:
+                    type: number
+                    format: float
+                    description: Completion percentage (0-100)
+                    minimum: 0
+                    maximum: 100
+                    example: 90.0
+                  knuspr_cart_url:
+                    type: string
+                    format: uri
+                    description: Direct link to the Knuspr cart
+                    example: "https://knuspr.de/cart/abc123"
+                  total_price:
+                    type: number
+                    format: float
+                    description: Total price of matched items in EUR
+                    example: 48.50
+              examples:
+                fullSuccess:
+                  summary: All items matched successfully
+                  value:
+                    success: true
+                    matched_items: 20
+                    unmatched_items: []
+                    progress: 100.0
+                    knuspr_cart_url: "https://knuspr.de/cart/abc123"
+                    total_price: 52.30
+                partialSuccess:
+                  summary: Most items matched, some unavailable
+                  value:
+                    success: true
+                    matched_items: 18
+                    unmatched_items: ["edible flowers", "saffron threads"]
+                    progress: 90.0
+                    knuspr_cart_url: "https://knuspr.de/cart/abc123"
+                    total_price: 48.50
         '400':
-          description: Invalid request or missing Knuspr credentials
+          description: Invalid request or cart data
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
               examples:
-                noCredentials:
+                emptyCart:
+                  summary: Cart has no items
                   value:
-                    detail: "Knuspr credentials not configured. Please authenticate first."
+                    detail: "Cart 'cart-123xyz' has no items to sync"
                     status_code: 400
+                    error_code: "EMPTY_CART"
+                invalidCredentials:
+                  summary: Invalid Knuspr credentials
+                  value:
+                    detail: "Invalid Knuspr credentials provided"
+                    status_code: 400
+                    error_code: "INVALID_CREDENTIALS"
         '401':
           $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Cart not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                detail: "Cart with ID 'cart-123xyz' not found"
+                status_code: 404
+                error_code: "CART_NOT_FOUND"
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -228,207 +448,160 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+      description: |
+        JWT token obtained from the authentication endpoint.
+        Include in Authorization header as: `Bearer <token>`
 
   schemas:
-    GroceryCart:
-      type: object
-      properties:
-        id:
-          type: integer
-          example: 123
-        meal_plan_id:
-          type: integer
-          nullable: true
-          example: 42
-        user_id:
-          type: integer
-          example: 1
-        items:
-          type: array
-          items:
-            $ref: '#/components/schemas/CartItem'
-        total_items:
-          type: integer
-          description: Number of unique ingredients
-          example: 24
-        status:
-          type: string
-          enum: [active, ordered, completed]
-          example: active
-        knuspr_cart_id:
-          type: string
-          nullable: true
-          description: External Knuspr cart reference
-          example: "knuspr-cart-abc123"
-        knuspr_synced_at:
-          type: string
-          format: date-time
-          nullable: true
-        created_at:
-          type: string
-          format: date-time
-        updated_at:
-          type: string
-          format: date-time
-        unavailable_items:
-          type: array
-          items:
-            type: string
-          description: Ingredients not matched to Knuspr products
-          example: ["saffron", "edible flowers"]
-
     CartItem:
       type: object
-      properties:
-        id:
-          type: integer
-          example: 456
-        ingredient_name:
-          type: string
-          example: "Flour"
-        quantity:
-          type: number
-          format: float
-          example: 720
-        unit:
-          type: string
-          enum: [ml, g, pcs, cup, tbsp, tsp, oz, lb, kg]
-          example: "ml"
-        category:
-          type: string
-          enum: [Produce, Dairy, Meat, Seafood, Bakery, Pantry, Frozen, Beverages, Snacks, Other]
-          example: "Bakery"
-        estimated_cost:
-          type: number
-          format: float
-          nullable: true
-          description: Estimated price in EUR
-          example: 2.50
-        knuspr_product_id:
-          type: string
-          nullable: true
-          example: "prod-flour-123"
-        recipe_sources:
-          type: array
-          description: Which recipes contribute to this ingredient
-          items:
-            $ref: '#/components/schemas/RecipeSource'
-
-    RecipeSource:
-      type: object
-      properties:
-        recipe_id:
-          type: integer
-          example: 1
-        recipe_title:
-          type: string
-          example: "Pancakes"
-        quantity:
-          type: number
-          format: float
-          example: 1.0
-        unit:
-          type: string
-          example: "cup"
-
-    CartItemUpdate:
-      type: object
       required:
+        - id
         - ingredient_name
         - quantity
         - unit
+        - recipe_ids
+        - category
       properties:
+        id:
+          type: string
+          description: Unique identifier for this cart item
+          example: "item-001"
         ingredient_name:
           type: string
+          description: Name of the ingredient
+          example: "Tomatoes"
+          minLength: 1
+          maxLength: 200
         quantity:
           type: number
           format: float
+          description: Quantity of the ingredient
+          example: 6.0
+          minimum: 0
+          exclusiveMinimum: true
         unit:
           type: string
-        category:
-          type: string
-
-    DeliveryPreferences:
-      type: object
-      properties:
-        preferred_dates:
+          description: Unit of measurement
+          enum: [ml, g, kg, l, pcs, cup, tbsp, tsp, oz, lb, qt, gal]
+          example: "pcs"
+        recipe_ids:
           type: array
+          description: IDs of recipes that use this ingredient
           items:
             type: string
-            format: date
-          description: Preferred delivery dates
-          example: ["2025-12-01", "2025-12-02"]
-        preferred_time_slot:
+          minItems: 1
+          example: ["recipe-1", "recipe-3"]
+        category:
           type: string
-          enum: [morning, afternoon, evening]
-          example: "afternoon"
-        budget_optimization:
-          type: boolean
-          description: Optimize for lowest price (may select alternatives)
-          default: false
-
-    WorkflowResponse:
-      type: object
-      properties:
-        workflow_id:
+          description: Food category for organization
+          enum:
+            - Produce
+            - Dairy
+            - Meat
+            - Seafood
+            - Bakery
+            - Pantry
+            - Frozen
+            - Beverages
+            - Snacks
+            - Condiments
+            - Spices
+            - Other
+          example: "Produce"
+        matched_product_id:
           type: string
-          example: "wf-123abc"
-        status:
-          type: string
-          enum: [pending, in_progress, completed, failed]
-          example: "in_progress"
-        message:
-          type: string
-          example: "Generating grocery cart and syncing to Knuspr..."
-        result:
-          type: object
           nullable: true
-          description: Present when status is 'completed'
-          properties:
-            cart_id:
-              type: integer
-              example: 123
-            knuspr_url:
-              type: string
-              format: uri
-              example: "https://knuspr.de/cart/abc123"
-            total_price:
-              type: number
-              format: float
-              example: 48.50
-            item_count:
-              type: integer
-              example: 24
+          description: Knuspr product ID if matched (null before Knuspr sync)
+          example: "knuspr-prod-12345"
+        estimated_price:
+          type: number
+          format: float
+          nullable: true
+          description: Estimated price in EUR (if Knuspr product matched)
+          example: 3.50
+        notes:
+          type: string
+          nullable: true
+          description: Additional notes or special instructions
+          example: "Organic preferred"
+          maxLength: 500
+
+    KnusprCredentials:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Knuspr account email
+          example: "user@example.com"
+          minLength: 5
+          maxLength: 255
+        password:
+          type: string
+          format: password
+          description: Knuspr account password
+          example: "securePassword123"
+          minLength: 8
+          maxLength: 128
+      description: |
+        Credentials for Knuspr authentication.
+        **Security Note:** These credentials are used only for this request and are not stored.
+        Always transmitted over HTTPS.
 
     Error:
       type: object
+      required:
+        - detail
+        - status_code
       properties:
         detail:
           type: string
           description: Human-readable error message
+          example: "Meal plan with ID 'mp-42abc' not found"
         status_code:
           type: integer
+          description: HTTP status code
+          example: 400
+        error_code:
+          type: string
+          description: Machine-readable error code for client handling
+          example: "MEAL_PLAN_NOT_FOUND"
+        field_errors:
+          type: object
+          nullable: true
+          description: Field-specific validation errors (for 400 Bad Request)
+          additionalProperties:
+            type: array
+            items:
+              type: string
+          example:
+            meal_plan_id: ["Invalid UUID format"]
+            aggregate_duplicates: ["Must be a boolean value"]
 
   responses:
     Unauthorized:
-      description: Authentication required
+      description: Authentication required or invalid token
       content:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-          example:
-            detail: "Not authenticated"
-            status_code: 401
-
-    NotFound:
-      description: Resource not found
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/Error'
-          example:
-            detail: "Resource not found"
-            status_code: 404
+          examples:
+            missingToken:
+              summary: No authentication token provided
+              value:
+                detail: "Not authenticated. Please provide a valid JWT token."
+                status_code: 401
+                error_code: "MISSING_TOKEN"
+            invalidToken:
+              summary: Invalid or expired token
+              value:
+                detail: "Invalid or expired authentication token"
+                status_code: 401
+                error_code: "INVALID_TOKEN"
 
     InternalError:
       description: Internal server error
@@ -436,6 +609,16 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/Error'
-          example:
-            detail: "Internal server error"
-            status_code: 500
+          examples:
+            generic:
+              summary: Generic server error
+              value:
+                detail: "An internal server error occurred. Please try again later."
+                status_code: 500
+                error_code: "INTERNAL_ERROR"
+            knusprTimeout:
+              summary: Knuspr service timeout
+              value:
+                detail: "Knuspr service is unavailable. Please try again later."
+                status_code: 500
+                error_code: "KNUSPR_TIMEOUT"

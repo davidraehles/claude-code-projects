@@ -52,7 +52,15 @@
       "Bash(do)",
       "Bash(git -C /home/darae/claude-code-projects status --short)",
       "Bash(gh pr list:*)",
-      "Bash(gh pr close:*)"
+      "Bash(gh pr close:*)",
+      "Bash(python -m py_compile:*)",
+      "Bash(PGPASSWORD=postgres psql:*)",
+      "Bash(source .venv/bin/activate)",
+      "Bash(alembic current:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node:*)",
+      "Bash(wc:*)",
+      "Bash(python scripts/test_query_performance.py:*)"
     ],
     "deny": [],
     "ask": []

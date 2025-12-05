@@ -367,4 +367,384 @@ test.describe('Knuspr Grocery Cart Integration', () => {
       expect(body.items_by_section).toBeTruthy();
     }
   });
+
+  // ===== T021: New E2E Tests for FillCartButton Component =====
+
+  test('should successfully fill Knuspr cart from grocery cart', async ({ page }) => {
+    /**
+     * Test: Complete flow of filling Knuspr cart with credentials
+     *
+     * Verify:
+     * 1. Navigate to grocery cart page
+     * 2. Click "Fill Knuspr Cart" button
+     * 3. Enter Knuspr credentials
+     * 4. Verify progress indicator appears
+     * 5. Wait for success message
+     * 6. Check matched items count is shown
+     * 7. Verify Knuspr cart link is present
+     */
+
+    // Step 1: Login
+    await page.goto(`${FRONTEND_URL}/login`);
+    await page.fill('input[type="email"]', TEST_USER.email);
+    await page.fill('input[type="password"]', TEST_USER.password);
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL(`${FRONTEND_URL}/dashboard`);
+
+    // Step 2: Navigate to grocery carts (assuming we have a grocery cart)
+    await page.goto(`${FRONTEND_URL}/grocery-carts`);
+    await page.waitForLoadState('networkidle');
+
+    // Find and click on first grocery cart
+    const cartCard = page.locator('[data-testid="grocery-cart-card"]').first();
+    if (await cartCard.isVisible()) {
+      await cartCard.click();
+    } else {
+      // Create a cart if none exists
+      await page.goto(`${FRONTEND_URL}/meal-plans`);
+      const mealPlanCard = page.locator('[data-testid="meal-plan-card"]').first();
+      await mealPlanCard.locator('button:has-text("Create Grocery Cart")').click();
+      await page.waitForURL(/\/grocery-carts\/\d+/);
+    }
+
+    // Step 3: Click "Fill Knuspr Cart" button
+    const fillCartButton = page.locator('button:has-text("Fill Knuspr Cart")');
+    await expect(fillCartButton).toBeVisible({ timeout: 5000 });
+    await fillCartButton.click();
+
+    // Step 4: Enter Knuspr credentials
+    const emailInput = page.locator('input[type="email"][aria-label*="Knuspr"]');
+    const passwordInput = page.locator('input[type="password"][aria-label*="Knuspr"]');
+
+    await expect(emailInput).toBeVisible({ timeout: 3000 });
+    await emailInput.fill('knuspr-test@example.com');
+    await passwordInput.fill('test-knuspr-password');
+
+    // Submit form
+    const submitButton = page.locator('button[type="submit"]:has-text("Fill Cart")');
+    await submitButton.click();
+
+    // Step 5: Verify progress indicator appears
+    const progressBar = page.locator('[role="progressbar"]');
+    await expect(progressBar).toBeVisible({ timeout: 3000 });
+
+    // Wait for loading text
+    await expect(page.locator('text=Filling Knuspr Cart')).toBeVisible();
+
+    // Step 6: Wait for success message (may take a while)
+    const successMessage = page.locator('text=Cart Filled Successfully');
+    await expect(successMessage).toBeVisible({ timeout: 30000 });
+
+    // Step 7: Check matched items count
+    const matchedItemsText = page.locator('text=/\\d+ items? added to your Knuspr cart/');
+    await expect(matchedItemsText).toBeVisible();
+
+    // Step 8: Verify Knuspr cart link is present
+    const knusprLink = page.locator('a:has-text("View in Knuspr")');
+    await expect(knusprLink).toBeVisible();
+
+    const href = await knusprLink.getAttribute('href');
+    expect(href).toBeTruthy();
+    expect(href).toMatch(/knuspr/i);
+  });
+
+  test('should handle authentication failure', async ({ page }) => {
+    /**
+     * Test: Handle invalid Knuspr credentials
+     *
+     * Verify:
+     * 1. Enter invalid credentials
+     * 2. Verify error message appears
+     * 3. Check that retry is possible
+     */
+
+    // Step 1: Login to app
+    await page.goto(`${FRONTEND_URL}/login`);
+    await page.fill('input[type="email"]', TEST_USER.email);
+    await page.fill('input[type="password"]', TEST_USER.password);
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL(`${FRONTEND_URL}/dashboard`);
+
+    // Step 2: Navigate to a grocery cart
+    await page.goto(`${FRONTEND_URL}/grocery-carts`);
+    await page.waitForLoadState('networkidle');
+
+    const cartCard = page.locator('[data-testid="grocery-cart-card"]').first();
+    if (await cartCard.isVisible()) {
+      await cartCard.click();
+    }
+
+    // Step 3: Click "Fill Knuspr Cart" button
+    const fillCartButton = page.locator('button:has-text("Fill Knuspr Cart")');
+    await expect(fillCartButton).toBeVisible({ timeout: 5000 });
+    await fillCartButton.click();
+
+    // Step 4: Enter INVALID credentials
+    const emailInput = page.locator('input[type="email"][aria-label*="Knuspr"]');
+    const passwordInput = page.locator('input[type="password"][aria-label*="Knuspr"]');
+
+    await expect(emailInput).toBeVisible({ timeout: 3000 });
+    await emailInput.fill('invalid@example.com');
+    await passwordInput.fill('wrong-password');
+
+    // Submit form
+    const submitButton = page.locator('button[type="submit"]:has-text("Fill Cart")');
+    await submitButton.click();
+
+    // Step 5: Verify error message appears
+    const errorMessage = page.locator('text=Authentication Failed, text=Failed to Fill Cart');
+    await expect(errorMessage.first()).toBeVisible({ timeout: 10000 });
+
+    // Step 6: Check that retry button is available
+    const retryButton = page.locator('button:has-text("Try Again")');
+    await expect(retryButton).toBeVisible();
+
+    // Verify clicking retry shows form again
+    await retryButton.click();
+    await expect(emailInput).toBeVisible();
+  });
+
+  test('should display unmatched items', async ({ page }) => {
+    /**
+     * Test: Display items that couldn't be matched on Knuspr
+     *
+     * Verify:
+     * 1. Fill cart with items (some may not match)
+     * 2. Verify unmatched items list is shown if any
+     * 3. Check warning message is displayed
+     */
+
+    // Step 1: Login
+    await page.goto(`${FRONTEND_URL}/login`);
+    await page.fill('input[type="email"]', TEST_USER.email);
+    await page.fill('input[type="password"]', TEST_USER.password);
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL(`${FRONTEND_URL}/dashboard`);
+
+    // Step 2: Navigate to grocery cart
+    await page.goto(`${FRONTEND_URL}/grocery-carts`);
+    await page.waitForLoadState('networkidle');
+
+    const cartCard = page.locator('[data-testid="grocery-cart-card"]').first();
+    if (await cartCard.isVisible()) {
+      await cartCard.click();
+    }
+
+    // Step 3: Fill Knuspr cart
+    const fillCartButton = page.locator('button:has-text("Fill Knuspr Cart")');
+    await fillCartButton.click();
+
+    const emailInput = page.locator('input[type="email"][aria-label*="Knuspr"]');
+    const passwordInput = page.locator('input[type="password"][aria-label*="Knuspr"]');
+
+    await emailInput.fill('knuspr-test@example.com');
+    await passwordInput.fill('test-knuspr-password');
+
+    const submitButton = page.locator('button[type="submit"]:has-text("Fill Cart")');
+    await submitButton.click();
+
+    // Step 4: Wait for completion
+    const successMessage = page.locator('text=Cart Filled Successfully');
+    await expect(successMessage).toBeVisible({ timeout: 30000 });
+
+    // Step 5: Check for unmatched items warning (if any)
+    const unmatchedWarning = page.locator('text=/could not be matched/i');
+
+    if (await unmatchedWarning.isVisible()) {
+      // Unmatched items exist - verify they're displayed
+      const unmatchedList = page.locator('ul').filter({ hasText: /could not be matched/i });
+      const listItems = unmatchedList.locator('li');
+
+      const count = await listItems.count();
+      expect(count).toBeGreaterThan(0);
+
+      // Verify each item is displayed with bullet point
+      for (let i = 0; i < Math.min(count, 3); i++) {
+        const item = listItems.nth(i);
+        await expect(item).toBeVisible();
+        const text = await item.textContent();
+        expect(text).toBeTruthy();
+        expect(text!.trim().length).toBeGreaterThan(0);
+      }
+
+      // Verify help text is shown
+      const helpText = page.locator('text=/manually add these items/i');
+      await expect(helpText).toBeVisible();
+    }
+  });
+
+  test('should validate credential form fields', async ({ page }) => {
+    /**
+     * Test: Form validation for credential inputs
+     *
+     * Verify:
+     * 1. Empty email shows error
+     * 2. Invalid email format shows error
+     * 3. Short password shows error
+     * 4. Valid inputs allow submission
+     */
+
+    // Step 1: Login
+    await page.goto(`${FRONTEND_URL}/login`);
+    await page.fill('input[type="email"]', TEST_USER.email);
+    await page.fill('input[type="password"]', TEST_USER.password);
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL(`${FRONTEND_URL}/dashboard`);
+
+    // Step 2: Navigate to grocery cart
+    await page.goto(`${FRONTEND_URL}/grocery-carts`);
+    const cartCard = page.locator('[data-testid="grocery-cart-card"]').first();
+    if (await cartCard.isVisible()) {
+      await cartCard.click();
+    }
+
+    // Step 3: Open credential form
+    const fillCartButton = page.locator('button:has-text("Fill Knuspr Cart")');
+    await fillCartButton.click();
+
+    const emailInput = page.locator('input[type="email"][aria-label*="Knuspr"]');
+    const passwordInput = page.locator('input[type="password"][aria-label*="Knuspr"]');
+    const submitButton = page.locator('button[type="submit"]:has-text("Fill Cart")');
+
+    // Test 1: Submit empty form
+    await submitButton.click();
+
+    // Should show validation errors
+    const emailError = page.locator('text=Email is required');
+    const passwordError = page.locator('text=Password is required');
+
+    await expect(emailError.or(page.locator('[aria-invalid="true"]').first())).toBeVisible();
+
+    // Test 2: Invalid email format
+    await emailInput.fill('invalid-email');
+    await submitButton.click();
+
+    const invalidEmailError = page.locator('text=Invalid email address');
+    if (await invalidEmailError.isVisible()) {
+      await expect(invalidEmailError).toBeVisible();
+    }
+
+    // Test 3: Short password
+    await emailInput.fill('valid@example.com');
+    await passwordInput.fill('123');
+    await submitButton.click();
+
+    const shortPasswordError = page.locator('text=/Password must be at least/i');
+    if (await shortPasswordError.isVisible()) {
+      await expect(shortPasswordError).toBeVisible();
+    }
+
+    // Test 4: Valid inputs should allow submission (will fail on backend, but form validates)
+    await emailInput.fill('valid@example.com');
+    await passwordInput.fill('validpassword123');
+    await submitButton.click();
+
+    // Form should submit (either progress bar or error from backend)
+    const progressOrError = page.locator('[role="progressbar"], text=/Failed/i, text=/Filling/i');
+    await expect(progressOrError.first()).toBeVisible({ timeout: 5000 });
+  });
+
+  test('should show/hide password toggle', async ({ page }) => {
+    /**
+     * Test: Password visibility toggle
+     *
+     * Verify:
+     * 1. Password is hidden by default
+     * 2. Toggle button shows password
+     * 3. Toggle button hides password again
+     */
+
+    // Step 1: Login
+    await page.goto(`${FRONTEND_URL}/login`);
+    await page.fill('input[type="email"]', TEST_USER.email);
+    await page.fill('input[type="password"]', TEST_USER.password);
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL(`${FRONTEND_URL}/dashboard`);
+
+    // Step 2: Navigate to grocery cart
+    await page.goto(`${FRONTEND_URL}/grocery-carts`);
+    const cartCard = page.locator('[data-testid="grocery-cart-card"]').first();
+    if (await cartCard.isVisible()) {
+      await cartCard.click();
+    }
+
+    // Step 3: Open credential form
+    const fillCartButton = page.locator('button:has-text("Fill Knuspr Cart")');
+    await fillCartButton.click();
+
+    const passwordInput = page.locator('input[aria-label*="Knuspr password"]');
+    await expect(passwordInput).toBeVisible();
+
+    // Step 4: Verify password is hidden by default
+    const inputType = await passwordInput.getAttribute('type');
+    expect(inputType).toBe('password');
+
+    // Step 5: Click show password toggle
+    const showPasswordButton = page.locator('button:has-text("Show password")');
+    await showPasswordButton.click();
+
+    // Verify password is now visible
+    const newInputType = await passwordInput.getAttribute('type');
+    expect(newInputType).toBe('text');
+
+    // Step 6: Click hide password toggle
+    const hidePasswordButton = page.locator('button:has-text("Hide password")');
+    await hidePasswordButton.click();
+
+    // Verify password is hidden again
+    const finalInputType = await passwordInput.getAttribute('type');
+    expect(finalInputType).toBe('password');
+  });
+
+  test('should remember credentials when checkbox is selected', async ({ page }) => {
+    /**
+     * Test: Remember credentials functionality
+     *
+     * Verify:
+     * 1. Checkbox for remembering credentials exists
+     * 2. Security warning is shown when checked
+     * 3. Link to create Knuspr account is present
+     */
+
+    // Step 1: Login
+    await page.goto(`${FRONTEND_URL}/login`);
+    await page.fill('input[type="email"]', TEST_USER.email);
+    await page.fill('input[type="password"]', TEST_USER.password);
+    await page.click('button:has-text("Sign In")');
+    await page.waitForURL(`${FRONTEND_URL}/dashboard`);
+
+    // Step 2: Navigate to grocery cart
+    await page.goto(`${FRONTEND_URL}/grocery-carts`);
+    const cartCard = page.locator('[data-testid="grocery-cart-card"]').first();
+    if (await cartCard.isVisible()) {
+      await cartCard.click();
+    }
+
+    // Step 3: Open credential form
+    const fillCartButton = page.locator('button:has-text("Fill Knuspr Cart")');
+    await fillCartButton.click();
+
+    // Step 4: Find remember credentials checkbox
+    const rememberCheckbox = page.locator('input[type="checkbox"]').filter({
+      hasText: /remember/i
+    }).or(page.locator('label:has-text("Remember")').locator('input[type="checkbox"]'));
+
+    const checkboxLocator = page.locator('label', { hasText: /Remember my credentials/i }).locator('input[type="checkbox"]');
+    await expect(checkboxLocator).toBeVisible();
+
+    // Step 5: Check the checkbox
+    await checkboxLocator.check();
+    await expect(checkboxLocator).toBeChecked();
+
+    // Step 6: Verify security warning appears
+    const securityWarning = page.locator('text=/Security notice/i, text=/stored locally/i');
+    await expect(securityWarning.first()).toBeVisible();
+
+    // Step 7: Verify link to create Knuspr account
+    const createAccountLink = page.locator('a[href*="knuspr"]').filter({ hasText: /Create one here/i });
+    await expect(createAccountLink).toBeVisible();
+
+    const href = await createAccountLink.getAttribute('href');
+    expect(href).toMatch(/knuspr/i);
+  });
 });

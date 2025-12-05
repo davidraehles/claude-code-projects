@@ -60,6 +60,7 @@ export const GROCERY_CART_ENDPOINTS = {
  */
 export const WORKFLOW_ENDPOINTS = {
   MEAL_PLAN_WITH_GROCERIES: `${API_V1}/workflows/meal-plan-with-groceries`,
+  FILL_KNUSPR_CART: (cartId: number) => `${API_V1}/workflows/carts/${cartId}/fill-knuspr`,
 } as const;
 
 /**

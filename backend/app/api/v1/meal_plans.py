@@ -7,7 +7,7 @@ Provides REST API for meal plan generation, management, and grocery cart operati
 from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from pydantic import BaseModel, Field
 
 from app.api.dependencies import get_database, get_current_user_id
@@ -273,8 +273,12 @@ async def get_meal_plan(
     Returns:
         Detailed meal plan with all meals
     """
+    # Optimized query with eager loading to avoid N+1 queries
     meal_plan = (
         db.query(MealPlan)
+        .options(
+            selectinload(MealPlan.recipes).selectinload(MealPlanRecipe.recipe)
+        )
         .filter(MealPlan.id == meal_plan_id, MealPlan.user_id == user_id)
         .first()
     )
@@ -369,8 +373,12 @@ async def generate_grocery_cart(
     Returns:
         Created grocery cart
     """
+    # Optimized query with eager loading to avoid N+1 queries
     meal_plan = (
         db.query(MealPlan)
+        .options(
+            selectinload(MealPlan.recipes).selectinload(MealPlanRecipe.recipe)
+        )
         .filter(MealPlan.id == meal_plan_id, MealPlan.user_id == user_id)
         .first()
     )
@@ -393,12 +401,8 @@ async def generate_grocery_cart(
     db.commit()
     db.refresh(cart)
 
-    # Get all recipes in meal plan
-    meal_plan_recipes = (
-        db.query(MealPlanRecipe)
-        .filter(MealPlanRecipe.meal_plan_id == meal_plan_id)
-        .all()
-    )
+    # Use already-loaded recipes from meal plan (no additional query)
+    meal_plan_recipes = meal_plan.recipes
 
     # Aggregate ingredients
     ingredient_quantities = {}

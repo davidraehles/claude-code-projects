@@ -14,8 +14,8 @@ import { useCreateCartFromMealPlanWorkflow } from '@/hooks/queries/useWorkflows'
 import { useKnusprCredentials } from '@/hooks/queries/useKnusprCredentials'
 import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
-import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
+import { CartGenerationButton } from '@/components/knuspr/CartGenerationButton'
 
 export default function MealPlanDetailPage() {
   const params = useParams()
@@ -192,11 +192,33 @@ export default function MealPlanDetailPage() {
           </p>
         </div>
 
-        {/* Actions */}
+        {/* Actions - Simple Cart Generation */}
+        {mealPlan.total_recipes && mealPlan.total_recipes > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="flex flex-col gap-4">
+              <div>
+                <h3 className="font-semibold text-gray-900 mb-1">
+                  Generate Grocery Cart
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Create a shopping list from your meal plan with all ingredients aggregated and organized.
+                </p>
+              </div>
+              <CartGenerationButton
+                meal_plan_id={mealPlanId}
+                className="sm:self-start"
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Actions - Advanced Knuspr Integration */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div>
-              <h3 className="font-semibold text-gray-900 mb-1">Ready to shop?</h3>
+              <h3 className="font-semibold text-gray-900 mb-1">
+                Advanced: Knuspr Integration
+              </h3>
               <p className="text-sm text-gray-600">
                 {hasKnusprCredentials
                   ? 'Generate a Knuspr shopping cart with real products and delivery slots'
@@ -217,7 +239,7 @@ export default function MealPlanDetailPage() {
                   Generating...
                 </span>
               ) : (
-                <span>🛒 {hasKnusprCredentials ? 'Generate Knuspr Cart' : 'Setup Knuspr'}</span>
+                <span>{hasKnusprCredentials ? 'Generate Knuspr Cart' : 'Setup Knuspr'}</span>
               )}
             </Button>
           </div>
@@ -356,7 +378,7 @@ export default function MealPlanDetailPage() {
                     onChange={(checked) => setBudgetOptimization(checked)}
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    Without this, we'll prioritize the earliest available delivery slot
+                    Without this, we&apos;ll prioritize the earliest available delivery slot
                   </p>
                 </div>
 

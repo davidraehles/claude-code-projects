@@ -151,6 +151,13 @@ export interface GroceryCart {
   total_items: number
   status: "active" | "purchased"
   created_at: string
+  unmatched_items?: string[]
+  unavailable_items?: string[]
+}
+
+export interface RecipeSource {
+  recipe_id: number
+  recipe_name: string
 }
 
 export interface GroceryItem {
@@ -159,6 +166,7 @@ export interface GroceryItem {
   category?: string
   estimated_cost?: number
   checked?: boolean
+  recipe_sources?: RecipeSource[]
 }
 
 // ===== API Responses =====
