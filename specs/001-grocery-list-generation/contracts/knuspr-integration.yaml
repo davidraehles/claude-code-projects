@@ -1,0 +1,1113 @@
+openapi: 3.0.3
+info:
+  title: Knuspr Integration API
+  description: |
+    OpenAPI specification for Knuspr MCP integration workflow.
+
+    This contract defines the interface for interacting with Knuspr's online grocery service,
+    including authentication, cart management, and product search operations.
+
+    The integration uses the Knuspr MCP (Model Context Protocol) client to communicate
+    with Knuspr's backend services for automated grocery cart management.
+
+  version: 1.0.0
+  contact:
+    name: Meal Planner Integration Team
+
+servers:
+  - url: http://localhost:8000/api/v1
+    description: Local development
+  - url: https://api.mealplanner.com/api/v1
+    description: Production
+
+tags:
+  - name: authentication
+    description: Knuspr authentication management
+  - name: cart-operations
+    description: Shopping cart operations
+  - name: products
+    description: Product search and details
+
+paths:
+  /knuspr/auth/login:
+    post:
+      tags:
+        - authentication
+      summary: Authenticate with Knuspr
+      description: |
+        Authenticates the user with Knuspr and obtains an access token.
+        The token must be used in subsequent API calls for cart operations.
+
+        Tokens typically expire after 24 hours and must be refreshed.
+      operationId: loginToKnuspr
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnusprAuthRequest'
+            examples:
+              validCredentials:
+                summary: Valid login credentials
+                value:
+                  email: "user@example.com"
+                  password: "securePassword123"
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnusprAuthResponse'
+              examples:
+                success:
+                  value:
+                    token: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    expires_at: "2025-12-03T18:30:00Z"
+                    user_id: "knuspr_user_123"
+                    session_id: "sess_abc123xyz"
+        '401':
+          description: Authentication failed - Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidCredentials:
+                  value:
+                    error_code: "AUTH_FAILED"
+                    message: "Invalid email or password"
+                    status_code: 401
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/auth/status:
+    get:
+      tags:
+        - authentication
+      summary: Check authentication status
+      description: |
+        Verifies if the current Knuspr authentication token is valid and active.
+        Returns session information including expiration time.
+      operationId: checkKnusprAuthStatus
+      security:
+        - knusprAuth: []
+      responses:
+        '200':
+          description: Authentication status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnusprAuthStatus'
+              examples:
+                authenticated:
+                  value:
+                    authenticated: true
+                    user_id: "knuspr_user_123"
+                    expires_at: "2025-12-03T18:30:00Z"
+                    session_id: "sess_abc123xyz"
+                    remaining_seconds: 82800
+                unauthenticated:
+                  value:
+                    authenticated: false
+                    message: "Token expired or invalid"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/auth/logout:
+    post:
+      tags:
+        - authentication
+      summary: Logout from Knuspr
+      description: |
+        Invalidates the current Knuspr session and access token.
+        After logout, a new authentication is required for cart operations.
+      operationId: logoutFromKnuspr
+      security:
+        - knusprAuth: []
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Successfully logged out from Knuspr"
+                  logged_out_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/cart/add-item:
+    post:
+      tags:
+        - cart-operations
+      summary: Add single item to cart
+      description: |
+        Adds a single product to the user's Knuspr shopping cart.
+        If the product already exists in the cart, the quantity is updated.
+      operationId: addItemToKnusprCart
+      security:
+        - knusprAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnusprAddItemRequest'
+            examples:
+              addProduct:
+                value:
+                  product_id: "prod_flour_500g"
+                  quantity: 2
+      responses:
+        '200':
+          description: Item added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnusprCartItemResponse'
+              examples:
+                success:
+                  value:
+                    cart_item_id: "item_abc123"
+                    product_id: "prod_flour_500g"
+                    product_name: "Organic All-Purpose Flour 500g"
+                    quantity: 2
+                    unit_price: 2.49
+                    total_price: 4.98
+                    unit: "pcs"
+                    available: true
+        '400':
+          description: Invalid request (product not available, invalid quantity)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productUnavailable:
+                  value:
+                    error_code: "PRODUCT_UNAVAILABLE"
+                    message: "Product is currently out of stock"
+                    status_code: 400
+                invalidQuantity:
+                  value:
+                    error_code: "INVALID_QUANTITY"
+                    message: "Quantity must be between 1 and 99"
+                    status_code: 400
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value:
+                    error_code: "PRODUCT_NOT_FOUND"
+                    message: "Product with ID 'prod_flour_500g' not found"
+                    status_code: 404
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/cart/add-batch:
+    post:
+      tags:
+        - cart-operations
+      summary: Add multiple items in batch
+      description: |
+        Adds multiple products to the Knuspr cart in a single request.
+        This is more efficient than multiple single-item requests.
+
+        Returns progress tracking and partial success information if some items fail.
+      operationId: addBatchToKnusprCart
+      security:
+        - knusprAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/KnusprBatchAddRequest'
+            examples:
+              batchAdd:
+                value:
+                  items:
+                    - product_id: "prod_flour_500g"
+                      quantity: 2
+                    - product_id: "prod_eggs_10pcs"
+                      quantity: 1
+                    - product_id: "prod_milk_1l"
+                      quantity: 3
+      responses:
+        '200':
+          description: Batch operation completed (may include partial failures)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnusprBatchResponse'
+              examples:
+                fullSuccess:
+                  value:
+                    progress:
+                      current: 3
+                      total: 3
+                      status: "completed"
+                      success_count: 3
+                      failure_count: 0
+                    successful_items:
+                      - cart_item_id: "item_abc123"
+                        product_id: "prod_flour_500g"
+                        quantity: 2
+                      - cart_item_id: "item_def456"
+                        product_id: "prod_eggs_10pcs"
+                        quantity: 1
+                      - cart_item_id: "item_ghi789"
+                        product_id: "prod_milk_1l"
+                        quantity: 3
+                    failed_items: []
+                    errors: []
+                partialSuccess:
+                  value:
+                    progress:
+                      current: 3
+                      total: 3
+                      status: "completed_with_errors"
+                      success_count: 2
+                      failure_count: 1
+                    successful_items:
+                      - cart_item_id: "item_abc123"
+                        product_id: "prod_flour_500g"
+                        quantity: 2
+                      - cart_item_id: "item_def456"
+                        product_id: "prod_eggs_10pcs"
+                        quantity: 1
+                    failed_items:
+                      - product_id: "prod_milk_1l"
+                        quantity: 3
+                    errors:
+                      - product_id: "prod_milk_1l"
+                        error_code: "PRODUCT_UNAVAILABLE"
+                        message: "Product is currently out of stock"
+        '400':
+          description: Invalid request (empty batch, invalid format)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/cart:
+    get:
+      tags:
+        - cart-operations
+      summary: Get current cart contents
+      description: |
+        Retrieves all items currently in the user's Knuspr shopping cart,
+        including product details, quantities, and pricing information.
+      operationId: getKnusprCart
+      security:
+        - knusprAuth: []
+      responses:
+        '200':
+          description: Cart retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnusprCart'
+              examples:
+                cartWithItems:
+                  value:
+                    cart_id: "cart_xyz789"
+                    items:
+                      - cart_item_id: "item_abc123"
+                        product_id: "prod_flour_500g"
+                        product_name: "Organic All-Purpose Flour 500g"
+                        quantity: 2
+                        unit_price: 2.49
+                        total_price: 4.98
+                        unit: "pcs"
+                        category: "Pantry"
+                        available: true
+                      - cart_item_id: "item_def456"
+                        product_id: "prod_eggs_10pcs"
+                        product_name: "Free Range Eggs 10pcs"
+                        quantity: 1
+                        unit_price: 3.99
+                        total_price: 3.99
+                        unit: "pcs"
+                        category: "Dairy"
+                        available: true
+                    total_items: 2
+                    total_quantity: 3
+                    subtotal: 8.97
+                    tax: 1.61
+                    total: 10.58
+                    currency: "EUR"
+                    updated_at: "2025-12-02T18:30:00Z"
+                emptyCart:
+                  value:
+                    cart_id: "cart_xyz789"
+                    items: []
+                    total_items: 0
+                    total_quantity: 0
+                    subtotal: 0.00
+                    tax: 0.00
+                    total: 0.00
+                    currency: "EUR"
+                    updated_at: "2025-12-02T18:30:00Z"
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/cart/item/{item_id}:
+    delete:
+      tags:
+        - cart-operations
+      summary: Remove item from cart
+      description: |
+        Removes a specific item from the Knuspr shopping cart.
+        The item_id must be a valid cart item identifier.
+      operationId: removeItemFromKnusprCart
+      security:
+        - knusprAuth: []
+      parameters:
+        - name: item_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Cart item identifier
+          example: "item_abc123"
+      responses:
+        '200':
+          description: Item removed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Item removed from cart"
+                  removed_item_id:
+                    type: string
+                    example: "item_abc123"
+                  removed_at:
+                    type: string
+                    format: date-time
+        '404':
+          description: Cart item not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value:
+                    error_code: "ITEM_NOT_FOUND"
+                    message: "Cart item with ID 'item_abc123' not found"
+                    status_code: 404
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/cart/clear:
+    post:
+      tags:
+        - cart-operations
+      summary: Clear entire cart
+      description: |
+        Removes all items from the Knuspr shopping cart.
+        This operation cannot be undone.
+      operationId: clearKnusprCart
+      security:
+        - knusprAuth: []
+      responses:
+        '200':
+          description: Cart cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Cart cleared successfully"
+                  items_removed:
+                    type: integer
+                    example: 15
+                  cleared_at:
+                    type: string
+                    format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/products/search:
+    get:
+      tags:
+        - products
+      summary: Search products by name
+      description: |
+        Searches the Knuspr product catalog by name or keyword.
+        Returns matching products with availability and pricing information.
+
+        Supports pagination for large result sets.
+      operationId: searchKnusprProducts
+      security:
+        - knusprAuth: []
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+          description: Search query (product name or keyword)
+          example: "flour"
+        - name: category
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter by product category
+          example: "Pantry"
+        - name: available_only
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: true
+          description: Only return products in stock
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Maximum number of results to return
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Number of results to skip (for pagination)
+      responses:
+        '200':
+          description: Search results retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnusprProductSearchResponse'
+              examples:
+                results:
+                  value:
+                    query: "flour"
+                    total_results: 42
+                    returned_results: 5
+                    offset: 0
+                    limit: 5
+                    products:
+                      - product_id: "prod_flour_500g"
+                        name: "Organic All-Purpose Flour 500g"
+                        description: "High-quality organic flour"
+                        price: 2.49
+                        unit: "pcs"
+                        available: true
+                        category: "Pantry"
+                        brand: "BioMarket"
+                        image_url: "https://cdn.knuspr.de/products/flour_500g.jpg"
+                      - product_id: "prod_flour_1kg"
+                        name: "All-Purpose Flour 1kg"
+                        description: "Standard all-purpose flour"
+                        price: 1.99
+                        unit: "pcs"
+                        available: true
+                        category: "Pantry"
+                        brand: "BasicGoods"
+                        image_url: "https://cdn.knuspr.de/products/flour_1kg.jpg"
+                noResults:
+                  value:
+                    query: "unicorn"
+                    total_results: 0
+                    returned_results: 0
+                    offset: 0
+                    limit: 20
+                    products: []
+        '400':
+          description: Invalid search parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimitExceeded'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /knuspr/products/{product_id}:
+    get:
+      tags:
+        - products
+      summary: Get product details
+      description: |
+        Retrieves detailed information about a specific Knuspr product,
+        including pricing, availability, nutritional information, and images.
+      operationId: getKnusprProductDetails
+      security:
+        - knusprAuth: []
+      parameters:
+        - name: product_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Product identifier
+          example: "prod_flour_500g"
+      responses:
+        '200':
+          description: Product details retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KnusprProductDetail'
+              examples:
+                productDetail:
+                  value:
+                    product_id: "prod_flour_500g"
+                    name: "Organic All-Purpose Flour 500g"
+                    description: "High-quality organic flour perfect for baking"
+                    price: 2.49
+                    unit: "pcs"
+                    package_size: "500g"
+                    available: true
+                    stock_quantity: 150
+                    category: "Pantry"
+                    subcategory: "Baking"
+                    brand: "BioMarket"
+                    origin: "Germany"
+                    image_url: "https://cdn.knuspr.de/products/flour_500g.jpg"
+                    additional_images:
+                      - "https://cdn.knuspr.de/products/flour_500g_2.jpg"
+                      - "https://cdn.knuspr.de/products/flour_500g_3.jpg"
+                    nutritional_info:
+                      calories: 364
+                      protein: 10
+                      carbohydrates: 76
+                      fat: 1
+                      fiber: 3
+                      unit: "per 100g"
+                    allergens:
+                      - "gluten"
+                    certifications:
+                      - "organic"
+                      - "EU organic"
+        '404':
+          description: Product not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  value:
+                    error_code: "PRODUCT_NOT_FOUND"
+                    message: "Product with ID 'prod_flour_500g' not found"
+                    status_code: 404
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    knusprAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Knuspr authentication token obtained via /knuspr/auth/login
+
+  schemas:
+    KnusprAuthRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: Knuspr account email
+          example: "user@example.com"
+        password:
+          type: string
+          format: password
+          description: Knuspr account password
+          minLength: 8
+          example: "securePassword123"
+
+    KnusprAuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT authentication token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        expires_at:
+          type: string
+          format: date-time
+          description: Token expiration timestamp
+          example: "2025-12-03T18:30:00Z"
+        user_id:
+          type: string
+          description: Knuspr user identifier
+          example: "knuspr_user_123"
+        session_id:
+          type: string
+          description: Session identifier
+          example: "sess_abc123xyz"
+
+    KnusprAuthStatus:
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+          description: Whether the user is currently authenticated
+        user_id:
+          type: string
+          nullable: true
+          description: Knuspr user ID if authenticated
+        expires_at:
+          type: string
+          format: date-time
+          nullable: true
+          description: Token expiration time
+        session_id:
+          type: string
+          nullable: true
+          description: Current session ID
+        remaining_seconds:
+          type: integer
+          nullable: true
+          description: Seconds until token expires
+        message:
+          type: string
+          nullable: true
+          description: Status message if unauthenticated
+
+    KnusprAddItemRequest:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: string
+          description: Knuspr product identifier
+          example: "prod_flour_500g"
+        quantity:
+          type: integer
+          minimum: 1
+          maximum: 99
+          description: Number of items to add
+          example: 2
+
+    KnusprCartItem:
+      type: object
+      properties:
+        cart_item_id:
+          type: string
+          description: Unique cart item identifier
+          example: "item_abc123"
+        product_id:
+          type: string
+          description: Product identifier
+          example: "prod_flour_500g"
+        product_name:
+          type: string
+          description: Product name
+          example: "Organic All-Purpose Flour 500g"
+        quantity:
+          type: integer
+          minimum: 1
+          description: Quantity in cart
+          example: 2
+        unit_price:
+          type: number
+          format: float
+          description: Price per unit in EUR
+          example: 2.49
+        total_price:
+          type: number
+          format: float
+          description: Total price (quantity × unit_price) in EUR
+          example: 4.98
+        unit:
+          type: string
+          description: Unit of measurement
+          enum: [pcs, g, kg, ml, l]
+          example: "pcs"
+        category:
+          type: string
+          description: Product category
+          example: "Pantry"
+        available:
+          type: boolean
+          description: Whether product is currently in stock
+          example: true
+
+    KnusprCartItemResponse:
+      allOf:
+        - $ref: '#/components/schemas/KnusprCartItem'
+
+    KnusprBatchAddRequest:
+      type: object
+      required:
+        - items
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 50
+          description: List of items to add (max 50 per batch)
+          items:
+            type: object
+            required:
+              - product_id
+              - quantity
+            properties:
+              product_id:
+                type: string
+              quantity:
+                type: integer
+                minimum: 1
+                maximum: 99
+
+    KnusprBatchResponse:
+      type: object
+      properties:
+        progress:
+          $ref: '#/components/schemas/ProgressTracking'
+        successful_items:
+          type: array
+          description: Items successfully added to cart
+          items:
+            $ref: '#/components/schemas/KnusprCartItem'
+        failed_items:
+          type: array
+          description: Items that failed to be added
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+              quantity:
+                type: integer
+        errors:
+          type: array
+          description: Error details for failed items
+          items:
+            type: object
+            properties:
+              product_id:
+                type: string
+              error_code:
+                type: string
+              message:
+                type: string
+
+    ProgressTracking:
+      type: object
+      properties:
+        current:
+          type: integer
+          description: Number of items processed
+          example: 3
+        total:
+          type: integer
+          description: Total number of items in batch
+          example: 5
+        status:
+          type: string
+          enum: [pending, in_progress, completed, completed_with_errors, failed]
+          description: Overall batch operation status
+          example: "completed"
+        success_count:
+          type: integer
+          description: Number of successfully processed items
+          example: 3
+        failure_count:
+          type: integer
+          description: Number of failed items
+          example: 0
+
+    KnusprCart:
+      type: object
+      properties:
+        cart_id:
+          type: string
+          description: Knuspr cart identifier
+          example: "cart_xyz789"
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnusprCartItem'
+        total_items:
+          type: integer
+          description: Number of unique products in cart
+          example: 2
+        total_quantity:
+          type: integer
+          description: Total quantity of all items
+          example: 3
+        subtotal:
+          type: number
+          format: float
+          description: Subtotal before tax (EUR)
+          example: 8.97
+        tax:
+          type: number
+          format: float
+          description: Tax amount (EUR)
+          example: 1.61
+        total:
+          type: number
+          format: float
+          description: Total price including tax (EUR)
+          example: 10.58
+        currency:
+          type: string
+          description: Currency code
+          example: "EUR"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    KnusprProductSearchResult:
+      type: object
+      properties:
+        product_id:
+          type: string
+          description: Product identifier
+          example: "prod_flour_500g"
+        name:
+          type: string
+          description: Product name
+          example: "Organic All-Purpose Flour 500g"
+        description:
+          type: string
+          nullable: true
+          description: Short product description
+        price:
+          type: number
+          format: float
+          description: Product price in EUR
+          example: 2.49
+        unit:
+          type: string
+          description: Unit of measurement
+          enum: [pcs, g, kg, ml, l]
+          example: "pcs"
+        available:
+          type: boolean
+          description: Product availability
+          example: true
+        category:
+          type: string
+          description: Product category
+          example: "Pantry"
+        brand:
+          type: string
+          nullable: true
+          description: Brand name
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          description: Product image URL
+
+    KnusprProductSearchResponse:
+      type: object
+      properties:
+        query:
+          type: string
+          description: Original search query
+        total_results:
+          type: integer
+          description: Total number of matching products
+        returned_results:
+          type: integer
+          description: Number of results in this response
+        offset:
+          type: integer
+          description: Pagination offset
+        limit:
+          type: integer
+          description: Results per page
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/KnusprProductSearchResult'
+
+    KnusprProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/KnusprProductSearchResult'
+        - type: object
+          properties:
+            package_size:
+              type: string
+              nullable: true
+              description: Package size description
+              example: "500g"
+            stock_quantity:
+              type: integer
+              nullable: true
+              description: Available stock quantity
+            subcategory:
+              type: string
+              nullable: true
+              description: Product subcategory
+            origin:
+              type: string
+              nullable: true
+              description: Country of origin
+            additional_images:
+              type: array
+              nullable: true
+              items:
+                type: string
+                format: uri
+              description: Additional product images
+            nutritional_info:
+              type: object
+              nullable: true
+              description: Nutritional information
+              properties:
+                calories:
+                  type: integer
+                protein:
+                  type: number
+                carbohydrates:
+                  type: number
+                fat:
+                  type: number
+                fiber:
+                  type: number
+                unit:
+                  type: string
+            allergens:
+              type: array
+              nullable: true
+              items:
+                type: string
+              description: List of allergens
+            certifications:
+              type: array
+              nullable: true
+              items:
+                type: string
+              description: Product certifications (organic, fair trade, etc.)
+
+    Error:
+      type: object
+      properties:
+        error_code:
+          type: string
+          description: Machine-readable error code
+          example: "AUTH_FAILED"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid email or password"
+        status_code:
+          type: integer
+          description: HTTP status code
+          example: 401
+        details:
+          type: object
+          nullable: true
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "UNAUTHORIZED"
+            message: "Authentication required. Please login first."
+            status_code: 401
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "NOT_FOUND"
+            message: "The requested resource was not found"
+            status_code: 404
+
+    RateLimitExceeded:
+      description: Too many requests - rate limit exceeded
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/Error'
+              - type: object
+                properties:
+                  retry_after:
+                    type: integer
+                    description: Seconds until rate limit resets
+                    example: 60
+          example:
+            error_code: "RATE_LIMIT_EXCEEDED"
+            message: "Too many requests. Please try again later."
+            status_code: 429
+            retry_after: 60
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error_code: "INTERNAL_ERROR"
+            message: "An unexpected error occurred. Please try again later."
+            status_code: 500
