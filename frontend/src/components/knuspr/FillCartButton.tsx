@@ -288,10 +288,8 @@ export function FillCartButton({
     )
   }
 
-  // Loading state with progress
+  // Loading state
   if (fillCartMutation.isPending) {
-    const progress = fillCartMutation.data?.progress || 0
-
     return (
       <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
         <div className="flex flex-col items-center">
@@ -320,25 +318,8 @@ export function FillCartButton({
             Filling Knuspr Cart...
           </h3>
 
-          <p className="text-sm text-gray-600 mb-4 text-center">
+          <p className="text-sm text-gray-600 text-center">
             Matching items with Knuspr products and adding to cart
-          </p>
-
-          {/* Progress bar */}
-          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-2">
-            <div
-              className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
-              style={{ width: `${progress}%` }}
-              role="progressbar"
-              aria-valuenow={progress}
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-label="Cart filling progress"
-            />
-          </div>
-
-          <p className="text-xs text-gray-500">
-            {progress}% complete
           </p>
         </div>
       </div>
