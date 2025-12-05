@@ -208,3 +208,150 @@ groups:
         annotations:
           summary: "No user activity detected"
           description: "No user registrations or recipe views in the last 2 hours"
+
+  - name: authentication_alerts
+    interval: 30s
+    rules:
+      # Critical: JWT token expiration issues
+      - alert: JWTTokenRefreshFailureHigh
+        expr: rate(auth_token_refresh_failures_total[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: authentication
+        annotations:
+          summary: "High JWT token refresh failure rate"
+          description: "JWT token refresh failure rate is {{ $value }} failures/sec (threshold: 0.1/sec). Users may be unable to maintain sessions."
+          runbook: "Check JWT secret configuration, token expiration settings, and auth service logs. Verify database connectivity for token storage."
+
+      # Warning: JWT token expiration approaching
+      - alert: JWTTokenExpirationHigh
+        expr: rate(auth_token_expired_total[5m]) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High JWT token expiration rate"
+          description: "JWT token expiration rate is {{ $value }} expirations/sec (threshold: 0.5/sec). May indicate short token lifetime or high session churn."
+          runbook: "Review token expiration policies. Check if users are experiencing frequent logouts."
+
+  - name: integration_alerts
+    interval: 30s
+    rules:
+      # Critical: Knuspr API integration failures
+      - alert: KnusprAPIFailureHigh
+        expr: rate(knuspr_api_errors_total[5m]) / rate(knuspr_api_requests_total[5m]) > 0.2
+        for: 5m
+        labels:
+          severity: critical
+          component: integrations
+        annotations:
+          summary: "High Knuspr API failure rate"
+          description: "Knuspr API failure rate is {{ $value | humanizePercentage }} (threshold: 20%). Grocery cart functionality may be impaired."
+          runbook: "Check Knuspr API credentials, network connectivity, and rate limits. Review Knuspr service status page. Check for API version changes."
+
+      # Warning: Knuspr API slow response
+      - alert: KnusprAPISlowResponse
+        expr: histogram_quantile(0.95, rate(knuspr_api_duration_seconds_bucket[5m])) > 3
+        for: 5m
+        labels:
+          severity: warning
+          component: integrations
+        annotations:
+          summary: "Knuspr API responding slowly"
+          description: "Knuspr API P95 response time is {{ $value }}s (threshold: 3s). Users may experience delays in cart operations."
+          runbook: "Check Knuspr service status. Consider implementing caching or timeout adjustments."
+
+  - name: backup_alerts
+    interval: 60s
+    rules:
+      # Critical: Backup failures
+      - alert: DatabaseBackupFailed
+        expr: time() - backup_last_success_timestamp_seconds > 86400
+        for: 1h
+        labels:
+          severity: critical
+          component: backup
+        annotations:
+          summary: "Database backup has not succeeded in 24 hours"
+          description: "Last successful backup was {{ $value | humanizeDuration }} ago. Data loss risk is increasing."
+          runbook: "Check backup service logs, verify backup_data volume is writable, ensure sufficient disk space, verify database connectivity. Review /backups directory for errors."
+
+      # Warning: Backup taking too long
+      - alert: DatabaseBackupSlow
+        expr: backup_duration_seconds > 1800
+        for: 5m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Database backup taking longer than expected"
+          description: "Backup duration is {{ $value | humanizeDuration }} (threshold: 30 minutes). May impact system performance."
+          runbook: "Check database size growth, disk I/O performance, and backup compression settings."
+
+      # Warning: Backup storage running low
+      - alert: BackupStorageLow
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/backups"} / node_filesystem_size_bytes{mountpoint="/backups"})) > 0.8
+        for: 15m
+        labels:
+          severity: warning
+          component: backup
+        annotations:
+          summary: "Backup storage is running low"
+          description: "Backup volume usage is {{ $value | humanizePercentage }} (threshold: 80%). May need cleanup or expansion."
+          runbook: "Review backup retention policy, clean old backups, or expand backup_data volume. Check if S3 upload is functioning."
+
+  - name: security_alerts
+    interval: 30s
+    rules:
+      # Warning: Certificate expiration approaching (if HTTPS enabled)
+      - alert: TLSCertificateExpiringSoon
+        expr: (ssl_certificate_expiry_seconds < 604800) and (ssl_certificate_expiry_seconds > 0)
+        for: 1h
+        labels:
+          severity: warning
+          component: security
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "TLS certificate expires in {{ $value | humanizeDuration }} (threshold: 7 days). Renew certificate to avoid service disruption."
+          runbook: "Renew TLS certificate using certbot or certificate provider. Update certificate in load balancer/reverse proxy configuration."
+
+      # Critical: Certificate expired
+      - alert: TLSCertificateExpired
+        expr: ssl_certificate_expiry_seconds <= 0
+        for: 5m
+        labels:
+          severity: critical
+          component: security
+        annotations:
+          summary: "TLS certificate has expired"
+          description: "TLS certificate has expired. HTTPS connections will fail, service may be inaccessible."
+          runbook: "URGENT: Renew and deploy TLS certificate immediately. Check certificate renewal automation."
+
+  - name: logging_alerts
+    interval: 30s
+    rules:
+      # Critical: High error rate in logs
+      - alert: HighErrorLogRate
+        expr: rate(log_messages_total{level="error"}[5m]) > 1
+        for: 5m
+        labels:
+          severity: critical
+          component: logging
+        annotations:
+          summary: "High error rate detected in application logs"
+          description: "Error log rate is {{ $value }} errors/sec (threshold: 1/sec). Application may be experiencing issues."
+          runbook: "Query logs in Grafana: {service=\"recipe-meal-planning-api\", level=\"error\"}. Check for patterns in error messages and stack traces."
+
+      # Warning: Error log rate elevated
+      - alert: ElevatedErrorLogRate
+        expr: rate(log_messages_total{level="error"}[5m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+          component: logging
+        annotations:
+          summary: "Elevated error rate in application logs"
+          description: "Error log rate is {{ $value }} errors/sec (threshold: 0.5/sec). Monitor for escalation."
+          runbook: "Review recent deployments and configuration changes. Check application logs for error patterns."

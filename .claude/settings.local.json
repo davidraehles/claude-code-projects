@@ -60,7 +60,18 @@
       "Bash(npx eslint:*)",
       "Bash(node:*)",
       "Bash(wc:*)",
-      "Bash(python scripts/test_query_performance.py:*)"
+      "Bash(python scripts/test_query_performance.py:*)",
+      "Bash(find:*)",
+      "Bash(source:*)",
+      "Bash(DB_HOST=custom.host DB_PORT=5433 DB_USER=testuser DB_PASSWORD=testpass DB_NAME=testdb alembic upgrade:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker compose:*)",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker/loki/loki-config.yml )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker/promtail/promtail-config.yml )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker-compose.yml )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/scripts/log_retention_policy.sh )",
+      "Bash(/home/darae/claude-code-projects/infrastructure/docker/loki/rules/alerts.yml )",
+      "Bash(/home/darae/claude-code-projects/docs/LOG_RETENTION_POLICY.md)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,65 @@
+# Codecov Configuration
+# Documentation: https://docs.codecov.io/docs/codecov-yaml
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        base: auto
+
+    patch:
+      default:
+        target: 75%
+        threshold: 5%
+
+  range: 60..100
+  round: down
+  precision: 2
+
+  # Ignore patterns
+  ignore:
+    - "backend/tests/**"
+    - "backend/migrations/**"
+    - "backend/scripts/**"
+    - "frontend/__tests__/**"
+    - "frontend/e2e/**"
+    - "frontend/.next/**"
+    - "frontend/node_modules/**"
+    - "**/__mocks__/**"
+    - "**/test_*.py"
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/*.spec.ts"
+    - "**/*.spec.tsx"
+
+# Flags for organizing coverage
+flags:
+  backend:
+    paths:
+      - backend/app/
+    carryforward: true
+
+  frontend:
+    paths:
+      - frontend/src/
+    carryforward: true
+
+  unit:
+    carryforward: true
+
+  integration:
+    carryforward: true
+
+# Comments on pull requests
+comment:
+  layout: "reach,diff,flags,files,footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+# GitHub status checks
+github_checks:
+  annotations: true

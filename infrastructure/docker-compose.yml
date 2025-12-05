@@ -105,6 +105,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
       - '--web.enable-lifecycle'
     depends_on:
       - api
@@ -178,7 +179,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_INSTALL_PLUGINS: ""
       GF_PATHS_PROVISIONING: /etc/grafana/provisioning
@@ -191,9 +192,56 @@ services:
       - prometheus
       - loki
 
+  # Database Backup Service
+  # Runs automated backups on a schedule
+  db-backup:
+    image: postgres:15-alpine
+    container_name: recipe-db-backup
+    environment:
+      # Database connection (connects to db service)
+      DATABASE_URL: "postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-recipe_app}"
+
+      # Backup configuration
+      BACKUP_DIR: /backups
+      BACKUP_RETENTION: ${BACKUP_RETENTION:-30}
+
+      # AWS S3 configuration (optional - set these for S3 uploads)
+      S3_BUCKET: ${S3_BUCKET:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-us-east-1}
+    volumes:
+      # Mount backup scripts
+      - ../infrastructure/scripts/backup_database.sh:/usr/local/bin/backup_database.sh:ro
+      - ../infrastructure/scripts/restore_database.sh:/usr/local/bin/restore_database.sh:ro
+
+      # Mount backup storage directory
+      - backup_data:/backups
+
+      # Mount crontab for scheduling
+      - ./docker/backup/crontab:/etc/crontabs/root:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    # Install required dependencies and start cron
+    command: >
+      sh -c "
+        echo 'Installing backup dependencies...' &&
+        apk add --no-cache aws-cli bash gzip &&
+        echo 'Making backup scripts executable...' &&
+        chmod +x /usr/local/bin/backup_database.sh &&
+        chmod +x /usr/local/bin/restore_database.sh &&
+        echo 'Creating backup directory...' &&
+        mkdir -p /backups &&
+        echo 'Starting cron daemon...' &&
+        crond -f -l 2
+      "
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:
   prometheus_data:
   grafana_data:
   loki_data:
+  backup_data:

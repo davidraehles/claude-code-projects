@@ -70,6 +70,7 @@ scrape_configs:
           level:
           logger:
           request_id:
+          user_id:
 
       # Output format
       - output:
@@ -120,6 +121,8 @@ scrape_configs:
           logger:
           method:
           status_code:
+          request_id:
+          user_id:
 
       - output:
           source: message
