@@ -169,8 +169,50 @@ app = FastAPI(
 )
 
 # CORS middleware configuration (production-hardened)
-cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else ["*"]
-cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
+def get_cors_origins():
+    """
+    Get CORS origins with secure defaults.
+
+    In production, requires explicit CORS_ORIGINS configuration.
+    In development, defaults to localhost for convenience.
+
+    Returns:
+        List of allowed origin patterns
+
+    Raises:
+        ValueError: If in production and CORS_ORIGINS not configured
+    """
+    origins_str = os.getenv("CORS_ORIGINS")
+
+    if not origins_str:
+        if os.getenv("APP_ENV") == "production":
+            raise ValueError(
+                "CORS_ORIGINS environment variable required in production. "
+                "Set to comma-separated list of allowed origins: "
+                "'https://example.com,https://app.example.com'"
+            )
+        # Development: allow localhost
+        return [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8000",
+        ]
+
+    # Parse configured origins
+    origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
+
+    # Reject wildcard in production
+    if "*" in origins and os.getenv("APP_ENV") == "production":
+        raise ValueError(
+            "CORS wildcard '*' not allowed in production. "
+            "Explicitly list allowed origins in CORS_ORIGINS environment variable."
+        )
+
+    return origins if origins else ["*"]
+
+
+cors_origins = get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,

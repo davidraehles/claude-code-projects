@@ -169,6 +169,55 @@ def decode_token(token: str) -> dict:
         )
 
 
+# Authorization Dependencies
+
+def require_admin(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_database)
+) -> User:
+    """
+    Dependency for endpoints that require admin privileges (sync version).
+
+    Args:
+        credentials: JWT token from Authorization header
+        db: Database session
+
+    Returns:
+        Admin user object
+
+    Raises:
+        HTTPException: If user is not authenticated or not admin
+    """
+    # Decode token
+    payload = decode_token(credentials.credentials)
+
+    # Verify token type
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token type"
+        )
+
+    # Get user
+    user_id = int(payload.get("sub"))
+    user = db.query(User).filter(User.id == user_id).first()
+
+    if not user or user.deleted_at:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Check admin status
+    if not user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin privileges required"
+        )
+
+    return user
+
+
 # Authentication Endpoints
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
