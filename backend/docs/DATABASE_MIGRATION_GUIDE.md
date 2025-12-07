@@ -1,6 +1,6 @@
 # Database Migration Guide
 
-Comprehensive guide for creating, testing, deploying, and troubleshooting database migrations using Alembic for the AI Meal Planner application.
+Comprehensive guide for creating, testing, deploying, and troubleshooting database migrations using Alembic for the Go, Cart! application.
 
 ## Table of Contents
 
