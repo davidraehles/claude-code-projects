@@ -17,17 +17,20 @@ depends_on = None
 
 def upgrade():
     """Add is_admin column to users table."""
-    # Add is_admin column with default False
+    # Add is_admin column with server-side default (important for existing rows)
     op.add_column(
         'users',
         sa.Column(
             'is_admin',
             sa.Boolean(),
             nullable=False,
-            default=False,
+            server_default=sa.false(),
             comment='Whether user has admin privileges'
         )
     )
+
+    # Explicitly set existing rows to False (in case server_default doesn't apply)
+    op.execute('UPDATE users SET is_admin = FALSE WHERE is_admin IS NULL')
 
     print("✅ Added is_admin column to users table")
 

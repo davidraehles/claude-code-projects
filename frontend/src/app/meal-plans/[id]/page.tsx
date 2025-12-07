@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { CartGenerationButton } from '@/components/knuspr/CartGenerationButton'
+import type { MealPlanDetail } from '@/lib/types'
 
 export default function MealPlanDetailPage() {
   const params = useParams()
@@ -136,8 +137,8 @@ export default function MealPlanDetailPage() {
   }
 
   // API returns MealPlanDetail structure with nested meal_plan property
-  const planData = mealPlan.meal_plan || mealPlan
-  const days = (mealPlan.days || []).sort((a, b) => a.day_number - b.day_number)
+  const planData = (mealPlan as MealPlanDetail).meal_plan
+  const days = ((mealPlan as MealPlanDetail).days || []).sort((a, b) => a.day_number - b.day_number)
 
   return (
     <div className="min-h-screen bg-gray-50">

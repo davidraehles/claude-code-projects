@@ -3,6 +3,8 @@
 Tests for PR #42 security fix: Admin authentication on rate limit API endpoints.
 """
 
+from datetime import datetime
+
 import pytest
 from fastapi import status
 from sqlalchemy import select
@@ -55,7 +57,7 @@ async def test_admin_rate_limit_list_policies_requires_admin(client, non_admin_u
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert "Admin privileges required" in response.json()["message"]
+    assert "Admin privileges required" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -139,7 +141,7 @@ async def test_admin_whitelist_endpoints_require_admin(client, non_admin_user):
     )
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
-    assert "Admin privileges required" in response.json()["message"]
+    assert "Admin privileges required" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -151,7 +153,7 @@ async def test_deleted_user_cannot_be_admin(client, db: AsyncSession):
         password_hash="hashed_password",
         country="US",
         is_admin=True,
-        deleted_at=pytest.importorskip("datetime").datetime.utcnow(),
+        deleted_at=datetime.utcnow(),
     )
     db.add(user)
     await db.commit()
@@ -165,4 +167,4 @@ async def test_deleted_user_cannot_be_admin(client, db: AsyncSession):
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert "User not found" in response.json()["message"]
+    assert "User not found" in response.json()["detail"]
