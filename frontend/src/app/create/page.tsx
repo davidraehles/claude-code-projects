@@ -13,7 +13,7 @@ import { useCreateRecipe } from '@/hooks/queries/useRecipes'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 
 interface FormData {
   title: string
@@ -122,7 +122,7 @@ export default function CreatePage() {
           </Link>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Create Recipe</h1>
           <p className="text-gray-600">
-            Add a new recipe to your library. Fill in the details below and we'll calculate nutrition info automatically.
+            Add a new recipe to your library. Fill in the details below and we&apos;ll calculate nutrition info automatically.
           </p>
         </div>
 

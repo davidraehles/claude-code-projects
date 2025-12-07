@@ -109,7 +109,7 @@ export default function ImportPage() {
           </Link>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Import Recipe</h1>
           <p className="text-gray-600">
-            Paste a recipe URL from any cooking website. We'll automatically extract ingredients, instructions, and nutrition info.
+            Paste a recipe URL from any cooking website. We&apos;ll automatically extract ingredients, instructions, and nutrition info.
           </p>
         </div>
 

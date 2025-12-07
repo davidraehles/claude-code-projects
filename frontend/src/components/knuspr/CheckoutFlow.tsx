@@ -4,7 +4,6 @@ import React, { useState, useCallback } from 'react';
 import { ArrowRight, ArrowLeft, CheckCircle, AlertCircle, Loader } from 'lucide-react';
 import CartPreview, { CartPreviewData } from './CartPreview';
 import DeliverySlotPicker, { DeliverySlot } from './DeliverySlotPicker';
-import CartErrorHandler from './CartErrorHandler';
 import { formatEUR } from '@/lib/formatCurrency';
 
 export type CheckoutStep = 'cart' | 'delivery' | 'confirm' | 'complete';
@@ -22,6 +21,7 @@ interface CheckoutState {
   selectedSlot: DeliverySlot | null;
   error: string | null;
   orderConfirmed: boolean;
+  orderId?: string;
 }
 
 /**
@@ -114,10 +114,15 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
       return;
     }
 
-    // Call onCheckoutComplete with generated order ID
+    // Generate order ID when completing checkout
     // In production, this would submit to the backend
+    const orderId = `ORD-${Date.now()}`;
+    setState((prev) => ({
+      ...prev,
+      orderId,
+    }));
+
     if (onCheckoutComplete) {
-      const orderId = `ORD-${Date.now()}`;
       onCheckoutComplete(orderId);
     }
   }, [state.selectedSlot, onCheckoutComplete]);
@@ -282,7 +287,7 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
       <div className="bg-white rounded-lg p-4 my-4">
         <p className="text-sm text-gray-600">Order ID</p>
         <p className="text-lg font-mono font-bold text-gray-900 break-all">
-          ORD-{Date.now()}
+          {state.orderId || 'Generating...'}
         </p>
       </div>
 

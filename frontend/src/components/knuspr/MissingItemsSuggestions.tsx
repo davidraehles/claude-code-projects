@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { AlertCircle, Plus, X, Search, Lightbulb } from 'lucide-react';
+import { AlertCircle, Plus, X, Lightbulb } from 'lucide-react';
 import { formatEUR } from '@/lib/formatCurrency';
 
 export interface MissingItemsSuggestionsProps {
@@ -97,7 +97,7 @@ export const MissingItemsSuggestions: React.FC<MissingItemsSuggestionsProps> = (
               {unavailableItems.length} Item(s) Not Found in Stock
             </h3>
             <p className="text-sm text-amber-800 mt-1">
-              These ingredients weren't available in Knuspr. You can manually add alternatives
+              These ingredients weren&apos;t available in Knuspr. You can manually add alternatives
               or skip them.
             </p>
           </div>

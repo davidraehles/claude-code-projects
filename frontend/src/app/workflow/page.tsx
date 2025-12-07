@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import CartPreview, { CartPreviewData } from '@/components/knuspr/CartPreview';
 import DeliverySlotPicker, { DeliverySlot } from '@/components/knuspr/DeliverySlotPicker';
 import MissingItemsSuggestions from '@/components/knuspr/MissingItemsSuggestions';
@@ -174,7 +174,7 @@ function WorkflowPageContent() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Generating Your Cart</h2>
               <p className="text-gray-600">
-                We're converting your meal plan into a Knuspr shopping cart...
+                We&apos;re converting your meal plan into a Knuspr shopping cart...
               </p>
             </div>
           </div>

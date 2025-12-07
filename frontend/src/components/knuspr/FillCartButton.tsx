@@ -47,9 +47,12 @@ export function FillCartButton({
   const { credentialStatus, saveCredentials } = useKnusprCredentials()
 
   // Load saved credentials if available
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (credentialStatus.data?.has_credentials && credentialStatus.data?.knuspr_email) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEmail(credentialStatus.data.knuspr_email)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setRememberCredentials(true)
     }
   }, [credentialStatus.data])
@@ -251,7 +254,7 @@ export function FillCartButton({
 
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <p className="text-xs text-blue-800">
-              Don't have a Knuspr account?{' '}
+              Don&apos;t have a Knuspr account?{' '}
               <a
                 href="https://knuspr.cz/register"
                 target="_blank"

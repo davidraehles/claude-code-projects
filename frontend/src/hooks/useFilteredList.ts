@@ -37,6 +37,7 @@ export function useFilteredList<T>(options: FilterOptions<T>) {
 
   useEffect(() => {
     if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFiltered(items)
       return
     }

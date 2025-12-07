@@ -77,7 +77,13 @@
       "WebFetch(domain:vercel.com)",
       "Bash(npm audit:*)",
       "Bash(alembic revision:*)",
-      "Bash(python -m alembic revision:*)"
+      "Bash(python -m alembic revision:*)",
+      "Bash(head:*)",
+      "Bash(grep:*)",
+      "Bash(jq:*)",
+      "Bash(python -m alembic:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
     ],
     "deny": [],
     "ask": []
