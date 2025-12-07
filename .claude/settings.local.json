@@ -84,7 +84,9 @@
       "Bash(python -m alembic:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(git diff:*)"
+      "Bash(git diff:*)",
+      "Bash(pytest:*)",
+      "Bash(python:*)"
     ],
     "deny": [],
     "ask": []

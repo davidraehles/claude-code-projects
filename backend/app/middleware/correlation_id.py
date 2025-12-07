@@ -29,6 +29,7 @@ from typing import Callable, Optional
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 
 from app.logging_config import (
     get_logger,
@@ -110,7 +111,17 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
                 },
                 exc_info=True,
             )
-            raise
+
+            # Create error response with correlation ID header
+            error_response = JSONResponse(
+                status_code=500,
+                content={
+                    "detail": "Internal server error",
+                    "error": str(e),
+                },
+            )
+            error_response.headers[self.CORRELATION_ID_HEADER] = correlation_id
+            return error_response
 
         finally:
             # Clear correlation ID from context

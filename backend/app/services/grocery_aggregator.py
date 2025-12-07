@@ -125,8 +125,13 @@ class AggregatedIngredient:
     quantity: float
     unit: str
     recipe_ids: List[int]
-    original_strings: List[str]
+    original_strings: List[str] = None
     category: Optional[str] = None
+
+    def __post_init__(self):
+        """Initialize original_strings with empty list if not provided."""
+        if self.original_strings is None:
+            self.original_strings = []
 
 
 class GroceryAggregator:
@@ -372,8 +377,12 @@ class GroceryAggregator:
         Raises:
             ValueError: If ingredient_string is None or empty
         """
-        if not ingredient_string or not ingredient_string.strip():
-            raise ValueError("Ingredient string cannot be None or empty")
+        if ingredient_string is None:
+            raise ValueError("Ingredient string cannot be None")
+
+        if not ingredient_string.strip():
+            # Return default for empty string
+            return ParsedIngredient(quantity=1.0, unit="whole", name="", original_text=ingredient_string)
 
         original = ingredient_string.strip()
 
@@ -456,9 +465,18 @@ class GroceryAggregator:
                     unit = adjective_match.group(1).lower()
                     name = remaining[adjective_match.end() :].strip()
                 else:
-                    # No unit or adjective specified - assume whole
-                    unit = "whole"
-                    name = remaining
+                    # No unit or adjective specified
+                    # For simple cases like "2-3 carrots", use first word as unit
+                    words = remaining.split()
+                    if words:
+                        unit = words[0].lower()  # First word becomes the unit (e.g., "carrots")
+                        name = " ".join(words[1:]) if len(words) > 1 else unit
+                        if not name:
+                            name = unit
+                    else:
+                        # Fallback - empty remaining
+                        unit = "whole"
+                        name = remaining
 
         # Clean up name
         name = name.strip()
