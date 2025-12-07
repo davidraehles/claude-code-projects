@@ -162,6 +162,75 @@ class TestMiddlewareOrdering:
         assert True  # TODO: Implement when middleware stack inspection is added
 
 
+class TestJWTSecretKeyGeneration:
+    """Test JWT secret key generation with fail-secure pattern."""
+
+    def test_jwt_secret_key_from_env_variable(self):
+        """Test that JWT_SECRET_KEY is read from environment."""
+        from app.api.dependencies import get_jwt_secret_key
+
+        expected_key = "test-jwt-secret-key-from-env"
+        with patch.dict(os.environ, {"JWT_SECRET_KEY": expected_key, "APP_ENV": "production"}):
+            key = get_jwt_secret_key()
+            assert key == expected_key
+
+    def test_jwt_secret_key_fails_in_production_without_env(self):
+        """Test that JWT fails-secure in production without JWT_SECRET_KEY."""
+        from app.api.dependencies import get_jwt_secret_key
+
+        with patch.dict(os.environ, {"APP_ENV": "production"}, clear=False):
+            os.environ.pop("JWT_SECRET_KEY", None)
+
+            with pytest.raises(ValueError) as exc_info:
+                get_jwt_secret_key()
+
+            assert "JWT_SECRET_KEY environment variable is required in production" in str(exc_info.value)
+            assert "python -c" in str(exc_info.value)  # Should include generation command
+
+    def test_jwt_secret_key_generates_random_in_development(self):
+        """Test that JWT generates random key in development."""
+        from app.api.dependencies import get_jwt_secret_key
+
+        with patch.dict(os.environ, {"APP_ENV": "development"}, clear=False):
+            os.environ.pop("JWT_SECRET_KEY", None)
+
+            key1 = get_jwt_secret_key()
+            key2 = get_jwt_secret_key()
+
+            # Keys should be generated (non-empty)
+            assert key1
+            assert key2
+            assert len(key1) >= 32  # token_urlsafe(32) produces ~43 chars
+
+    def test_jwt_secret_key_sufficient_length(self):
+        """Test that generated JWT secret key has sufficient length for security."""
+        from app.api.dependencies import get_jwt_secret_key
+
+        with patch.dict(os.environ, {"APP_ENV": "development"}, clear=False):
+            os.environ.pop("JWT_SECRET_KEY", None)
+
+            key = get_jwt_secret_key()
+
+            # Key should be at least 32 characters (256 bits of entropy)
+            assert len(key) >= 32
+
+    def test_jwt_secret_key_not_hardcoded_default(self):
+        """Test that hardcoded default is not used."""
+        from app.api.dependencies import SECRET_KEY
+
+        # Should not be the old hardcoded default
+        assert SECRET_KEY != "your-secret-key-change-in-production"
+        assert SECRET_KEY  # Should have some value
+
+    def test_jwt_secret_key_single_source_of_truth(self):
+        """Test that auth.py imports SECRET_KEY from dependencies.py."""
+        from app.api.dependencies import SECRET_KEY as deps_key
+        from app.api.v1.auth import SECRET_KEY as auth_key
+
+        # Both modules should use the same key
+        assert deps_key == auth_key
+
+
 class TestRegexPatternPrecompilation:
     """Test that regex patterns are pre-compiled for performance."""
 
