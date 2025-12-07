@@ -2,10 +2,26 @@
  * NextAuth configuration for authentication.
  */
 
-import NextAuth, { NextAuthOptions } from 'next-auth'
+import NextAuth, { NextAuthOptions, JWT, DefaultSession } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+interface User {
+  id: string
+  email: string
+  name: string
+  accessToken: string
+}
+
+interface CustomJWT extends JWT {
+  accessToken?: string
+  id?: string
+}
+
+interface CustomSession extends DefaultSession {
+  accessToken?: string
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -78,7 +94,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: any; user: any }) {
+    async jwt({ token, user }: { token: CustomJWT; user?: User }): Promise<CustomJWT> {
       // Add access_token to the token right after signin
       if (user) {
         token.accessToken = user.accessToken
@@ -86,10 +102,10 @@ export const authOptions: NextAuthOptions = {
       }
       return token
     },
-    async session({ session, token }: { session: any; token: any }) {
+    async session({ session, token }: { session: CustomSession; token: CustomJWT }): Promise<CustomSession> {
       // Send properties to the client
       if (token && session.user) {
-        session.user.id = token.id as string
+        session.user.id = token.id
         session.accessToken = token.accessToken
       }
       return session

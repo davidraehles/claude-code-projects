@@ -95,7 +95,7 @@ class ApiClient {
     })
   }
 
-  async getCurrentUser(token: string): Promise<any> {
+  async getCurrentUser(token: string): Promise<Record<string, unknown>> {
     return this.request(AUTH_ENDPOINTS.ME, {}, token)
   }
 
@@ -153,8 +153,8 @@ class ApiClient {
     )
   }
 
-  async importRecipe(data: RecipeImportRequest, token?: string | null): Promise<any> {
-    return this.request<any>(
+  async importRecipe(data: RecipeImportRequest, token?: string | null): Promise<Record<string, unknown>> {
+    return this.request<Record<string, unknown>>(
       RECIPE_ENDPOINTS.HARVEST,
       {
         method: "POST",
@@ -164,7 +164,7 @@ class ApiClient {
     )
   }
 
-  async uploadRecipeFile(file: File, token?: string | null): Promise<any> {
+  async uploadRecipeFile(file: File, token?: string | null): Promise<Record<string, unknown>> {
     const formData = new FormData()
     formData.append("file", file)
 

@@ -37,10 +37,10 @@ interface DevToolsOptions {
 }
 
 interface DevToolsConnection {
-  subscribe(listener: (message: any) => void): () => void
+  subscribe(listener: (message: Record<string, unknown>) => void): () => void
   unsubscribe(): void
-  send(action: any, state: any): void
-  init(state: any): void
+  send(action: Record<string, unknown>, state: unknown): void
+  init(state: unknown): void
 }
 
 // Extend Window interface if not already extended
@@ -75,7 +75,7 @@ export function useReducerWithDevTools<S, A>(
   const [state, dispatch] = useReducer(
     reducer,
     initialState,
-    init as any
+    init as ((initialState: S) => S) | undefined
   )
 
   const devToolsRef = useRef<DevToolsConnection | null>(null)
@@ -170,24 +170,14 @@ export function useReducerWithDevTools<S, A>(
   }, [state])
 
   // Wrap dispatch to send actions to DevTools
-  const enhancedDispatch = useRef((action: A) => {
+  const dispatchWithDevTools = (action: A) => {
     if (devToolsRef.current) {
       devToolsRef.current.send(action, state)
     }
     dispatch(action)
-  })
+  }
 
-  // Update the dispatch wrapper when state changes
-  useEffect(() => {
-    enhancedDispatch.current = (action: A) => {
-      if (devToolsRef.current) {
-        devToolsRef.current.send(action, state)
-      }
-      dispatch(action)
-    }
-  }, [state])
-
-  return [state, enhancedDispatch.current as React.Dispatch<A>]
+  return [state, dispatchWithDevTools as React.Dispatch<A>]
 }
 
 /**
