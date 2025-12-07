@@ -201,7 +201,7 @@ export function usePersistedReducer<S, A>(
   const enhancedDispatch = useCallback(
     (action: A) => {
       if (devToolsRef.current) {
-        devToolsRef.current.send(action, state)
+        devToolsRef.current.send(action as Record<string, unknown>, state)
       }
       dispatch(action)
     },
