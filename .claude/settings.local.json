@@ -83,7 +83,8 @@
       "Bash(jq:*)",
       "Bash(python -m alembic:*)",
       "Bash(gh run list:*)",
-      "Bash(gh run view:*)"
+      "Bash(gh run view:*)",
+      "Bash(git diff:*)"
     ],
     "deny": [],
     "ask": []
