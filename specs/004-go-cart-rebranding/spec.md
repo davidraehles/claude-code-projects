@@ -134,6 +134,19 @@ The rebranding incorporates Google Material Design 3 (latest version) principles
 - **Component Styling**: Cards, buttons, form fields, and inputs using Material Design specifications
 - **Light/Dark Mode Support**: Support both light and dark themes that automatically adapt to user's system settings/preferences. Material Design 3 principles apply to both themes with appropriate color variations
 
+### Detailed Design Specification
+
+For comprehensive design guidelines, implementation details, and visual specifications including:
+- Complete color system with CSS variables
+- Typography scale and font specifications
+- Component library with styled examples
+- Animation sequences and scroll-triggered effects
+- Responsive breakpoints and mobile considerations
+- Technical stack recommendations
+- Asset requirements and implementation checklist
+
+**See [design-spec.md](./design-spec.md)** for the complete detailed design system documentation.
+
 ## Assumptions
 
 - The existing PostgreSQL database already has connectivity and can accept new table/records
