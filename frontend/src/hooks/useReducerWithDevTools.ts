@@ -72,11 +72,9 @@ export function useReducerWithDevTools<S, A>(
   name: string = 'Reducer',
   init?: (initialState: S) => S
 ): [S, React.Dispatch<A>] {
-  const [state, dispatch] = useReducer(
-    reducer,
-    initialState,
-    init
-  ) as [S, React.Dispatch<A>]
+  const [state, dispatch] = init
+    ? (useReducer(reducer, initialState, init) as [S, React.Dispatch<A>])
+    : (useReducer(reducer, initialState) as [S, React.Dispatch<A>])
 
   const devToolsRef = useRef<DevToolsConnection | null>(null)
   const isTimeTravel = useRef(false)
@@ -139,9 +137,10 @@ export function useReducerWithDevTools<S, A>(
               break
             case 'IMPORT_STATE':
               // Import state from file
-              if (message.payload.nextLiftedState) {
-                const { computedStates } = message.payload.nextLiftedState
-                if (computedStates && computedStates.length > 0) {
+              if ((payload as Record<string, unknown>).nextLiftedState) {
+                const nextLiftedState = (payload as Record<string, unknown>).nextLiftedState as Record<string, unknown>
+                const { computedStates } = nextLiftedState
+                if (computedStates && Array.isArray(computedStates) && computedStates.length > 0) {
                   isTimeTravel.current = true
                 }
               }
