@@ -5,6 +5,7 @@ import { ArrowRight, ArrowLeft, CheckCircle, AlertCircle, Loader } from 'lucide-
 import CartPreview, { CartPreviewData } from './CartPreview';
 import DeliverySlotPicker, { DeliverySlot } from './DeliverySlotPicker';
 import CartErrorHandler from './CartErrorHandler';
+import { formatEUR } from '@/lib/formatCurrency';
 
 export type CheckoutStep = 'cart' | 'delivery' | 'confirm' | 'complete';
 
@@ -172,7 +173,7 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
               <p className="font-medium text-green-900">Delivery Confirmed</p>
               <p className="text-sm text-green-700">
                 {new Date(state.selectedSlot.date).toLocaleDateString()} •{' '}
-                {state.selectedSlot.time_window} (€{state.selectedSlot.price.toFixed(2)})
+                {state.selectedSlot.time_window} ({formatEUR(state.selectedSlot.price)})
               </p>
             </div>
           </div>
@@ -201,28 +202,26 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
           <div className="flex justify-between">
             <span className="text-gray-600">Items ({cartData.item_count})</span>
             <span className="font-medium text-gray-900">
-              €{Object.values(cartData.items_by_section)
+              {formatEUR(Object.values(cartData.items_by_section)
                 .flat()
-                .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                .toFixed(2)}
+                .reduce((sum, item) => sum + item.price * item.quantity, 0))}
             </span>
           </div>
 
           {state.selectedSlot && (
             <div className="flex justify-between">
               <span className="text-gray-600">Delivery ({state.selectedSlot.time_window})</span>
-              <span className="font-medium text-gray-900">€{state.selectedSlot.price.toFixed(2)}</span>
+              <span className="font-medium text-gray-900">{formatEUR(state.selectedSlot.price)}</span>
             </div>
           )}
 
           <div className="flex justify-between pt-2">
             <span className="text-lg font-semibold text-gray-900">Total</span>
             <span className="text-2xl font-bold text-blue-600">
-              €{(Object.values(cartData.items_by_section)
+              {formatEUR(Object.values(cartData.items_by_section)
                 .flat()
                 .reduce((sum, item) => sum + item.price * item.quantity, 0) +
-                (state.selectedSlot?.price || 0))
-                .toFixed(2)}
+                (state.selectedSlot?.price || 0))}
             </span>
           </div>
         </div>

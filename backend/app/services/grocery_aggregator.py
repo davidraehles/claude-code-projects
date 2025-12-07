@@ -96,13 +96,13 @@ class ParsedIngredient:
         quantity: Numeric quantity (1.5, 2.0, etc.)
         unit: Unit of measurement (cups, grams, whole, etc.)
         name: Ingredient name (flour, olive oil, salt, etc.)
-        original: Original ingredient string
+        original_text: Original ingredient string
     """
 
-    quantity: float
-    unit: str
-    name: str
-    original: str
+    quantity: Optional[float] = None
+    unit: str = ""
+    name: str = ""
+    original_text: str = ""
 
 
 @dataclass
@@ -141,15 +141,17 @@ class GroceryAggregator:
         normalize_units: Convert to standard units (ml, g, count)
     """
 
-    def __init__(self, db_session: Session | AsyncSession) -> None:
+    def __init__(self, db_session: Session | AsyncSession = None, db = None) -> None:
         """
         Initialize the GroceryAggregator service.
 
         Args:
             db_session: SQLAlchemy database session (sync or async)
+            db: Alternative db parameter for test compatibility
         """
-        self.db_session = db_session
-        self.is_async = isinstance(db_session, AsyncSession)
+        # Support both db_session and db parameter names
+        self.db_session = db_session or db
+        self.is_async = isinstance(self.db_session, AsyncSession) if self.db_session else False
 
     def aggregate_from_meal_plan_sync(
         self, meal_plan_id: int
@@ -211,7 +213,7 @@ class GroceryAggregator:
                             # Track multiple recipe sources
                             if recipe.id not in existing["recipe_ids"]:
                                 existing["recipe_ids"].append(recipe.id)
-                            existing["original_strings"].append(parsed.original)
+                            existing["original_strings"].append(parsed.original_text)
                         else:
                             # Different units - keep separate with suffix
                             ingredient_key = f"{ingredient_key}_{normalized_unit}"
@@ -220,7 +222,7 @@ class GroceryAggregator:
                                 "quantity": normalized_qty,
                                 "unit": normalized_unit,
                                 "recipe_ids": [recipe.id],
-                                "original_strings": [parsed.original],
+                                "original_strings": [parsed.original_text],
                             }
                     else:
                         aggregated[ingredient_key] = {
@@ -308,7 +310,7 @@ class GroceryAggregator:
                             # Track multiple recipe sources
                             if recipe.id not in existing["recipe_ids"]:
                                 existing["recipe_ids"].append(recipe.id)
-                            existing["original_strings"].append(parsed.original)
+                            existing["original_strings"].append(parsed.original_text)
                         else:
                             # Different units - keep separate with suffix
                             ingredient_key = f"{ingredient_key}_{normalized_unit}"
@@ -317,7 +319,7 @@ class GroceryAggregator:
                                 "quantity": normalized_qty,
                                 "unit": normalized_unit,
                                 "recipe_ids": [recipe.id],
-                                "original_strings": [parsed.original],
+                                "original_strings": [parsed.original_text],
                             }
                     else:
                         aggregated[ingredient_key] = {
@@ -453,7 +455,7 @@ class GroceryAggregator:
         name = name.strip()
 
         return ParsedIngredient(
-            quantity=quantity, unit=unit, name=name, original=original
+            quantity=quantity, unit=unit, name=name, original_text=original
         )
 
     def normalize_units(self, quantity: float, unit: str) -> Tuple[float, str]:

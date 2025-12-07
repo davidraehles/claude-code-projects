@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { AlertCircle, Plus, X, Search, Lightbulb } from 'lucide-react';
+import { formatEUR } from '@/lib/formatCurrency';
 
 export interface MissingItemsSuggestionsProps {
   unavailableItems: string[];
@@ -119,29 +120,28 @@ export const MissingItemsSuggestions: React.FC<MissingItemsSuggestionsProps> = (
             key={`unavailable-${idx}`}
             className="rounded-lg bg-white border border-amber-100 p-3 hover:shadow-sm transition-shadow"
           >
-            <button
-              onClick={() => toggleExpanded(item)}
-              className="w-full flex items-center justify-between"
-            >
-              <div className="flex items-center gap-3 flex-1 text-left">
+            <div className="w-full flex items-center justify-between gap-3">
+              <button
+                onClick={() => toggleExpanded(item)}
+                className="flex-1 flex items-center gap-3 text-left"
+              >
                 <span className="text-lg">❌</span>
                 <div>
                   <p className="font-medium text-gray-900">{item}</p>
                   <p className="text-xs text-gray-500">Out of stock</p>
                 </div>
-              </div>
+              </button>
               <button
-                onClick={(e) => {
-                  e.stopPropagation();
+                onClick={() => {
                   setAddingItem(item);
                   setExpandedItems(new Set([...expandedItems, item]));
                 }}
-                className="inline-flex items-center gap-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 text-sm font-medium transition-colors"
+                className="inline-flex items-center gap-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-700 px-3 py-1.5 text-sm font-medium transition-colors flex-shrink-0"
               >
                 <Plus className="h-4 w-4" />
                 Add Alternative
               </button>
-            </button>
+            </div>
 
             {/* Expansion Panel */}
             {expandedItems.has(item) && (
@@ -248,7 +248,7 @@ export const MissingItemsSuggestions: React.FC<MissingItemsSuggestionsProps> = (
                   <p className="font-medium text-green-900">{item.name}</p>
                   <p className="text-xs text-green-700">
                     {item.quantity} {item.unit}
-                    {item.estimatedPrice && ` • €${(item.estimatedPrice * item.quantity).toFixed(2)}`}
+                    {item.estimatedPrice && ` • ${formatEUR(item.estimatedPrice * item.quantity)}`}
                   </p>
                 </div>
                 <button
@@ -268,15 +268,15 @@ export const MissingItemsSuggestions: React.FC<MissingItemsSuggestionsProps> = (
         <div className="rounded-lg bg-white border border-blue-200 p-3 space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Original Cart</span>
-            <span className="font-medium text-gray-900">€{cartSubtotal.toFixed(2)}</span>
+            <span className="font-medium text-gray-900">{formatEUR(cartSubtotal)}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-sm text-gray-600">Additional Items</span>
-            <span className="font-medium text-gray-900">€{totalManualItemsPrice.toFixed(2)}</span>
+            <span className="font-medium text-gray-900">{formatEUR(totalManualItemsPrice)}</span>
           </div>
           <div className="flex justify-between items-center pt-2 border-t border-blue-100">
             <span className="text-sm font-semibold text-gray-900">New Total</span>
-            <span className="text-lg font-bold text-blue-600">€{newTotal.toFixed(2)}</span>
+            <span className="text-lg font-bold text-blue-600">{formatEUR(newTotal)}</span>
           </div>
         </div>
       )}
