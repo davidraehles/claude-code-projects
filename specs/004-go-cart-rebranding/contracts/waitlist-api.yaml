@@ -1,0 +1,106 @@
+openapi: 3.0.3
+info:
+  title: Go, Cart! Waitlist API
+  version: 1.0.0
+  description: API for managing the Go, Cart! waitlist and email verification.
+
+paths:
+  /api/v1/waitlist:
+    post:
+      summary: Join the waitlist
+      description: Submits an email address to the waitlist and triggers a verification email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+              properties:
+                email:
+                  type: string
+                  format: email
+                metadata:
+                  type: object
+                  description: Optional marketing attribution data
+      responses:
+        '201':
+          description: Successfully added to waitlist (pending verification)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistResponse'
+        '400':
+          description: Invalid email format or already registered
+        '429':
+          description: Too many requests
+
+  /api/v1/waitlist/verify:
+    post:
+      summary: Verify email address
+      description: Verifies a waitlist entry using a token sent via email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Email successfully verified
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistResponse'
+        '400':
+          description: Invalid or expired token
+        '404':
+          description: Token not found
+
+  /api/v1/waitlist/status:
+    get:
+      summary: Check waitlist status
+      description: Returns the current status of a waitlist entry (for polling/updates).
+      parameters:
+        - in: query
+          name: email
+          schema:
+            type: string
+            format: email
+          required: true
+      responses:
+        '200':
+          description: Current status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WaitlistResponse'
+        '404':
+          description: Email not found
+
+components:
+  schemas:
+    WaitlistResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        status:
+          type: string
+          enum: [PENDING, VERIFIED, INVITED, ONBOARDED]
+        position:
+          type: integer
+          description: Approximate position in the queue (optional)
+        created_at:
+          type: string
+          format: date-time

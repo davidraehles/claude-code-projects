@@ -467,7 +467,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Import and include routers
-from app.api.v1 import recipes, ingredients, users, meal_plans, auth, grocery_carts, knuspr_credentials, workflows
+from app.api.v1 import recipes, ingredients, users, meal_plans, auth, grocery_carts, knuspr_credentials, workflows, waitlist
 
 app.include_router(recipes.router, prefix="/api/v1/recipes", tags=["Recipes"])
 app.include_router(ingredients.router, prefix="/api/v1/ingredients", tags=["Ingredients"])
@@ -477,6 +477,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(grocery_carts.router, tags=["Grocery Carts"])
 app.include_router(knuspr_credentials.router, tags=["Knuspr Credentials"])
 app.include_router(workflows.router, prefix="/api/v1/workflows", tags=["Workflows"])
+app.include_router(waitlist.router, prefix="/api/v1/waitlist", tags=["Waitlist"])
 
 
 if __name__ == "__main__":

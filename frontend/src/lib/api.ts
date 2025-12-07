@@ -1,5 +1,5 @@
 /**
- * API client for the Meal Planner backend.
+ * API client for the Go, Cart! backend.
  * Refactored to be immutable - token passed as parameter instead of mutation.
  * Uses centralized endpoint constants to prevent typos and ensure consistency.
  */

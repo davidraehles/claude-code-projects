@@ -1,0 +1,87 @@
+'use client'
+
+import { Container } from '../ui/container'
+
+const recipeCards = [
+  {
+    title: `Ottolenghi's Roasted Ratatouille`,
+    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop',
+    meta: ['Vegan', '30 min', 'Serves 4']
+  },
+  {
+    title: 'Creamy Mushroom Risotto',
+    image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop',
+    meta: ['Vegetarian', '45 min', 'Serves 2']
+  },
+  {
+    title: 'Spicy Thai Basil Chicken',
+    image: 'https://images.unsplash.com/photo-1559314809-0f31657ffa3f?w=400&h=300&fit=crop',
+    meta: ['Gluten-free', '20 min', 'Serves 3']
+  },
+  {
+    title: 'Lemon Garlic Shrimp Pasta',
+    image: 'https://images.unsplash.com/photo-1513565658846-b55d46be4c02?w=400&h=300&fit=crop',
+    meta: ['Quick', '25 min', 'Serves 4']
+  },
+  {
+    title: 'Baked Feta Pasta',
+    image: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400&h=300&fit=crop',
+    meta: ['Viral', '40 min', 'Serves 6']
+  },
+  {
+    title: 'Korean Bibimbap Bowl',
+    image: 'https://images.unsplash.com/photo-1579586140626-462c933496ce?w=400&h=300&fit=crop',
+    meta: ['Healthy', '35 min', 'Serves 2']
+  }
+]
+
+export function Curation() {
+  return (
+    <section className="py-20 md:py-32 lg:py-40 bg-neutral-50/50">
+      <Container>
+        {/* Section Label */}
+        <div className="text-center mb-8">
+          <span className="label inline-block px-6 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-semibold uppercase tracking-wider">
+            CURATE
+          </span>
+        </div>
+
+        {/* Headline */}
+        <div className="text-center mb-12">
+          <h2 className="heading-section mb-6">Your recipes. Your way.</h2>
+          <p className="body-large max-w-2xl mx-auto">
+            Save recipes from anywhere. Build your personal cookbook.
+          </p>
+        </div>
+
+        {/* Recipe Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {recipeCards.map((card, index) => (
+            <div
+              key={index}
+              className="group recipe-card bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:-translate-y-4 transition-all duration-500 cursor-pointer border border-neutral-200 hover:border-primary-200"
+            >
+              <div
+                className="w-full h-64 bg-gradient-to-br from-neutral-200 to-neutral-300 group-hover:scale-105 transition-transform duration-500"
+                style={{ backgroundImage: `url(${card.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+              />
+              <div className="p-6">
+                <h3 className="heading-card mb-4 group-hover:text-primary-600 transition-colors">{card.title}</h3>
+                <div className="flex flex-wrap gap-2">
+                  {card.meta.map((tag, i) => (
+                    <span
+                      key={i}
+                      className="px-3 py-1 bg-neutral-100 text-neutral-600 text-xs rounded-full font-medium"
+                    >
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Container>
+    </section>
+  )
+}

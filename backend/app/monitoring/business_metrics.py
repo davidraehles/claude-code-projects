@@ -1,7 +1,7 @@
 """
 Business KPI Metrics Module
 
-This module tracks business-critical metrics for the AI Meal Planner application.
+This module tracks business-critical metrics for the Go, Cart! application.
 All metrics are exposed to Prometheus for monitoring and alerting.
 
 Metrics Categories:

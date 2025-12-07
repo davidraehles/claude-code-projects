@@ -1,5 +1,5 @@
 /**
- * TypeScript type definitions for the Meal Planner API.
+ * TypeScript type definitions for the Go, Cart! API.
  */
 
 // ===== User & Auth =====

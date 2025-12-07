@@ -1,7 +1,7 @@
 """
 Distributed Tracing Module
 
-Implements OpenTelemetry-based distributed tracing for the AI Meal Planner application.
+Implements OpenTelemetry-based distributed tracing for the Go, Cart! application.
 Integrates with Jaeger for trace collection, storage, and visualization.
 
 Features:
