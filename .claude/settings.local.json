@@ -88,7 +88,8 @@
       "Bash(pytest:*)",
       "Bash(python:*)",
       "Bash(gh pr checks:*)",
-      "Bash(git worktree:*)"
+      "Bash(git worktree:*)",
+      "Bash(gh api:*)"
     ],
     "deny": [],
     "ask": []

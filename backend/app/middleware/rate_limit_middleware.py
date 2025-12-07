@@ -17,7 +17,7 @@ them automatically to all incoming requests.
 
 import logging
 import re
-from typing import Callable, Optional, Dict, Tuple, Pattern
+from typing import Callable, Optional, Dict, Pattern
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse

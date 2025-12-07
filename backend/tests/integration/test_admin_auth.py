@@ -7,12 +7,10 @@ from datetime import datetime
 
 import pytest
 from fastapi import status
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.auth import create_access_token, create_refresh_token
+from app.api.v1.auth import create_access_token
 from app.models.user import User
-from app.database import AsyncSessionLocal
 
 
 @pytest.fixture

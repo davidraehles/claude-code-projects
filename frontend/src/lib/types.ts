@@ -131,6 +131,12 @@ export interface MealPlanDetail {
   statistics: MealPlanStatistics
 }
 
+/**
+ * The API may return either a nested MealPlanDetail structure or a flat structure
+ * combining MealPlan with its related days and statistics.
+ */
+export type MealPlanDetailResponse = MealPlanDetail | (MealPlan & { days: MealPlanDay[]; statistics: MealPlanStatistics })
+
 export interface MealPlanStatistics {
   total_meals: number
   total_recipes: number

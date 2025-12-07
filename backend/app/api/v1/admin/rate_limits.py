@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.rate_limit import RateLimitPolicy, RateLimitOverride, RateLimitWhitelist
 from app.config.rate_limit_config import rate_limit_config, LimitType
-from app.api.v1.auth import require_admin
+from app.api.v1.auth import require_admin_async, require_admin
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -167,7 +167,7 @@ class RateLimitWhitelistResponse(BaseModel):
 async def list_policies(
     enabled_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> List[RateLimitPolicy]:
     """
     List all rate limit policies.
@@ -195,7 +195,7 @@ async def list_policies(
 async def create_policy(
     policy_data: RateLimitPolicyCreate,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitPolicy:
     """
     Create a new rate limit policy.
@@ -253,7 +253,7 @@ async def create_policy(
 async def get_policy(
     policy_id: int,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitPolicy:
     """
     Get a specific rate limit policy.
@@ -287,7 +287,7 @@ async def update_policy(
     policy_id: int,
     policy_update: RateLimitPolicyUpdate,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitPolicy:
     """
     Update a rate limit policy.
@@ -335,7 +335,7 @@ async def update_policy(
 async def delete_policy(
     policy_id: int,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> None:
     """
     Delete a rate limit policy.
@@ -373,7 +373,7 @@ async def list_overrides(
     user_id: Optional[int] = None,
     active_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> List[RateLimitOverride]:
     """
     List rate limit overrides.
@@ -412,7 +412,7 @@ async def list_overrides(
 async def create_override(
     override_data: RateLimitOverrideCreate,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitOverride:
     """
     Create a rate limit override for a specific user.
@@ -454,7 +454,7 @@ async def create_override(
 async def delete_override(
     override_id: int,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> None:
     """
     Delete a rate limit override.
@@ -492,7 +492,7 @@ async def list_whitelist(
     enabled_only: bool = False,
     active_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> List[RateLimitWhitelist]:
     """
     List whitelist entries.
@@ -531,7 +531,7 @@ async def list_whitelist(
 async def create_whitelist_entry(
     whitelist_data: RateLimitWhitelistCreate,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitWhitelist:
     """
     Create a whitelist entry to bypass rate limiting.
@@ -586,7 +586,7 @@ async def create_whitelist_entry(
 async def delete_whitelist_entry(
     whitelist_id: int,
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> None:
     """
     Delete a whitelist entry.
@@ -636,7 +636,7 @@ async def clear_cache(_: bool = Depends(require_admin)) -> None:
 @router.post("/seed-defaults", status_code=status.HTTP_201_CREATED)
 async def seed_default_policies(
     db: AsyncSession = Depends(get_db),
-    admin: User = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> dict:
     """
     Seed database with default rate limit policies.

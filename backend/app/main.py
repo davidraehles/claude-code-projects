@@ -202,6 +202,24 @@ def get_cors_origins():
     # Parse configured origins
     origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
 
+    # Reject empty list in production (configuration error)
+    if not origins:
+        if os.getenv("APP_ENV") == "production":
+            raise ValueError(
+                "CORS_ORIGINS is set but empty after parsing. "
+                "Explicit origins required in production. "
+                "Set to comma-separated list of allowed origins: "
+                "'https://example.com,https://app.example.com'"
+            )
+        # Development: log warning and return localhost defaults
+        logger.warning("CORS_ORIGINS is empty after parsing. Using localhost defaults for development.")
+        return [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8000",
+        ]
+
     # Reject wildcard in production
     if "*" in origins and os.getenv("APP_ENV") == "production":
         raise ValueError(
@@ -209,7 +227,7 @@ def get_cors_origins():
             "Explicitly list allowed origins in CORS_ORIGINS environment variable."
         )
 
-    return origins if origins else ["*"]
+    return origins
 
 
 cors_origins = get_cors_origins()

@@ -17,12 +17,8 @@ class TestCSRFSecretKeyGeneration:
 
         expected_key = "test-secret-key-from-env"
         with patch.dict(os.environ, {"CSRF_SECRET_KEY": expected_key, "APP_ENV": "production"}):
-            # Reload module to pick up env var
-            import importlib
-            import app.middleware.csrf_middleware
-            importlib.reload(app.middleware.csrf_middleware)
-
-            key = app.middleware.csrf_middleware.get_csrf_secret_key()
+            # Test the function directly instead of using module-level constant
+            key = get_csrf_secret_key()
             assert key == expected_key
 
     def test_csrf_secret_key_fails_in_production_without_env(self):
