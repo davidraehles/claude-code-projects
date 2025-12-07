@@ -11,7 +11,7 @@ from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
 revision = '005_add_dietary_tags'
-down_revision = '004_create_meal_plan_tables'
+down_revision = '004'
 branch_labels = None
 depends_on = None
 

@@ -43,15 +43,6 @@ def upgrade() -> None:
 
     # Create indexes for rate_limit_policies
     op.create_index(
-        "idx_rate_limit_policies_enabled", "rate_limit_policies", ["enabled"], unique=False
-    )
-    op.create_index(
-        "idx_rate_limit_policies_pattern",
-        "rate_limit_policies",
-        ["endpoint_pattern"],
-        unique=False,
-    )
-    op.create_index(
         op.f("ix_rate_limit_policies_id"), "rate_limit_policies", ["id"], unique=False
     )
     op.create_index(
@@ -59,6 +50,9 @@ def upgrade() -> None:
         "rate_limit_policies",
         ["endpoint_pattern"],
         unique=True,
+    )
+    op.create_index(
+        "idx_rate_limit_policies_enabled", "rate_limit_policies", ["enabled"], unique=False
     )
 
     # Create rate_limit_overrides table
@@ -85,18 +79,6 @@ def upgrade() -> None:
 
     # Create indexes for rate_limit_overrides
     op.create_index(
-        "idx_rate_limit_overrides_user", "rate_limit_overrides", ["user_id"], unique=False
-    )
-    op.create_index(
-        "idx_rate_limit_overrides_expires", "rate_limit_overrides", ["expires_at"], unique=False
-    )
-    op.create_index(
-        "idx_rate_limit_overrides_user_expires",
-        "rate_limit_overrides",
-        ["user_id", "expires_at"],
-        unique=False,
-    )
-    op.create_index(
         op.f("ix_rate_limit_overrides_id"), "rate_limit_overrides", ["id"], unique=False
     )
     op.create_index(
@@ -106,6 +88,12 @@ def upgrade() -> None:
         op.f("ix_rate_limit_overrides_expires_at"),
         "rate_limit_overrides",
         ["expires_at"],
+        unique=False,
+    )
+    op.create_index(
+        "idx_rate_limit_overrides_user_expires",
+        "rate_limit_overrides",
+        ["user_id", "expires_at"],
         unique=False,
     )
 
@@ -131,18 +119,6 @@ def upgrade() -> None:
     )
 
     # Create indexes for rate_limit_whitelist
-    op.create_index(
-        "idx_rate_limit_whitelist_identifier_type",
-        "rate_limit_whitelist",
-        ["identifier", "limit_type"],
-        unique=False,
-    )
-    op.create_index(
-        "idx_rate_limit_whitelist_enabled", "rate_limit_whitelist", ["enabled"], unique=False
-    )
-    op.create_index(
-        "idx_rate_limit_whitelist_expires", "rate_limit_whitelist", ["expires_at"], unique=False
-    )
     op.create_index(
         op.f("ix_rate_limit_whitelist_id"), "rate_limit_whitelist", ["id"], unique=False
     )
@@ -170,6 +146,12 @@ def upgrade() -> None:
         ["expires_at"],
         unique=False,
     )
+    op.create_index(
+        "idx_rate_limit_whitelist_identifier_type",
+        "rate_limit_whitelist",
+        ["identifier", "limit_type"],
+        unique=False,
+    )
 
     print("✅ Created rate_limit_policies table with indexes")
     print("✅ Created rate_limit_overrides table with indexes")
@@ -180,36 +162,33 @@ def downgrade() -> None:
     """Drop rate limiting tables."""
 
     # Drop rate_limit_whitelist table
+    op.drop_index(
+        "idx_rate_limit_whitelist_identifier_type", table_name="rate_limit_whitelist"
+    )
     op.drop_index(op.f("ix_rate_limit_whitelist_expires_at"), table_name="rate_limit_whitelist")
     op.drop_index(op.f("ix_rate_limit_whitelist_enabled_ix"), table_name="rate_limit_whitelist")
     op.drop_index(op.f("ix_rate_limit_whitelist_limit_type"), table_name="rate_limit_whitelist")
     op.drop_index(op.f("ix_rate_limit_whitelist_identifier"), table_name="rate_limit_whitelist")
     op.drop_index(op.f("ix_rate_limit_whitelist_id"), table_name="rate_limit_whitelist")
-    op.drop_index("idx_rate_limit_whitelist_expires", table_name="rate_limit_whitelist")
-    op.drop_index("idx_rate_limit_whitelist_enabled", table_name="rate_limit_whitelist")
-    op.drop_index(
-        "idx_rate_limit_whitelist_identifier_type", table_name="rate_limit_whitelist"
-    )
     op.drop_table("rate_limit_whitelist")
 
     # Drop rate_limit_overrides table
+    op.drop_index(
+        "idx_rate_limit_overrides_user_expires", table_name="rate_limit_overrides"
+    )
     op.drop_index(
         op.f("ix_rate_limit_overrides_expires_at"), table_name="rate_limit_overrides"
     )
     op.drop_index(op.f("ix_rate_limit_overrides_user_id"), table_name="rate_limit_overrides")
     op.drop_index(op.f("ix_rate_limit_overrides_id"), table_name="rate_limit_overrides")
-    op.drop_index("idx_rate_limit_overrides_user_expires", table_name="rate_limit_overrides")
-    op.drop_index("idx_rate_limit_overrides_expires", table_name="rate_limit_overrides")
-    op.drop_index("idx_rate_limit_overrides_user", table_name="rate_limit_overrides")
     op.drop_table("rate_limit_overrides")
 
     # Drop rate_limit_policies table
+    op.drop_index("idx_rate_limit_policies_enabled", table_name="rate_limit_policies")
     op.drop_index(
         op.f("ix_rate_limit_policies_endpoint_pattern"), table_name="rate_limit_policies"
     )
     op.drop_index(op.f("ix_rate_limit_policies_id"), table_name="rate_limit_policies")
-    op.drop_index("idx_rate_limit_policies_pattern", table_name="rate_limit_policies")
-    op.drop_index("idx_rate_limit_policies_enabled", table_name="rate_limit_policies")
     op.drop_table("rate_limit_policies")
 
     print("✅ Dropped all rate limiting tables")

@@ -4,7 +4,7 @@
  * Implements ARCH-007: Extract common filtering pattern
  */
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 
 export interface FilterOptions<T> {
   /** List of items to filter */
@@ -37,6 +37,7 @@ export function useFilteredList<T>(options: FilterOptions<T>) {
 
   useEffect(() => {
     if (!query.trim()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFiltered(items)
       return
     }

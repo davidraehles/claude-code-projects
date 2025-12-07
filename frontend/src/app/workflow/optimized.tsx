@@ -74,7 +74,6 @@ interface WorkflowState {
 }
 
 export default function OptimizedWorkflowPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const mealPlanId = searchParams.get('meal_plan_id');
 
@@ -217,7 +216,7 @@ export default function OptimizedWorkflowPage() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Generating Your Cart</h2>
               <p className="text-gray-600">
-                We're converting your meal plan into a Knuspr shopping cart...
+                We&apos;re converting your meal plan into a Knuspr shopping cart...
               </p>
             </div>
           </div>
@@ -330,7 +329,7 @@ export default function OptimizedWorkflowPage() {
 
           {/* Missing Items */}
           {(state.step === 'delivery-selection' || state.step === 'review') &&
-            state.cartData?.unavailable_items.length! > 0 && (
+            (state.cartData?.unavailable_items?.length ?? 0) > 0 && (
             <div className="rounded-lg bg-white p-6 shadow-sm">
               <MissingItemsSuggestions
                 unavailableItems={state.cartData?.unavailable_items || []}
@@ -376,7 +375,7 @@ export default function OptimizedWorkflowPage() {
                 Complete Order on Knuspr →
               </button>
               <p className="text-xs text-green-700 text-center">
-                You'll be redirected to Knuspr to finalize your order
+                You&apos;ll be redirected to Knuspr to finalize your order
               </p>
             </div>
           )}

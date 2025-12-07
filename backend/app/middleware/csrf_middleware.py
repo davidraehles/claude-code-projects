@@ -26,7 +26,38 @@ logger = get_logger(__name__)
 CSRF_TOKEN_LENGTH = 32
 CSRF_COOKIE_NAME = "csrf_token"
 CSRF_HEADER_NAME = "X-CSRF-Token"
-CSRF_SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+
+
+def get_csrf_secret_key() -> str:
+    """
+    Get CSRF secret key with secure defaults.
+
+    In production, requires explicit CSRF_SECRET_KEY environment variable.
+    In development, generates a random key if not set.
+
+    Returns:
+        CSRF secret key for token signing
+
+    Raises:
+        ValueError: If in production and CSRF_SECRET_KEY not configured
+    """
+    secret = os.getenv("CSRF_SECRET_KEY")
+    if not secret:
+        if os.getenv("APP_ENV") == "production":
+            raise ValueError(
+                "CSRF_SECRET_KEY environment variable required in production. "
+                "Generate with: python -c 'import secrets; print(secrets.token_urlsafe(32))'"
+            )
+        # Development: generate random key, warn user
+        secret = secrets.token_urlsafe(32)
+        logger.warning(
+            "CSRF_SECRET_KEY not set. Generated random key for development. "
+            "Set CSRF_SECRET_KEY environment variable for production."
+        )
+    return secret
+
+
+CSRF_SECRET_KEY = get_csrf_secret_key()
 
 # Methods that don't require CSRF protection
 SAFE_METHODS = {"GET", "HEAD", "OPTIONS", "TRACE"}

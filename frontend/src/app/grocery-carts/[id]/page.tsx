@@ -15,13 +15,10 @@ import {
   groceryCartReducer,
   getInitialCartState,
   selectCheckedCount,
-  selectIsItemChecked,
   type GroceryCartState,
 } from '@/reducers/groceryCartReducer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
-import { Checkbox } from '@/components/ui/Checkbox'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { ViewToggle } from '@/components/grocery/ViewToggle'
 import { RecipeView } from '@/components/grocery/RecipeView'
 import { CategoryView } from '@/components/grocery/CategoryView'
@@ -97,7 +94,7 @@ export default function GroceryCartPage() {
         dispatch({ type: 'SET_VIEW_MODE', payload: { viewMode: savedView } })
       }
     }
-  }, [cartId, isValidId])
+  }, [cartId, isValidId, dispatch])
 
   // Print grocery list
   const handlePrint = () => {

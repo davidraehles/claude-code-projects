@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export interface PerformanceMetrics {
   lcp?: number; // Largest Contentful Paint
@@ -10,6 +10,7 @@ export interface PerformanceMetrics {
 
 export function usePerformanceMetrics(componentName?: string) {
   const metricsRef = useRef<PerformanceMetrics>({});
+  const [metrics, setMetrics] = useState<PerformanceMetrics>({});
 
   useEffect(() => {
     // Track LCP (Largest Contentful Paint)
@@ -17,10 +18,12 @@ export function usePerformanceMetrics(componentName?: string) {
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
         const lastEntry = entries[entries.length - 1] as PerformanceEntryWithTime;
-        metricsRef.current.lcp = lastEntry.renderTime || lastEntry.loadTime;
+        const lcp = lastEntry.renderTime || lastEntry.loadTime;
+        metricsRef.current.lcp = lcp;
+        setMetrics(prev => ({ ...prev, lcp }));
         if (process.env.NODE_ENV === 'development') {
           console.log(
-            `[${componentName || 'Performance'}] LCP: ${metricsRef.current.lcp?.toFixed(2)}ms`
+            `[${componentName || 'Performance'}] LCP: ${lcp?.toFixed(2)}ms`
           );
         }
       });
@@ -39,10 +42,12 @@ export function usePerformanceMetrics(componentName?: string) {
         const entries = list.getEntries();
         if (entries.length > 0) {
           const firstEntry = entries[0] as PerformanceEntryWithDuration;
-          metricsRef.current.fid = firstEntry.processingDuration;
+          const fid = firstEntry.processingDuration;
+          metricsRef.current.fid = fid;
+          setMetrics(prev => ({ ...prev, fid }));
           if (process.env.NODE_ENV === 'development') {
             console.log(
-              `[${componentName || 'Performance'}] FID: ${metricsRef.current.fid?.toFixed(2)}ms`
+              `[${componentName || 'Performance'}] FID: ${fid?.toFixed(2)}ms`
             );
           }
         }
@@ -66,9 +71,10 @@ export function usePerformanceMetrics(componentName?: string) {
           if (!layoutShiftEntry.hadRecentInput) {
             clsValue += layoutShiftEntry.value;
             metricsRef.current.cls = clsValue;
+            setMetrics(prev => ({ ...prev, cls: clsValue }));
             if (process.env.NODE_ENV === 'development') {
               console.log(
-                `[${componentName || 'Performance'}] CLS: ${metricsRef.current.cls?.toFixed(4)}`
+                `[${componentName || 'Performance'}] CLS: ${clsValue?.toFixed(4)}`
               );
             }
           }
@@ -91,14 +97,20 @@ export function usePerformanceMetrics(componentName?: string) {
           const navTimings = window.performance.getEntriesByType('navigation') as PerformanceNavigationTiming[];
           if (navTimings.length > 0) {
             const navTiming = navTimings[0];
-            metricsRef.current.pageLoadTime = navTiming.loadEventEnd - navTiming.fetchStart;
-            metricsRef.current.ttfb = navTiming.responseStart - navTiming.fetchStart;
+            const pageLoadTime = navTiming.loadEventEnd - navTiming.fetchStart;
+            const ttfb = navTiming.responseStart - navTiming.fetchStart;
+            metricsRef.current.pageLoadTime = pageLoadTime;
+            metricsRef.current.ttfb = ttfb;
+            setMetrics(prev => ({ ...prev, pageLoadTime, ttfb }));
           }
         } else {
           // Fallback to deprecated timing API
           const perfData = window.performance.timing;
-          metricsRef.current.pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
-          metricsRef.current.ttfb = perfData.responseStart - perfData.navigationStart;
+          const pageLoadTime = perfData.loadEventEnd - perfData.navigationStart;
+          const ttfb = perfData.responseStart - perfData.navigationStart;
+          metricsRef.current.pageLoadTime = pageLoadTime;
+          metricsRef.current.ttfb = ttfb;
+          setMetrics(prev => ({ ...prev, pageLoadTime, ttfb }));
         }
 
         if (process.env.NODE_ENV === 'development') {
@@ -114,7 +126,7 @@ export function usePerformanceMetrics(componentName?: string) {
     return () => window.removeEventListener('load', handleLoad);
   }, [componentName]);
 
-  return metricsRef.current;
+  return metrics;
 }
 
 // Type helpers

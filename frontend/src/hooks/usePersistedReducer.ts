@@ -30,14 +30,14 @@ interface PersistedState<S> {
 
 // Redux DevTools Extension API types
 interface ReduxDevToolsExtension {
-  connect(options?: any): DevToolsConnection
+  connect(options?: Record<string, unknown>): DevToolsConnection
 }
 
 interface DevToolsConnection {
-  subscribe(listener: (message: any) => void): () => void
+  subscribe(listener: (message: Record<string, unknown>) => void): () => void
   unsubscribe(): void
-  send(action: any, state: any): void
-  init(state: any): void
+  send(action: Record<string, unknown>, state: unknown): void
+  init(state: unknown): void
 }
 
 declare global {
@@ -201,7 +201,7 @@ export function usePersistedReducer<S, A>(
   const enhancedDispatch = useCallback(
     (action: A) => {
       if (devToolsRef.current) {
-        devToolsRef.current.send(action, state)
+        devToolsRef.current.send(action as Record<string, unknown>, state)
       }
       dispatch(action)
     },

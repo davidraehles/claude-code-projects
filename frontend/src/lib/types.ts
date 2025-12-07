@@ -110,26 +110,32 @@ export interface MealPlanCreateRequest {
   preferred_cuisines?: string[]
 }
 
-export interface MealPlanDetail extends MealPlan {
-  days: MealPlanDay[]
-  statistics: MealPlanStatistics
-}
-
 export interface MealPlanDay {
   day_number: number
   date: string
   meals: Meal[]
-  total_calories: number
 }
 
 export interface Meal {
-  id: number
-  recipe_id: number
-  recipe: Recipe
   meal_type: string
-  scheduled_date: string
+  recipe_id: number
+  recipe_name: string
   servings: number
+  calories?: number
+  cost?: number
 }
+
+export interface MealPlanDetail {
+  meal_plan: MealPlan
+  days: MealPlanDay[]
+  statistics: MealPlanStatistics
+}
+
+/**
+ * The API may return either a nested MealPlanDetail structure or a flat structure
+ * combining MealPlan with its related days and statistics.
+ */
+export type MealPlanDetailResponse = MealPlanDetail | (MealPlan & { days: MealPlanDay[]; statistics: MealPlanStatistics })
 
 export interface MealPlanStatistics {
   total_meals: number

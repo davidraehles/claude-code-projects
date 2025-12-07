@@ -37,7 +37,7 @@ export function ErrorFallback({ error, errorInfo, onReset }: ErrorFallbackProps)
               <div>
                 <h1 className="text-2xl font-bold mb-1">Something went wrong</h1>
                 <p className="text-red-100">
-                  We encountered an unexpected error. Don't worry, your data is safe.
+                  We encountered an unexpected error. Don&apos;t worry, your data is safe.
                 </p>
               </div>
             </div>

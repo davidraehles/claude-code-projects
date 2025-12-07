@@ -17,6 +17,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models.rate_limit import RateLimitPolicy, RateLimitOverride, RateLimitWhitelist
 from app.config.rate_limit_config import rate_limit_config, LimitType
+from app.api.v1.auth import require_admin_async, require_admin
+from app.models.user import User
 
 logger = logging.getLogger(__name__)
 
@@ -158,30 +160,6 @@ class RateLimitWhitelistResponse(BaseModel):
         from_attributes = True
 
 
-# TODO: Implement admin authentication dependency
-# For now, this is a placeholder. In production, this should verify admin JWT token
-async def require_admin(db: AsyncSession = Depends(get_db)) -> bool:
-    """
-    Dependency to require admin authentication.
-
-    TODO: Implement proper admin authentication:
-    - Verify JWT token
-    - Check user role/permissions
-    - Validate admin status in database
-
-    Args:
-        db: Database session
-
-    Returns:
-        True if authenticated as admin
-
-    Raises:
-        HTTPException: If not authenticated or not an admin
-    """
-    # PLACEHOLDER: This should be replaced with actual admin auth
-    # For now, we'll allow access to demonstrate the API
-    # In production, this MUST check user roles
-    return True
 
 
 # Rate Limit Policy Endpoints
@@ -189,7 +167,7 @@ async def require_admin(db: AsyncSession = Depends(get_db)) -> bool:
 async def list_policies(
     enabled_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> List[RateLimitPolicy]:
     """
     List all rate limit policies.
@@ -197,7 +175,7 @@ async def list_policies(
     Args:
         enabled_only: If True, only return enabled policies
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         List of rate limit policies
@@ -217,7 +195,7 @@ async def list_policies(
 async def create_policy(
     policy_data: RateLimitPolicyCreate,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitPolicy:
     """
     Create a new rate limit policy.
@@ -225,7 +203,7 @@ async def create_policy(
     Args:
         policy_data: Policy creation data
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         Created rate limit policy
@@ -275,7 +253,7 @@ async def create_policy(
 async def get_policy(
     policy_id: int,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitPolicy:
     """
     Get a specific rate limit policy.
@@ -283,7 +261,7 @@ async def get_policy(
     Args:
         policy_id: Policy ID
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         Rate limit policy
@@ -309,7 +287,7 @@ async def update_policy(
     policy_id: int,
     policy_update: RateLimitPolicyUpdate,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitPolicy:
     """
     Update a rate limit policy.
@@ -318,7 +296,7 @@ async def update_policy(
         policy_id: Policy ID
         policy_update: Fields to update
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         Updated rate limit policy
@@ -357,7 +335,7 @@ async def update_policy(
 async def delete_policy(
     policy_id: int,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> None:
     """
     Delete a rate limit policy.
@@ -365,7 +343,7 @@ async def delete_policy(
     Args:
         policy_id: Policy ID
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Raises:
         HTTPException: If policy not found
@@ -395,7 +373,7 @@ async def list_overrides(
     user_id: Optional[int] = None,
     active_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> List[RateLimitOverride]:
     """
     List rate limit overrides.
@@ -404,7 +382,7 @@ async def list_overrides(
         user_id: Filter by user ID
         active_only: If True, only return non-expired overrides
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         List of rate limit overrides
@@ -434,7 +412,7 @@ async def list_overrides(
 async def create_override(
     override_data: RateLimitOverrideCreate,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitOverride:
     """
     Create a rate limit override for a specific user.
@@ -442,7 +420,7 @@ async def create_override(
     Args:
         override_data: Override creation data
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         Created rate limit override
@@ -476,7 +454,7 @@ async def create_override(
 async def delete_override(
     override_id: int,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> None:
     """
     Delete a rate limit override.
@@ -484,7 +462,7 @@ async def delete_override(
     Args:
         override_id: Override ID
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Raises:
         HTTPException: If override not found
@@ -514,7 +492,7 @@ async def list_whitelist(
     enabled_only: bool = False,
     active_only: bool = False,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> List[RateLimitWhitelist]:
     """
     List whitelist entries.
@@ -523,7 +501,7 @@ async def list_whitelist(
         enabled_only: If True, only return enabled entries
         active_only: If True, only return non-expired entries
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         List of whitelist entries
@@ -553,7 +531,7 @@ async def list_whitelist(
 async def create_whitelist_entry(
     whitelist_data: RateLimitWhitelistCreate,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> RateLimitWhitelist:
     """
     Create a whitelist entry to bypass rate limiting.
@@ -561,7 +539,7 @@ async def create_whitelist_entry(
     Args:
         whitelist_data: Whitelist creation data
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         Created whitelist entry
@@ -608,7 +586,7 @@ async def create_whitelist_entry(
 async def delete_whitelist_entry(
     whitelist_id: int,
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> None:
     """
     Delete a whitelist entry.
@@ -616,7 +594,7 @@ async def delete_whitelist_entry(
     Args:
         whitelist_id: Whitelist entry ID
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Raises:
         HTTPException: If whitelist entry not found
@@ -649,7 +627,7 @@ async def clear_cache(_: bool = Depends(require_admin)) -> None:
     Forces reload of policies and whitelist from database on next request.
 
     Args:
-        _: Admin authentication dependency
+        admin: Authenticated admin user
     """
     rate_limit_config.clear_cache()
     logger.info("Rate limit configuration cache cleared")
@@ -658,7 +636,7 @@ async def clear_cache(_: bool = Depends(require_admin)) -> None:
 @router.post("/seed-defaults", status_code=status.HTTP_201_CREATED)
 async def seed_default_policies(
     db: AsyncSession = Depends(get_db),
-    _: bool = Depends(require_admin),
+    admin: User = Depends(require_admin_async),
 ) -> dict:
     """
     Seed database with default rate limit policies.
@@ -667,7 +645,7 @@ async def seed_default_policies(
 
     Args:
         db: Database session
-        _: Admin authentication dependency
+        admin: Authenticated admin user
 
     Returns:
         Status message

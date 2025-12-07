@@ -169,8 +169,68 @@ app = FastAPI(
 )
 
 # CORS middleware configuration (production-hardened)
-cors_origins = os.getenv("CORS_ORIGINS", "").split(",") if os.getenv("CORS_ORIGINS") else ["*"]
-cors_origins = [origin.strip() for origin in cors_origins if origin.strip()]
+def get_cors_origins():
+    """
+    Get CORS origins with secure defaults.
+
+    In production, requires explicit CORS_ORIGINS configuration.
+    In development, defaults to localhost for convenience.
+
+    Returns:
+        List of allowed origin patterns
+
+    Raises:
+        ValueError: If in production and CORS_ORIGINS not configured
+    """
+    origins_str = os.getenv("CORS_ORIGINS")
+
+    if not origins_str:
+        if os.getenv("APP_ENV") == "production":
+            raise ValueError(
+                "CORS_ORIGINS environment variable required in production. "
+                "Set to comma-separated list of allowed origins: "
+                "'https://example.com,https://app.example.com'"
+            )
+        # Development: allow localhost
+        return [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8000",
+        ]
+
+    # Parse configured origins
+    origins = [origin.strip() for origin in origins_str.split(",") if origin.strip()]
+
+    # Reject empty list in production (configuration error)
+    if not origins:
+        if os.getenv("APP_ENV") == "production":
+            raise ValueError(
+                "CORS_ORIGINS is set but empty after parsing. "
+                "Explicit origins required in production. "
+                "Set to comma-separated list of allowed origins: "
+                "'https://example.com,https://app.example.com'"
+            )
+        # Development: log warning and return localhost defaults
+        logger.warning("CORS_ORIGINS is empty after parsing. Using localhost defaults for development.")
+        return [
+            "http://localhost:3000",
+            "http://localhost:8000",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:8000",
+        ]
+
+    # Reject wildcard in production
+    if "*" in origins and os.getenv("APP_ENV") == "production":
+        raise ValueError(
+            "CORS wildcard '*' not allowed in production. "
+            "Explicitly list allowed origins in CORS_ORIGINS environment variable."
+        )
+
+    return origins
+
+
+cors_origins = get_cors_origins()
 
 app.add_middleware(
     CORSMiddleware,
@@ -191,10 +251,7 @@ app.add_middleware(CorrelationIdMiddleware)
 # Input validation middleware (EARLY - validate and sanitize input)
 app.add_middleware(InputValidationMiddleware)
 
-# CSRF protection middleware (exempt health, metrics, and docs endpoints)
-app.add_middleware(CSRFMiddleware, exempt_paths=["/health", "/health/live", "/health/ready", "/metrics", "/api/docs", "/api/redoc", "/"])
-
-# Security headers middleware (after RequestId, before rate limiting)
+# Security headers middleware (after input validation, before rate limiting)
 from app.middleware.security_headers import SecurityHeadersMiddleware
 app.add_middleware(
     SecurityHeadersMiddleware,
@@ -202,7 +259,7 @@ app.add_middleware(
     hsts_max_age=31536000  # 1 year
 )
 
-# Rate limiting middleware (after security headers)
+# Rate limiting middleware (BEFORE CSRF - blocks abusive requests early)
 from app.middleware.rate_limit_middleware import RateLimitMiddleware
 # Get Redis client for rate limiting if available
 try:
@@ -219,6 +276,9 @@ app.add_middleware(
     default_window=int(os.getenv("RATE_LIMIT_WINDOW", "60")),
     enable_rate_limiting=os.getenv("ENABLE_RATE_LIMITING", "true").lower() == "true"
 )
+
+# CSRF protection middleware (AFTER rate limiting - exempt health, metrics, and docs endpoints)
+app.add_middleware(CSRFMiddleware, exempt_paths=["/health", "/health/live", "/health/ready", "/metrics", "/api/docs", "/api/redoc", "/"])
 
 # Prometheus metrics middleware (should be last to measure total request time)
 from app.monitoring.middleware import PrometheusMiddleware

@@ -163,7 +163,10 @@ describe('CheckoutFlow Component', () => {
       });
 
       // Select slot
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
 
       // Go to confirmation
       fireEvent.click(screen.getByText(/Next/));
@@ -182,7 +185,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -200,7 +206,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -217,7 +226,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -243,7 +255,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -270,7 +285,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -297,7 +315,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -321,7 +342,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -365,7 +389,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {
@@ -394,7 +421,10 @@ describe('CheckoutFlow Component', () => {
         expect(screen.getByText('Step 2 of 3: Select Delivery Slot')).toBeInTheDocument();
       });
 
-      fireEvent.click(screen.getByText(/09:00-12:00/));
+      // Click first available 09:00-12:00 slot
+      const slots = screen.getAllByText(/09:00-12:00/);
+      const slotButton = slots[0].closest('button');
+      fireEvent.click(slotButton!);
       fireEvent.click(screen.getByText(/Next/));
 
       await waitFor(() => {

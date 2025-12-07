@@ -2,6 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Calendar, Clock, DollarSign, AlertCircle, Check } from 'lucide-react';
+import { formatEUR } from '@/lib/formatCurrency';
 
 export interface DeliverySlot {
   slot_id: string;
@@ -219,7 +220,7 @@ export const DeliverySlotPicker: React.FC<DeliverySlotPickerProps> = ({
                     <div className="flex items-center justify-between pt-2 border-t border-gray-100">
                       <span className="text-sm text-gray-600">Delivery Fee</span>
                       <span className="text-lg font-bold text-gray-900">
-                        €{slot.price.toFixed(2)}
+                        {formatEUR(slot.price)}
                       </span>
                     </div>
                   </button>

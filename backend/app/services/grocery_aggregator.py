@@ -35,6 +35,8 @@ VOLUME_TO_ML = {
     "ml": 1.0,
     "liter": 1000.0,
     "liters": 1000.0,
+    "litre": 1000.0,
+    "litres": 1000.0,
     "l": 1000.0,
     "pint": 473.176,
     "pints": 473.176,
@@ -96,13 +98,13 @@ class ParsedIngredient:
         quantity: Numeric quantity (1.5, 2.0, etc.)
         unit: Unit of measurement (cups, grams, whole, etc.)
         name: Ingredient name (flour, olive oil, salt, etc.)
-        original: Original ingredient string
+        original_text: Original ingredient string
     """
 
-    quantity: float
-    unit: str
-    name: str
-    original: str
+    quantity: Optional[float] = None
+    unit: str = ""
+    name: str = ""
+    original_text: str = ""
 
 
 @dataclass
@@ -123,8 +125,13 @@ class AggregatedIngredient:
     quantity: float
     unit: str
     recipe_ids: List[int]
-    original_strings: List[str]
+    original_strings: List[str] = None
     category: Optional[str] = None
+
+    def __post_init__(self):
+        """Initialize original_strings with empty list if not provided."""
+        if self.original_strings is None:
+            self.original_strings = []
 
 
 class GroceryAggregator:
@@ -141,15 +148,18 @@ class GroceryAggregator:
         normalize_units: Convert to standard units (ml, g, count)
     """
 
-    def __init__(self, db_session: Session | AsyncSession) -> None:
+    def __init__(self, db_session: Session | AsyncSession = None, db = None) -> None:
         """
         Initialize the GroceryAggregator service.
 
         Args:
             db_session: SQLAlchemy database session (sync or async)
+            db: Alternative db parameter for test compatibility
         """
-        self.db_session = db_session
-        self.is_async = isinstance(db_session, AsyncSession)
+        # Support both db_session and db parameter names
+        self.db_session = db_session or db
+        self.db = self.db_session  # Alias for test compatibility
+        self.is_async = isinstance(self.db_session, AsyncSession) if self.db_session else False
 
     def aggregate_from_meal_plan_sync(
         self, meal_plan_id: int
@@ -211,7 +221,7 @@ class GroceryAggregator:
                             # Track multiple recipe sources
                             if recipe.id not in existing["recipe_ids"]:
                                 existing["recipe_ids"].append(recipe.id)
-                            existing["original_strings"].append(parsed.original)
+                            existing["original_strings"].append(parsed.original_text)
                         else:
                             # Different units - keep separate with suffix
                             ingredient_key = f"{ingredient_key}_{normalized_unit}"
@@ -220,7 +230,7 @@ class GroceryAggregator:
                                 "quantity": normalized_qty,
                                 "unit": normalized_unit,
                                 "recipe_ids": [recipe.id],
-                                "original_strings": [parsed.original],
+                                "original_strings": [parsed.original_text],
                             }
                     else:
                         aggregated[ingredient_key] = {
@@ -308,7 +318,7 @@ class GroceryAggregator:
                             # Track multiple recipe sources
                             if recipe.id not in existing["recipe_ids"]:
                                 existing["recipe_ids"].append(recipe.id)
-                            existing["original_strings"].append(parsed.original)
+                            existing["original_strings"].append(parsed.original_text)
                         else:
                             # Different units - keep separate with suffix
                             ingredient_key = f"{ingredient_key}_{normalized_unit}"
@@ -317,7 +327,7 @@ class GroceryAggregator:
                                 "quantity": normalized_qty,
                                 "unit": normalized_unit,
                                 "recipe_ids": [recipe.id],
-                                "original_strings": [parsed.original],
+                                "original_strings": [parsed.original_text],
                             }
                     else:
                         aggregated[ingredient_key] = {
@@ -345,7 +355,7 @@ class GroceryAggregator:
             for item in aggregated.values()
         ]
 
-    def parse_ingredient(self, ingredient_string: str) -> ParsedIngredient:
+    def parse_ingredient(self, ingredient_string: Optional[str]) -> ParsedIngredient:
         """
         Parse an ingredient string into structured components.
 
@@ -363,7 +373,17 @@ class GroceryAggregator:
 
         Returns:
             ParsedIngredient with quantity, unit, name, and original string
+
+        Raises:
+            ValueError: If ingredient_string is None or empty
         """
+        if ingredient_string is None:
+            raise ValueError("Ingredient string cannot be None")
+
+        if not ingredient_string.strip():
+            # Return default for empty string
+            return ParsedIngredient(quantity=1.0, unit="whole", name="", original_text=ingredient_string)
+
         original = ingredient_string.strip()
 
         # Pattern for mixed numbers (e.g., "1 1/2")
@@ -430,17 +450,33 @@ class GroceryAggregator:
 
         # Extract unit from remaining string
         if quantity_match:
-            # Common units pattern
-            unit_pattern = r"^(cup|cups|tablespoon|tablespoons|tbsp|teaspoon|teaspoons|tsp|pound|pounds|lb|lbs|ounce|ounces|oz|gram|grams|g|kilogram|kilograms|kg|milliliter|milliliters|ml|liter|liters|l|clove|cloves|piece|pieces|whole|slice|slices|can|cans|package|packages|pinch|pinches|dash|dashes)\b"
+            # Common units pattern (known measurement units)
+            unit_pattern = r"^(cup|cups|tablespoon|tablespoons|tbsp|teaspoon|teaspoons|tsp|pound|pounds|lb|lbs|ounce|ounces|oz|gram|grams|g|kilogram|kilograms|kg|milliliter|milliliters|ml|liter|liters|litre|litres|l|clove|cloves|piece|pieces|whole|slice|slices|can|cans|package|packages|pinch|pinches|dash|dashes)\b"
 
             unit_match = re.match(unit_pattern, remaining, re.IGNORECASE)
             if unit_match:
                 unit = unit_match.group(1).lower()
                 name = remaining[unit_match.end() :].strip()
             else:
-                # No unit specified - assume whole
-                unit = "whole"
-                name = remaining
+                # No known unit - check for adjective descriptors (large, medium, small, etc.)
+                adjective_pattern = r"^(large|medium|small|fresh|dried|ground|diced|chopped|minced|sliced|shredded|whole|halved|quartered|melted|grated|raw|cooked|roasted|toasted|blanched|crushed|beaten)\b"
+                adjective_match = re.match(adjective_pattern, remaining, re.IGNORECASE)
+                if adjective_match:
+                    unit = adjective_match.group(1).lower()
+                    name = remaining[adjective_match.end() :].strip()
+                else:
+                    # No unit or adjective specified
+                    # For simple cases like "2-3 carrots", use first word as unit
+                    words = remaining.split()
+                    if words:
+                        unit = words[0].lower()  # First word becomes the unit (e.g., "carrots")
+                        name = " ".join(words[1:]) if len(words) > 1 else unit
+                        if not name:
+                            name = unit
+                    else:
+                        # Fallback - empty remaining
+                        unit = "whole"
+                        name = remaining
 
         # Clean up name
         name = name.strip()
@@ -453,17 +489,17 @@ class GroceryAggregator:
         name = name.strip()
 
         return ParsedIngredient(
-            quantity=quantity, unit=unit, name=name, original=original
+            quantity=quantity, unit=unit, name=name, original_text=original
         )
 
-    def normalize_units(self, quantity: float, unit: str) -> Tuple[float, str]:
+    def normalize_units(self, quantity: float, unit: str, target_unit: Optional[str] = None) -> Tuple[float, str]:
         """
-        Normalize quantity and unit to standard measurements.
+        Normalize quantity and unit to standard measurements or target unit.
 
-        Converts various units to standard forms:
-        - Volume units -> milliliters (ml)
-        - Weight units -> grams (g)
-        - Count units -> count
+        Converts various units to standard forms or specific target unit:
+        - Volume units -> milliliters (ml) or target unit
+        - Weight units -> grams (g) or target unit
+        - Count units -> count or target unit
 
         Conversion factors:
         - Volume: 1 cup = 240ml, 1 tbsp = 15ml, 1 tsp = 5ml
@@ -473,30 +509,73 @@ class GroceryAggregator:
         Args:
             quantity: Original quantity value
             unit: Original unit string
+            target_unit: Optional target unit to convert to (e.g., "g", "ml", "count")
 
         Returns:
             Tuple of (normalized_quantity, normalized_unit)
 
         Examples:
-            (2.0, "cups") -> (480.0, "ml")
-            (1.0, "lb") -> (453.592, "g")
-            (3.0, "whole") -> (3.0, "count")
+            (2.0, "cups", "ml") -> (480.0, "ml")
+            (1.0, "lb", "g") -> (453.592, "g")
+            (3.0, "whole", "count") -> (3.0, "count")
         """
+        if quantity < 0:
+            raise ValueError(f"Quantity must be non-negative, got {quantity}")
+
         unit_lower = unit.lower().strip()
+
+        # First normalize to standard unit
+        normalized_quantity = quantity
+        normalized_unit = unit_lower
 
         # Check volume conversions
         if unit_lower in VOLUME_TO_ML:
             conversion_factor = VOLUME_TO_ML[unit_lower]
-            return (quantity * conversion_factor, "ml")
-
+            normalized_quantity = quantity * conversion_factor
+            normalized_unit = "ml"
         # Check weight conversions
-        if unit_lower in WEIGHT_TO_GRAMS:
+        elif unit_lower in WEIGHT_TO_GRAMS:
             conversion_factor = WEIGHT_TO_GRAMS[unit_lower]
-            return (quantity * conversion_factor, "g")
-
+            normalized_quantity = quantity * conversion_factor
+            normalized_unit = "g"
         # Check count units
-        if unit_lower in COUNT_UNITS:
-            return (quantity, "count")
+        elif unit_lower in COUNT_UNITS:
+            normalized_quantity = quantity
+            normalized_unit = "count"
 
-        # Unknown unit - return as-is
-        return (quantity, unit_lower)
+        # If target_unit specified, try to convert to it
+        if target_unit:
+            target_lower = target_unit.lower().strip()
+
+            # If already in target unit, return as-is
+            if normalized_unit == target_lower:
+                return (normalized_quantity, normalized_unit)
+
+            # Try to convert to target unit
+            # Normalize target unit first
+            normalized_quantity_target = normalized_quantity
+            normalized_unit_target = normalized_unit
+
+            if target_lower in VOLUME_TO_ML:
+                # Target is a volume unit
+                if normalized_unit == "ml" or normalized_unit in VOLUME_TO_ML:
+                    # Convert from ml to target volume unit
+                    target_factor = VOLUME_TO_ML[target_lower]
+                    if target_factor != 0:
+                        normalized_quantity_target = normalized_quantity / target_factor
+                    normalized_unit_target = target_lower
+            elif target_lower in WEIGHT_TO_GRAMS:
+                # Target is a weight unit
+                if normalized_unit == "g" or normalized_unit in WEIGHT_TO_GRAMS:
+                    # Convert from g to target weight unit
+                    target_factor = WEIGHT_TO_GRAMS[target_lower]
+                    if target_factor != 0:
+                        normalized_quantity_target = normalized_quantity / target_factor
+                    normalized_unit_target = target_lower
+            elif target_lower in COUNT_UNITS or target_lower == "count":
+                # Converting to count
+                normalized_unit_target = target_lower if target_lower in COUNT_UNITS else "count"
+
+            return (normalized_quantity_target, normalized_unit_target)
+
+        return (normalized_quantity, normalized_unit)
