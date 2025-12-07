@@ -44,6 +44,11 @@ export function Header({ userEmail }: HeaderProps) {
                 Meal Plans
               </Button>
             </Link>
+            <Link href="/grocery-carts">
+              <Button variant="ghost" size="sm">
+                🛒 Grocery Lists
+              </Button>
+            </Link>
             <Link href="/generate">
               <Button variant="primary" size="sm">
                 Generate Plan

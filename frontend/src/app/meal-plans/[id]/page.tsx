@@ -135,7 +135,8 @@ export default function MealPlanDetailPage() {
     return null
   }
 
-  // Days are already organized - ensure days array exists
+  // API returns MealPlanDetail structure with nested meal_plan property
+  const planData = mealPlan.meal_plan || mealPlan
   const days = (mealPlan.days || []).sort((a, b) => a.day_number - b.day_number)
 
   return (
@@ -185,15 +186,15 @@ export default function MealPlanDetailPage() {
             ← Back to Meal Plans
           </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Meal Plan for {new Date(mealPlan.start_date).toLocaleDateString()}
+            Meal Plan for {new Date(planData.start_date).toLocaleDateString()}
           </h1>
           <p className="text-gray-600">
-            {mealPlan.num_days} days • {mealPlan.num_people} people • {mealPlan.meals_per_day} meals/day
+            {planData.num_days} days • {planData.num_people} people • {planData.meals_per_day} meals/day
           </p>
         </div>
 
         {/* Actions - Simple Cart Generation */}
-        {mealPlan.total_recipes && mealPlan.total_recipes > 0 && (
+        {planData.total_recipes && planData.total_recipes > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
             <div className="flex flex-col gap-4">
               <div>
@@ -262,7 +263,7 @@ export default function MealPlanDetailPage() {
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {day.meals.map((meal, idx) => (
-                    <Card key={meal.id} hover>
+                    <Card key={`${day.day_number}-${meal.recipe_id}-${idx}`} hover>
                       <CardHeader>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-semibold text-blue-600 uppercase">
@@ -272,61 +273,27 @@ export default function MealPlanDetailPage() {
                             {meal.servings} servings
                           </span>
                         </div>
-                        <CardTitle className="text-lg">{meal.recipe.title}</CardTitle>
+                        <CardTitle className="text-lg">{meal.recipe_name}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        {/* Ingredients */}
-                        <div className="mb-3">
-                          <p className="text-xs font-semibold text-gray-700 mb-1">Ingredients:</p>
-                          <ul className="text-xs text-gray-600 space-y-0.5">
-                            {meal.recipe.ingredients.slice(0, 3).map((ing, idx) => (
-                              <li key={idx} className="line-clamp-1">• {ing}</li>
-                            ))}
-                            {meal.recipe.ingredients.length > 3 && (
-                              <li className="text-gray-500 italic">
-                                +{meal.recipe.ingredients.length - 3} more...
-                              </li>
-                            )}
-                          </ul>
+                        {/* Basic meal info */}
+                        <div className="space-y-3 text-sm text-gray-600">
+                          {meal.calories && (
+                            <div className="flex justify-between items-center">
+                              <span>Calories:</span>
+                              <span className="font-semibold text-gray-900">{Math.round(meal.calories)}</span>
+                            </div>
+                          )}
+                          {meal.cost && (
+                            <div className="flex justify-between items-center">
+                              <span>Est. Cost:</span>
+                              <span className="font-semibold text-gray-900">${meal.cost.toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center border-t pt-3">
+                            <span className="text-xs text-gray-500">Recipe ID: {meal.recipe_id}</span>
+                          </div>
                         </div>
-
-                        {/* Dietary tags */}
-                        {meal.recipe.dietary_tags && meal.recipe.dietary_tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {meal.recipe.dietary_tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Nutrition */}
-                        {meal.recipe.nutrition && (
-                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 border-t pt-2">
-                            <div className="text-center">
-                              <div className="font-semibold text-gray-900">
-                                {Math.round(meal.recipe.nutrition.calories || 0)}
-                              </div>
-                              <div className="text-gray-500">cal</div>
-                            </div>
-                            <div className="text-center border-l border-r">
-                              <div className="font-semibold text-gray-900">
-                                {Math.round(meal.recipe.nutrition.protein || 0)}g
-                              </div>
-                              <div className="text-gray-500">protein</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="font-semibold text-gray-900">
-                                {Math.round(meal.recipe.nutrition.carbs || 0)}g
-                              </div>
-                              <div className="text-gray-500">carbs</div>
-                            </div>
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                   ))}

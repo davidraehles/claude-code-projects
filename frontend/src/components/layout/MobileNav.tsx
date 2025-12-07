@@ -122,6 +122,13 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               Meal Plans
             </Link>
             <Link
+              href="/grocery-carts"
+              onClick={closeMenu}
+              className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              🛒 Grocery Lists
+            </Link>
+            <Link
               href="/generate"
               onClick={closeMenu}
               className="block"
