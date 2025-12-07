@@ -5,7 +5,6 @@ Smoke tests run against deployed environments to validate basic functionality.
 """
 
 import os
-from typing import Generator
 
 import httpx
 import pytest
@@ -23,7 +22,7 @@ def base_url() -> str:
 
 
 @pytest.fixture(scope="module")
-def client(base_url: str) -> Generator[httpx.Client, None, None]:
+def client(base_url: str):
     """
     Create an HTTP client for smoke tests.
 
@@ -38,7 +37,7 @@ def client(base_url: str) -> Generator[httpx.Client, None, None]:
 
 
 @pytest.fixture(scope="module")
-def async_client(base_url: str) -> Generator[httpx.AsyncClient, None, None]:
+async def async_client(base_url: str):
     """
     Create an async HTTP client for smoke tests.
 
