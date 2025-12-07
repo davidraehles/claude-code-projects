@@ -72,9 +72,9 @@ export function useReducerWithDevTools<S, A>(
   name: string = 'Reducer',
   init?: (initialState: S) => S
 ): [S, React.Dispatch<A>] {
-  const [state, dispatch] = init
-    ? (useReducer(reducer, initialState, init) as [S, React.Dispatch<A>])
-    : (useReducer(reducer, initialState) as [S, React.Dispatch<A>])
+  // Always call useReducer with init function (wrapper allows undefined)
+  const actualInit = init || ((state: S) => state)
+  const [state, dispatch] = useReducer(reducer, initialState, actualInit) as [S, React.Dispatch<A>]
 
   const devToolsRef = useRef<DevToolsConnection | null>(null)
   const isTimeTravel = useRef(false)
