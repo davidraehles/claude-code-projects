@@ -27,8 +27,9 @@ export default function MealPlanDetailPage() {
   const mealPlanId = typeof rawId === 'string' ? parseInt(rawId, 10) : NaN
   const isValidId = !isNaN(mealPlanId) && mealPlanId > 0
 
-  // Local state for delivery preferences modal
+  // Local state for modals
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false)
   const [preferredTimeSlot, setPreferredTimeSlot] = useState<'morning' | 'afternoon' | 'evening'>('afternoon')
   const [budgetOptimization, setBudgetOptimization] = useState(false)
 
@@ -53,8 +54,8 @@ export default function MealPlanDetailPage() {
   // Generate grocery cart with delivery preferences
   const handleGenerateCart = () => {
     if (!hasKnusprCredentials) {
-      // Show credentials setup prompt
-      alert('Please configure Knuspr credentials first. Go to your account settings.')
+      // Show credentials setup modal
+      setShowCredentialsModal(true)
       return
     }
     // Show delivery preferences modal
@@ -386,6 +387,44 @@ export default function MealPlanDetailPage() {
                     ) : (
                       'Create Cart'
                     )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Credentials Setup Modal */}
+        {showCredentialsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle>Knuspr Credentials Required</CardTitle>
+                <CardDescription>
+                  Configure your Knuspr credentials to generate grocery carts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 mb-4">
+                  Please set up your Knuspr credentials in your account settings to create grocery carts from meal plans.
+                </p>
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowCredentialsModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setShowCredentialsModal(false)
+                      router.push('/account/settings')
+                    }}
+                    className="flex-1"
+                  >
+                    Go to Settings
                   </Button>
                 </div>
               </CardContent>

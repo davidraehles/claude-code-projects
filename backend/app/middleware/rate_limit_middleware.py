@@ -70,6 +70,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Endpoint-specific rate limiters with pre-compiled regex patterns
         self.endpoint_limiters: Dict[Pattern, RateLimiter] = {}
+        # Cache for path-to-limiter mapping to avoid repeated pattern matching
+        self._limiter_cache: Dict[str, RateLimiter] = {}
         self._configure_endpoint_limits()
 
         logger.info(
@@ -113,19 +115,33 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         Get the appropriate rate limiter for a given path.
 
+        Uses caching to avoid repeated pattern matching for frequently accessed paths.
+
         Args:
             path: Request path
 
         Returns:
             RateLimiter instance
         """
-        # Check for endpoint-specific limiter
-        for pattern, limiter in self.endpoint_limiters.items():
-            if re.match(pattern, path):
-                return limiter
+        # Check cache first for performance
+        if path in self._limiter_cache:
+            return self._limiter_cache[path]
 
-        # Use default limiter
-        return self.default_limiter
+        # Check for endpoint-specific limiter
+        limiter = None
+        for pattern, candidate_limiter in self.endpoint_limiters.items():
+            if re.match(pattern, path):
+                limiter = candidate_limiter
+                break
+
+        # Use default limiter if no specific pattern matched
+        if limiter is None:
+            limiter = self.default_limiter
+
+        # Cache the result
+        self._limiter_cache[path] = limiter
+
+        return limiter
 
     def _extract_client_ip(self, request: Request) -> str:
         """
