@@ -9,7 +9,6 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 
 export default function GroceryCartsPage() {
   // Auth state from context
@@ -66,7 +65,7 @@ export default function GroceryCartsPage() {
           </h3>
           <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
             <li>Go to <Link href="/meal-plans" className="font-semibold hover:underline">Meal Plans</Link> and select a meal plan</li>
-            <li>Click "Generate Grocery Cart" on the meal plan detail page</li>
+            <li>Click &quot;Generate Grocery Cart&quot; on the meal plan detail page</li>
             <li>Review your shopping list with items organized by category or recipe</li>
             <li>Check off items as you shop and export or print your list</li>
           </ol>
