@@ -188,7 +188,7 @@ export default function SignupPage() {
         {/* Benefits */}
         <div className="mt-6 bg-gradient-to-br from-green-50 to-blue-50 border border-green-200 rounded-lg p-4">
           <p className="text-sm font-semibold text-gray-900 mb-2">
-            ✨ What you'll get:
+            ✨ What you&apos;ll get:
           </p>
           <ul className="text-xs text-gray-700 space-y-1">
             <li>• AI-powered personalized meal plans</li>

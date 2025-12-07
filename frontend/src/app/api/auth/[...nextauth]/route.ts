@@ -78,19 +78,19 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any; user: any }) {
       // Add access_token to the token right after signin
       if (user) {
-        token.accessToken = (user as any).accessToken
+        token.accessToken = user.accessToken
         token.id = user.id
       }
       return token
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       // Send properties to the client
       if (token && session.user) {
         session.user.id = token.id as string
-        ;(session as any).accessToken = token.accessToken
+        session.accessToken = token.accessToken
       }
       return session
     },

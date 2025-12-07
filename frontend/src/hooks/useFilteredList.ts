@@ -4,7 +4,7 @@
  * Implements ARCH-007: Extract common filtering pattern
  */
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 
 export interface FilterOptions<T> {
   /** List of items to filter */

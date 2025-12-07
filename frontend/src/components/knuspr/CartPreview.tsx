@@ -1,17 +1,14 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import Link from 'next/link';
 import {
   ShoppingCart,
   Package,
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  DollarSign,
   Truck,
   CheckCircle,
-  Clock,
 } from 'lucide-react';
 import { formatEUR } from '@/lib/formatCurrency';
 

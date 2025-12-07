@@ -20,7 +20,7 @@ interface UseAuthenticatedDataOptions<T> {
   /**
    * Dependencies to trigger refetch
    */
-  deps?: any[]
+  deps?: (string | number | boolean | null | undefined)[]
 }
 
 interface UseAuthenticatedDataResult<T> {

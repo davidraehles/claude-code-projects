@@ -154,11 +154,11 @@ function GroceryCartPage() {
 
           <h3>User Interactions</h3>
           <ul>
-            <li><strong>Expand/Collapse:</strong> Click "Show Items" or "Hide Items" button</li>
-            <li><strong>Search Item:</strong> Click "Search" button next to item</li>
+            <li><strong>Expand/Collapse:</strong> Click &quot;Show Items&quot; or &quot;Hide Items&quot; button</li>
+            <li><strong>Search Item:</strong> Click &quot;Search&quot; button next to item</li>
             <li><strong>Dismiss Item:</strong> Click X button next to item</li>
             <li><strong>Dismiss Alert:</strong> Click X button in top-right corner</li>
-            <li><strong>Browse Knuspr:</strong> Click "Browse Knuspr" link in footer</li>
+            <li><strong>Browse Knuspr:</strong> Click &quot;Browse Knuspr&quot; link in footer</li>
           </ul>
 
           <h3>localStorage Keys</h3>

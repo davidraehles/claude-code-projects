@@ -14,7 +14,6 @@ import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { RecipeCard } from '@/components/recipe/RecipeCard'
-import type { Recipe } from '@/lib/types'
 
 export default function DashboardPage() {
   // Auth state from context
