@@ -86,7 +86,8 @@
       "Bash(gh run view:*)",
       "Bash(git diff:*)",
       "Bash(pytest:*)",
-      "Bash(python:*)"
+      "Bash(python:*)",
+      "Bash(gh pr checks:*)"
     ],
     "deny": [],
     "ask": []

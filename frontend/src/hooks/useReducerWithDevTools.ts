@@ -72,9 +72,11 @@ export function useReducerWithDevTools<S, A>(
   name: string = 'Reducer',
   init?: (initialState: S) => S
 ): [S, React.Dispatch<A>] {
-  const [state, dispatch] = init
-    ? useReducer(reducer, initialState, init)
-    : useReducer(reducer, initialState)
+  const [state, dispatch] = useReducer(
+    reducer,
+    initialState,
+    init
+  ) as [S, React.Dispatch<A>]
 
   const devToolsRef = useRef<DevToolsConnection | null>(null)
   const isTimeTravel = useRef(false)
@@ -116,9 +118,10 @@ export function useReducerWithDevTools<S, A>(
       devTools.init(state)
 
       // Subscribe to time-travel actions
-      const unsubscribe = devTools.subscribe((message: any) => {
+      const unsubscribe = devTools.subscribe((message: Record<string, unknown>) => {
         if (message.type === 'DISPATCH') {
-          switch ((message.payload as any).type) {
+          const payload = message.payload as Record<string, unknown>
+          switch (payload.type) {
             case 'JUMP_TO_STATE':
             case 'JUMP_TO_ACTION':
               isTimeTravel.current = true
