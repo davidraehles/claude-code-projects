@@ -60,7 +60,8 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
         case 'cart':
           return { ...prev, currentStep: 'delivery', error: null };
         case 'delivery':
-          if (!state.selectedSlot) {
+          // Use prev.selectedSlot to avoid stale closure issues
+          if (!prev.selectedSlot) {
             return { ...prev, error: 'Please select a delivery slot' };
           }
           return { ...prev, currentStep: 'confirm', error: null };
@@ -70,7 +71,7 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
           return prev;
       }
     });
-  }, [state.selectedSlot]);
+  }, []);
 
   /**
    * Navigate to previous step
@@ -106,26 +107,33 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
    * Handle final checkout submission
    */
   const handleCheckout = useCallback(() => {
-    if (!state.selectedSlot) {
-      setState((prev) => ({
+    setState((prev) => {
+      // Use prev.selectedSlot to avoid stale closure issues
+      if (!prev.selectedSlot) {
+        return {
+          ...prev,
+          error: 'No delivery slot selected. Please go back and select a slot.',
+        };
+      }
+
+      // Generate order ID when completing checkout
+      // In production, this would submit to the backend
+      const orderId = `ORD-${Date.now()}`;
+
+      // Call onCheckoutComplete callback if provided
+      if (onCheckoutComplete) {
+        onCheckoutComplete(orderId);
+      }
+
+      return {
         ...prev,
-        error: 'No delivery slot selected. Please go back and select a slot.',
-      }));
-      return;
-    }
-
-    // Generate order ID when completing checkout
-    // In production, this would submit to the backend
-    const orderId = `ORD-${Date.now()}`;
-    setState((prev) => ({
-      ...prev,
-      orderId,
-    }));
-
-    if (onCheckoutComplete) {
-      onCheckoutComplete(orderId);
-    }
-  }, [state.selectedSlot, onCheckoutComplete]);
+        orderId,
+        currentStep: 'complete',
+        orderConfirmed: true,
+        error: null,
+      };
+    });
+  }, [onCheckoutComplete]);
 
   /**
    * Render cart review step
@@ -343,8 +351,7 @@ const CheckoutFlow: React.FC<CheckoutFlowProps> = ({
           }
           disabled={
             isProcessing ||
-            (state.currentStep === 'confirm' && !state.orderConfirmed) ||
-            (state.currentStep === 'delivery' && !state.selectedSlot)
+            (state.currentStep === 'confirm' && !state.orderConfirmed)
           }
           className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
