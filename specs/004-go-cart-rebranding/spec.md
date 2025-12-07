@@ -83,6 +83,15 @@ Waitlist emails are reliably stored in the existing PostgreSQL database with pro
 - How are invalid characters or SQL-injection attempts in email fields handled?
 - What happens when a user submits the waitlist form multiple times rapidly (spam prevention)?
 
+---
+
+## Clarifications
+
+### Session 2025-12-07
+
+- Q: Database connection failure handling for waitlist signups → A: Queue for later processing using service worker/background job for maximum resilience
+- Q: Email verification requirement for waitlist → A: Double opt-in (confirmation email required) - spot confirmed only after user clicks verification link
+
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
@@ -101,10 +110,25 @@ Waitlist emails are reliably stored in the existing PostgreSQL database with pro
 - **FR-012**: All existing authenticated user workflows (meal planning, recipe search, cart management) MUST function identically with the new visual design
 - **FR-013**: The system MUST support both light and dark themes that automatically adapt to user's system theme preference (prefers-color-scheme)
 - **FR-014**: All Material Design styling MUST be implemented in both light and dark theme variants with appropriate color contrast and accessibility standards
+- **FR-015**: When database connection fails during email submission, the system MUST queue the email for asynchronous processing using a service worker/background job (not discard it or show error)
+- **FR-016**: Queued emails MUST be persisted locally (IndexedDB or equivalent) until successfully synced to PostgreSQL database
+- **FR-017**: The system MUST display user-friendly status feedback ("We're saving your email - thanks for your patience") when email is queued for background processing
+- **FR-018**: The system MUST send a confirmation email to every submitted email address with a verification link
+- **FR-019**: Submitted emails MUST be stored with status "pending_verification" until the verification link is clicked
+- **FR-020**: Only emails with status "confirmed" MUST be counted as active waitlist members
+- **FR-021**: Verification links MUST expire after 7 days; users can request a new link by re-entering email on signup form
+- **FR-022**: Confirmation email MUST include: brand logo, verification link, expiration time, and link to resend confirmation
 
 ### Key Entities
 
-- **WaitlistSignup**: Represents a user email entry in the waitlist. Key attributes: email (string, unique), signup_timestamp (datetime), status (enum: active, unsubscribed)
+- **WaitlistSignup**: Represents a user email entry in the waitlist. Key attributes:
+  - email (string, unique)
+  - signup_timestamp (datetime)
+  - status (enum: pending_verification, confirmed, unsubscribed)
+  - verification_token (string, used for confirmation link)
+  - verification_sent_at (datetime)
+  - verified_at (datetime, null until email is confirmed)
+  - verification_expires_at (datetime, 7 days from verification_sent_at)
 
 ## Success Criteria *(mandatory)*
 
@@ -120,6 +144,10 @@ Waitlist emails are reliably stored in the existing PostgreSQL database with pro
 - **SC-008**: Invalid email submissions receive error feedback within 1 second of form submission
 - **SC-009**: Application automatically switches between light and dark themes based on system settings, with zero manual configuration required from users
 - **SC-010**: Both light and dark themes meet WCAG AA contrast ratio standards for all text and interactive elements
+- **SC-011**: Confirmation email sent within 5 seconds of form submission
+- **SC-012**: Verification link requires valid token and is clickable within 7-day expiration window
+- **SC-013**: Users clicking valid verification link see confirmation message within 2 seconds and are marked as confirmed in database
+- **SC-014**: 99% of confirmation emails are successfully delivered (tracked via delivery webhooks or similar)
 
 ## Design Direction
 
