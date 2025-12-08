@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { useFillKnusprCart } from '@/hooks/queries/useKnusprCart'

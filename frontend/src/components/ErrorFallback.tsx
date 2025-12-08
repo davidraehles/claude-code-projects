@@ -6,7 +6,7 @@
 'use client'
 
 import { ErrorInfo } from 'react'
-import { Button } from './ui/Button'
+import { Button } from './ui/button'
 
 interface ErrorFallbackProps {
   error: Error | null

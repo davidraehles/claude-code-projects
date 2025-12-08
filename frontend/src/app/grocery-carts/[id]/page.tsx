@@ -18,7 +18,7 @@ import {
   type GroceryCartState,
 } from '@/reducers/groceryCartReducer'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { ViewToggle } from '@/components/grocery/ViewToggle'
 import { RecipeView } from '@/components/grocery/RecipeView'
 import { CategoryView } from '@/components/grocery/CategoryView'

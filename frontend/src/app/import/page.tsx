@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useImportRecipe } from '@/hooks/queries/useRecipes'
 import { useFileUpload } from '@/hooks/queries/useFileUpload'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 

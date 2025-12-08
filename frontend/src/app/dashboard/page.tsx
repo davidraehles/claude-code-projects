@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRecipes } from '@/hooks/queries/useRecipes'
 import { useFilteredList } from '@/hooks/useFilteredList'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { RecipeCard } from '@/components/recipe/RecipeCard'
 

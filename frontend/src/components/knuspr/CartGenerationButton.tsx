@@ -10,7 +10,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { useGenerateCartFromMealPlan } from '@/hooks/queries/useGroceryCarts'
 
 export interface CartGenerationButtonProps {

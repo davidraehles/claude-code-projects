@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { useMealPlans } from '@/hooks/queries/useMealPlans'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 
 export default function MealPlansPage() {
