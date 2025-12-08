@@ -92,7 +92,8 @@
       "Bash(gh api:*)",
       "Bash(git merge:*)",
       "Bash(while read file)",
-      "Bash(do sed -i \"s|from ''''\\(.*\\)ui/Button''''|from ''''\\1ui/button''''|g\" \"$file\" sed -i 's|from \"\"\"\"\\(.*\\)ui/Button\"\"\"\"|from \"\"\"\"\\1ui/button\"\"\"\"|g' \"$file\" done)"
+      "Bash(do sed -i \"s|from ''''\\(.*\\)ui/Button''''|from ''''\\1ui/button''''|g\" \"$file\" sed -i 's|from \"\"\"\"\\(.*\\)ui/Button\"\"\"\"|from \"\"\"\"\\1ui/button\"\"\"\"|g' \"$file\" done)",
+      "Bash(xargs sed:*)"
     ],
     "deny": [],
     "ask": []

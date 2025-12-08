@@ -68,7 +68,7 @@ export function ErrorFallback({ error, errorInfo, onReset }: ErrorFallbackProps)
                 </Button>
               )}
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={handleReload}
                 className="flex-1"
               >

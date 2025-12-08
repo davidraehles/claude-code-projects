@@ -278,7 +278,7 @@ export function FillCartButton({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleReset}
               className="flex-1"
               aria-label="Cancel"
@@ -436,7 +436,7 @@ export function FillCartButton({
           )}
 
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleReset}
             className="w-full"
             aria-label="Close and return"
@@ -502,7 +502,7 @@ export function FillCartButton({
             Try Again
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleReset}
             className="flex-1"
             aria-label="Cancel"

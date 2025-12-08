@@ -245,7 +245,7 @@ export default function CreatePage() {
                 </div>
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="secondary"
                   onClick={handleAddIngredient}
                   className="mt-2 w-full"
                   disabled={isPending}

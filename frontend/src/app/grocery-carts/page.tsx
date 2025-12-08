@@ -49,7 +49,7 @@ export default function GroceryCartsPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/meal-plans">
-              <Button variant="outline">View Meal Plans</Button>
+              <Button variant="secondary">View Meal Plans</Button>
             </Link>
             <Link href="/generate">
               <Button variant="primary">Generate New Plan</Button>
