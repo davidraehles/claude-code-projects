@@ -33,7 +33,6 @@ export function FillCartButton({
   className = '',
 }: FillCartButtonProps) {
   const [showForm, setShowForm] = useState(false)
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberCredentials, setRememberCredentials] = useState(false)
   const [formErrors, setFormErrors] = useState<{
@@ -47,13 +46,18 @@ export function FillCartButton({
   const { credentialStatus, saveCredentials } = useKnusprCredentials()
 
   // Load saved credentials if available
-  const initialEmail = credentialStatus.data?.has_credentials && credentialStatus.data?.knuspr_email
-    ? credentialStatus.data.knuspr_email
-    : '';
-  const [email, setEmail] = useState(initialEmail)
-  const [rememberCredentials, setRememberCredentials] = useState(credentialStatus.data?.has_credentials || false)
+  useEffect(() => {
+    if (credentialStatus.data?.has_credentials) {
+      setEmail(credentialStatus.data.knuspr_email || '')
+      setRememberCredentials(true)
+    }
+  }, [credentialStatus.data])
+
+  const [email, setEmail] = useState('')
 
   // Validate form
+
+  const [email, setEmail] = useState('')
   const validateForm = (): boolean => {
     const errors: { email?: string; password?: string } = {}
 
