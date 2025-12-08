@@ -26,7 +26,7 @@ def upgrade() -> None:
     sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=False),
     sa.Column('verified_at', sa.DateTime(), nullable=True),
     sa.Column('invited_at', sa.DateTime(), nullable=True),
-    sa.Column('metadata', postgresql.JSONB(), nullable=True),
+    sa.Column('metadata', sa.JSON().with_variant(postgresql.JSONB(), "postgresql"), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
     )
@@ -34,15 +34,15 @@ def upgrade() -> None:
     op.create_index(op.f('ix_waitlist_entries_email'), 'waitlist_entries', ['email'], unique=False)
     op.create_index(op.f('ix_waitlist_entries_status'), 'waitlist_entries', ['status'], unique=False)
     op.create_index(op.f('ix_waitlist_entries_verification_token'), 'waitlist_entries', ['verification_token'], unique=False)
-
-    print("✅ Created waitlist_entries table with indexes")
+    op.create_index(op.f('ix_waitlist_entries_verified_at'), 'waitlist_entries', ['verified_at'], unique=False)
+    op.create_index(op.f('ix_waitlist_entries_invited_at'), 'waitlist_entries', ['invited_at'], unique=False)
 
 
 def downgrade() -> None:
+    op.drop_index(op.f('ix_waitlist_entries_invited_at'), table_name='waitlist_entries')
+    op.drop_index(op.f('ix_waitlist_entries_verified_at'), table_name='waitlist_entries')
     op.drop_index(op.f('ix_waitlist_entries_verification_token'), table_name='waitlist_entries')
     op.drop_index(op.f('ix_waitlist_entries_status'), table_name='waitlist_entries')
     op.drop_index(op.f('ix_waitlist_entries_email'), table_name='waitlist_entries')
     op.drop_index(op.f('ix_waitlist_entries_created_at'), table_name='waitlist_entries')
     op.drop_table('waitlist_entries')
-
-    print("✅ Dropped waitlist_entries table")

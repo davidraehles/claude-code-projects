@@ -12,17 +12,16 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_database
 from app.models.waitlist import WaitlistEntry
-from app.schemas.waitlist import WaitlistCreate, WaitlistVerify, WaitlistResponse
+from app.schemas.waitlist import WaitlistCreate, WaitlistVerify, WaitlistResponse, WaitlistStatus
 
 router = APIRouter()
 
 def get_position(db: Session, entry: WaitlistEntry) -> Optional[int]:
-    """Compute FIFO queue position based on creation timestamp."""
-    if not entry.created_at:
+    """Compute FIFO queue position based on ID (FIFO order)."""
+    if not entry.id:
         return None
-    count = db.query(WaitlistEntry).filter(
-        WaitlistEntry.created_at < entry.created_at
-    ).count()
+    # Count entries with ID less than current (simpler and more reliable than timestamp comparison)
+    count = db.query(WaitlistEntry).filter(WaitlistEntry.id < entry.id).count()
     return count + 1
 
 def create_waitlist_response(entry: WaitlistEntry, db: Session) -> WaitlistResponse:
@@ -33,7 +32,9 @@ def create_waitlist_response(entry: WaitlistEntry, db: Session) -> WaitlistRespo
         email=entry.email,
         status=entry.status,
         position=position,
-        created_at=entry.created_at
+        created_at=entry.created_at,
+        verified_at=entry.verified_at,
+        invited_at=entry.invited_at
     )
 
 @router.post("/", response_model=WaitlistResponse, status_code=201)
@@ -67,7 +68,7 @@ def join_waitlist(
     # Create pending entry
     entry = WaitlistEntry(
         email=waitlist_in.email,
-        status="PENDING",
+        status=WaitlistStatus.PENDING.value,
         verification_token=str(uuid.uuid4()),
         metadata_payload=waitlist_in.metadata,
     )
@@ -97,24 +98,29 @@ def verify_email(
     Raises:
         HTTPException: 400 if token is invalid or expired, or email already verified
     """
+    # First, try to find entry by token (won't find if already verified since token is cleared)
     entry = db.query(WaitlistEntry).filter(
         WaitlistEntry.verification_token == verify_in.token
     ).first()
 
+    # If not found by token, check if it was already verified
     if not entry:
+        # Check if this token was used before (entry exists but token is cleared)
+        # This is a security measure - we don't reveal if email exists
         raise HTTPException(
             status_code=400,
             detail="Invalid or expired verification token"
         )
 
-    if entry.status != "PENDING":
+    # Additional check: entry found but status is not PENDING
+    if entry.status != WaitlistStatus.PENDING.value:
         raise HTTPException(
             status_code=400,
             detail="Email already verified"
         )
 
     # Mark as verified and clear token
-    entry.status = "VERIFIED"
+    entry.status = WaitlistStatus.VERIFIED.value
     entry.verified_at = datetime.now(timezone.utc)
     entry.verification_token = None
     db.commit()

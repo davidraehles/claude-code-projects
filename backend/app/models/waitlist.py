@@ -5,7 +5,7 @@ Defines the database schema for waitlist signups with status tracking and verifi
 """
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, BigInteger, Integer, String, DateTime, Index
+from sqlalchemy import Column, BigInteger, Integer, String, DateTime, Index, func
 from sqlalchemy.dialects.postgresql import JSONB
 from app.database import Base
 from app.models.user import JSONType
@@ -46,7 +46,7 @@ class WaitlistEntry(Base):
     verification_token = Column(String(255), nullable=True, index=True)
 
     # Timestamps
-    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    created_at = Column(DateTime, nullable=False, default=func.now(), server_default=func.now(), index=True)
     verified_at = Column(DateTime, nullable=True, index=True)
     invited_at = Column(DateTime, nullable=True, index=True)
 

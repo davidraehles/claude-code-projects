@@ -189,9 +189,13 @@ describe('Hero Component', () => {
       await user.type(emailInput, 'test@example.com');
       await user.click(submitButton);
 
+      // After successful submission, form is hidden and success message is shown
       await waitFor(() => {
-        expect(emailInput).toHaveValue('');
+        expect(screen.getByText(/Welcome to the waitlist/i)).toBeInTheDocument();
       });
+
+      // Form should not be visible
+      expect(screen.queryByRole('textbox', { name: /email address/i })).not.toBeInTheDocument();
     });
   });
 

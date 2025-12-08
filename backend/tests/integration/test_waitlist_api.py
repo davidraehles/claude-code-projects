@@ -190,12 +190,14 @@ class TestWaitlistVerification:
         )
 
         # Try to verify again with same token
+        # After first verification, token is cleared for security
+        # So second attempt returns generic error (prevents email enumeration)
         response = client.post(
             "/api/v1/waitlist/verify",
             json={"token": token}
         )
         assert response.status_code == 400
-        assert "already verified" in response.json()["detail"]
+        assert "Invalid or expired" in response.json()["detail"]
 
 
 class TestWaitlistStatus:

@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 from enum import Enum
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 
 class WaitlistStatus(str, Enum):
@@ -27,8 +27,8 @@ class WaitlistCreate(BaseModel):
         description="Optional marketing attribution data"
     )
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "email": "user@example.com",
                 "metadata": {
@@ -37,30 +37,33 @@ class WaitlistCreate(BaseModel):
                 }
             }
         }
+    )
 
 
 class WaitlistVerify(BaseModel):
     """Schema for email verification."""
     token: str = Field(..., description="Verification token from email")
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "token": "abc123-def456-ghi789"
             }
         }
+    )
 
 
 class WaitlistStatusRequest(BaseModel):
     """Schema for checking waitlist status."""
     email: EmailStr = Field(..., description="User email address")
 
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "email": "user@example.com"
             }
         }
+    )
 
 
 class WaitlistResponse(BaseModel):
@@ -70,15 +73,20 @@ class WaitlistResponse(BaseModel):
     status: WaitlistStatus = Field(..., description="Current status")
     position: Optional[int] = Field(None, description="Approximate queue position")
     created_at: datetime = Field(..., description="Creation timestamp")
+    verified_at: Optional[datetime] = Field(None, description="Email verification timestamp")
+    invited_at: Optional[datetime] = Field(None, description="Invitation timestamp")
 
-    class Config:
-        from_attributes = True
-        schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "id": 1,
                 "email": "user@example.com",
                 "status": "PENDING",
                 "position": 42,
-                "created_at": "2025-12-07T22:00:00Z"
+                "created_at": "2025-12-07T22:00:00Z",
+                "verified_at": None,
+                "invited_at": None
             }
         }
+    )
