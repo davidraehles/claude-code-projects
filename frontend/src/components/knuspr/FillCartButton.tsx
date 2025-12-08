@@ -47,12 +47,12 @@ export function FillCartButton({
   const { credentialStatus, saveCredentials } = useKnusprCredentials()
 
   // Load saved credentials if available
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     if (credentialStatus.data?.has_credentials && credentialStatus.data?.knuspr_email) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setEmail(credentialStatus.data.knuspr_email)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+       
       setRememberCredentials(true)
     }
   }, [credentialStatus.data])

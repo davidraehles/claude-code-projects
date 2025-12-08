@@ -1,5 +1,6 @@
 import { test, expect, chromium } from '@playwright/test';
 import lighthouse from 'playwright-lighthouse';
+import { writeFileSync } from 'fs';
 
 test.describe('Lighthouse Audit - Go-Cart Rebranding', () => {
   test('Lighthouse audit on rebranded landing page @lighthouse', async ({ page }) => {
@@ -31,7 +32,7 @@ test.describe('Lighthouse Audit - Go-Cart Rebranding', () => {
       port: 9222,
       onlyCategories: ['performance', 'accessibility', 'best-practices', 'seo']
     });
-    
+
     await browser.close();
 
     // Extract and log scores
@@ -43,7 +44,7 @@ test.describe('Lighthouse Audit - Go-Cart Rebranding', () => {
     console.log(`Lighthouse Scores - Performance: ${perf}, Accessibility: ${acc}, Best Practices: ${bp}, SEO: ${seo}`);
 
     // Save HTML report
-    require('fs').writeFileSync('../lighthouse-playwright-report.html', lhr.report);
+    writeFileSync('../lighthouse-playwright-report.html', lhr.report);
     console.log('Detailed report saved: lighthouse-playwright-report.html');
   });
 });

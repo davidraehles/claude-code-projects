@@ -23,7 +23,7 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
   const [state, setState] = useState<FormState>("idle")
   const [errorMessage, setErrorMessage] = useState("")
   const [queueCount, setQueueCount] = useState(0)
-  const [isOnline, setIsOnline] = useState(true)
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine)
 
   // Check online status
   useEffect(() => {
@@ -47,8 +47,6 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
 
     window.addEventListener("online", handleOnline)
     window.addEventListener("offline", handleOffline)
-
-    setIsOnline(navigator.onLine)
 
     return () => {
       window.removeEventListener("online", handleOnline)
@@ -288,14 +286,14 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
         {/* Offline indicator */}
         {!isOnline && queueCount === 0 && (
           <div className="mt-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm">
-            <p>You're currently offline. Your submission will be saved and sent when you reconnect.</p>
+            <p>You&#39;re currently offline. Your submission will be saved and sent when you reconnect.</p>
           </div>
         )}
       </form>
 
       {/* Privacy notice */}
       <p className="text-xs text-neutral-600 text-center mt-4 max-w-md mx-auto">
-        We'll send you a verification email. No spam, ever. You can unsubscribe at any time.
+        We&#39;ll send you a verification email. No spam, ever. You can unsubscribe at any time.
       </p>
     </div>
   )

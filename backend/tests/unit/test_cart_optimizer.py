@@ -82,7 +82,7 @@ async def test_create_cart_success_emits_event_and_metrics(
 
         # Execute
         result = await agent.create_cart_from_meal_plan(
-            meal_plan_id=123, user_id=456, db=mock_db, credential_manager=MagicMock()
+            meal_plan_id=123, user_id=456, credential_manager=MagicMock()
         )
 
         # Verify Event Emission
@@ -122,7 +122,6 @@ async def test_create_cart_failure_emits_event_and_metrics(
             await agent.create_cart_from_meal_plan(
                 meal_plan_id=123,
                 user_id=456,
-                db=mock_db,
                 credential_manager=MagicMock(),
             )
 

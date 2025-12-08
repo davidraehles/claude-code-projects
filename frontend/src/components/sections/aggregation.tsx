@@ -146,7 +146,7 @@ export function Aggregation() {
             One list. Zero duplicates.
           </h2>
           <p className="body-large text-xl md:text-2xl text-neutral-600 max-w-2xl mx-auto">
-            We combine ingredients across all your planned meals. Like magic, but it's math.
+            Like magic, but it&#39;s math.
           </p>
         </div>
 

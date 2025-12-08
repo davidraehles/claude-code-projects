@@ -185,7 +185,7 @@ function VerifyContent() {
           Email Verified!
         </h1>
         <p className="text-neutral-600 mb-6">
-          Thanks for confirming your email address. You're all set on the waitlist!
+          Thanks for confirming your email address. You&#39;re all set on the waitlist!
         </p>
 
         {entry && entry.position && (
@@ -199,7 +199,7 @@ function VerifyContent() {
 
         <div className="space-y-3">
           <p className="text-sm text-neutral-600">
-            We'll notify you when it's your turn to join Go, Cart!
+            We&#39;ll notify you when it&#39;s your turn to join Go, Cart!
           </p>
           <Button
             variant="primary"
