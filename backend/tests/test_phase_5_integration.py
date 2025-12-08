@@ -18,15 +18,16 @@ from fastapi.testclient import TestClient
 
 # Import backend components
 import sys
-sys.path.insert(0, '/home/darae/claude-code-projects')
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.main import app
 from src.db.models import User, Recipe, MealPlan, GroceryCart
 from src.db.session import get_db
 from src.services.auth import create_access_token
-from src.services.meal_architect import MealArchitectAgent
-from src.agents.recipe_harvester import RecipeHarvester
-from src.agents.ingredient_intelligence import IngredientIntelligenceAgent
+from app.agents.meal_architect import MealArchitectAgent
+from app.agents.recipe_harvester import RecipeScraper
+from app.agents.ingredient_intelligence import IngredientIntelligenceAgent
 
 
 client = TestClient(app)
