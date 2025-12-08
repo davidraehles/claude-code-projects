@@ -51,14 +51,14 @@ description: "Task list for Go, Cart! Rebranding feature implementation"
 **Independent Test**: Verify API endpoints using `backend/tests/integration/test_waitlist.py`.
 
 ### Tests for User Story 1
-- [ ] T011 [P] [US1] Create integration test for waitlist flow in `backend/tests/integration/test_waitlist.py`
+- [x] T011 [P] [US1] Create integration test for waitlist flow in `backend/tests/integration/test_waitlist.py`
 
 ### Implementation for User Story 1
-- [ ] T014 [US1] Update EmailService to support verification emails in `backend/app/services/email.py`
-- [ ] T037 [US1] Create HTML email template for verification in `backend/app/templates/email/verification.html`
+- [x] T014 [US1] Update EmailService to support verification emails in `backend/app/services/email.py`
+- [x] T037 [US1] Create HTML email template for verification in `backend/app/templates/email/verification.html`
 - [x] T015 [US1] Implement Waitlist API endpoints (including resend logic) in `backend/app/api/v1/waitlist.py`
 - [x] T016 [US1] Register waitlist router in `backend/app/api/v1/__init__.py`
-- [ ] T038 [US1] Instrument Waitlist API with Prometheus metrics in `backend/app/api/v1/waitlist.py`
+- [x] T038 [US1] Instrument Waitlist API with Prometheus metrics in `backend/app/api/v1/waitlist.py`
 
 **Checkpoint**: Backend API is fully functional and passes tests.
 
@@ -90,11 +90,11 @@ description: "Task list for Go, Cart! Rebranding feature implementation"
 **Independent Test**: Verify animations trigger correctly on scroll and interactions feel smooth.
 
 ### Implementation for User Story 3
-- [ ] T024 [P] [US3] Configure Lenis smooth scrolling in `frontend/src/lib/animations/smooth-scroll.tsx`
-- [ ] T025 [P] [US3] Implement GSAP ScrollTrigger logic for Aggregation section in `frontend/src/components/sections/aggregation.tsx`
-- [ ] T026 [P] [US3] Add Framer Motion entrance animations to Hero in `frontend/src/components/sections/hero.tsx`
-- [ ] T027 [P] [US3] Add drag-and-drop animation to Planning section in `frontend/src/components/sections/planning.tsx`
-- [ ] T028 [US3] Implement scroll progress indicator in `frontend/src/components/ui/progress-indicator.tsx`
+- [x] T024 [P] [US3] Configure Lenis smooth scrolling in `frontend/src/lib/animations/smooth-scroll.tsx`
+- [x] T025 [P] [US3] Implement GSAP ScrollTrigger logic for Aggregation section in `frontend/src/components/sections/aggregation.tsx`
+- [x] T026 [P] [US3] Add Framer Motion entrance animations to Hero in `frontend/src/components/sections/hero.tsx`
+- [x] T027 [P] [US3] Add drag-and-drop animation to Planning section in `frontend/src/components/sections/planning.tsx`
+- [x] T028 [US3] Implement scroll progress indicator in `frontend/src/components/ui/progress-indicator.tsx`
 
 **Checkpoint**: Landing page is fully animated and interactive.
 
@@ -107,12 +107,12 @@ description: "Task list for Go, Cart! Rebranding feature implementation"
 **Independent Test**: Verify full user flow: Signup on frontend -> Backend DB entry -> Email received.
 
 ### Implementation for User Story 4
-- [ ] T029 [P] [US4] Create WaitlistForm component in `frontend/src/components/sections/waitlist-form.tsx`
-- [ ] T030 [US4] Implement API client for waitlist endpoints in `frontend/src/lib/api.ts`
-- [ ] T039 [US4] Implement IndexedDB wrapper for offline storage in `frontend/src/lib/offline-storage.ts`
-- [ ] T040 [US4] Create Service Worker for background sync in `frontend/public/sw.js` and registration in `frontend/src/app/providers.tsx`
-- [ ] T031 [US4] Integrate form with API, offline queueing, and handle loading/error states in `frontend/src/components/sections/waitlist-form.tsx`
-- [ ] T032 [US4] Create Email Verification page and logic in `frontend/src/app/verify/page.tsx`
+- [x] T029 [P] [US4] Create WaitlistForm component in `frontend/src/components/sections/waitlist-form.tsx`
+- [x] T030 [US4] Implement API client for waitlist endpoints in `frontend/src/lib/api.ts`
+- [x] T039 [US4] Implement IndexedDB wrapper for offline storage in `frontend/src/lib/offline-storage.ts`
+- [x] T040 [US4] Create Service Worker for background sync in `frontend/public/sw.js` and registration in `frontend/src/app/providers.tsx`
+- [x] T031 [US4] Integrate form with API, offline queueing, and handle loading/error states in `frontend/src/components/sections/waitlist-form.tsx`
+- [x] T032 [US4] Create Email Verification page and logic in `frontend/src/app/verify/page.tsx`
 
 **Checkpoint**: Full feature is functional end-to-end.
 
@@ -122,10 +122,10 @@ description: "Task list for Go, Cart! Rebranding feature implementation"
 
 **Purpose**: Final optimizations and checks.
 
-- [ ] T033 [P] Add SEO meta tags and Open Graph images in `frontend/src/app/layout.tsx`
-- [ ] T034 [P] Optimize images and assets in `frontend/public/`
-- [ ] T035 Verify accessibility (ARIA labels, keyboard nav) across all components
-- [ ] T036 Run Lighthouse performance audit and optimize bundle size
+- [x] T033 [P] Add SEO meta tags and Open Graph images in `frontend/src/app/layout.tsx`
+- [x] T034 [P] Optimize images and assets in `frontend/public/`
+- [x] T035 Verify accessibility (ARIA labels, keyboard nav) across all components
+- [x] T036 Run Lighthouse performance audit and optimize bundle size
 
 ---
 

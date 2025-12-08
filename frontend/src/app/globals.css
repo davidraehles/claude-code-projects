@@ -79,3 +79,122 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ==========================================
+   Accessibility Enhancements
+   ========================================== */
+
+/* Skip to content link - WCAG 2.1 requirement */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  background: #E85A4F;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 0 0 0.5rem 0;
+  z-index: 9999;
+  transition: top 0.2s;
+}
+
+.skip-to-content:focus {
+  top: 0;
+  outline: 3px solid #7EC8A3;
+  outline-offset: 2px;
+}
+
+/* Improved focus indicators - WCAG 2.1 AAA */
+*:focus-visible {
+  outline: 3px solid #E85A4F;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #E85A4F;
+  outline-offset: 2px;
+}
+
+/* Ensure sufficient color contrast for text */
+.text-muted {
+  color: #635A50; /* Ensures 4.5:1 contrast ratio */
+}
+
+/* Reduced motion support - WCAG 2.1 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  button,
+  a {
+    border: 2px solid currentColor;
+  }
+
+  .btn-primary {
+    background: #E85A4F;
+    color: white;
+    border: 3px solid #000;
+  }
+
+  .btn-secondary {
+    background: white;
+    color: #2D3748;
+    border: 3px solid #2D3748;
+  }
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ensure minimum touch target size (44x44px) - WCAG 2.1 AAA Mobile */
+@media (max-width: 768px) {
+  button,
+  a.btn,
+  input[type="button"],
+  input[type="submit"],
+  .touchable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Print styles for accessibility */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+
+  a[href^="#"]::after,
+  a[href^="javascript:"]::after {
+    content: "";
+  }
+}

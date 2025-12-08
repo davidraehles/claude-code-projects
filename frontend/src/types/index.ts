@@ -24,7 +24,7 @@ export type ThemePreference = 'light' | 'dark' | 'system';
 
 export interface WaitlistCreate {
   email: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WaitlistResponse extends WaitlistEntry {

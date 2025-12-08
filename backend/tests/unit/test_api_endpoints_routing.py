@@ -1,4 +1,3 @@
-
 import pytest
 from fastapi.testclient import TestClient
 from fastapi import FastAPI
@@ -65,7 +64,7 @@ def test_create_grocery_cart_no_trailing_slash(client, app, mock_db, mock_user_i
     app.dependency_overrides[get_current_user_id] = lambda: mock_user_id
 
     payload = {
-        "meal_plan_id": "test-plan-1",
+        "meal_plan_id": 1,
         "delivery_preferences": {
              "preferred_dates": ["2023-01-01"],
              "preferred_time_slot": "morning"
@@ -87,7 +86,7 @@ def test_get_grocery_cart(client, app, mock_db, mock_user_id):
     app.dependency_overrides[get_database] = lambda: mock_db
     # Not using user_id in endpoint currently, but good practice if auth is added
 
-    cart_id = "test-cart-123"
+    cart_id = 1
     response = client.get(f"/api/v1/grocery-carts/{cart_id}")
 
     assert response.status_code == 200

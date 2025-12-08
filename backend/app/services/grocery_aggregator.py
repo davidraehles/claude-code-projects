@@ -5,7 +5,7 @@ Provides ingredient parsing, unit normalization, and aggregation from meal plans
 """
 
 import re
-from typing import Tuple, List, Dict, Any, Optional
+from typing import Tuple, List, Dict, Any, Optional, Union
 from dataclasses import dataclass
 from fractions import Fraction
 
@@ -162,7 +162,7 @@ class GroceryAggregator:
         self.is_async = isinstance(self.db_session, AsyncSession) if self.db_session else False
 
     def aggregate_from_meal_plan_sync(
-        self, meal_plan_id: int
+        self, meal_plan_id: Union[int, MealPlan]
     ) -> List[AggregatedIngredient]:
         """
         Generate an aggregated grocery list from a meal plan (synchronous version).
@@ -179,27 +179,28 @@ class GroceryAggregator:
         Raises:
             ValueError: If meal plan not found or has no recipes
         """
-        # Fetch meal plan with recipes using synchronous session
-        meal_plan = (
-            self.db_session.query(MealPlan)
-            .options(selectinload(MealPlan.recipes).selectinload(MealPlanRecipe.recipe))
-            .filter(MealPlan.id == meal_plan_id)
-            .first()
-        )
-
-        if not meal_plan:
+        meal_plan_obj = meal_plan_id
+        if isinstance(meal_plan_id, int):
+            meal_plan_obj = (
+                self.db_session.query(MealPlan)
+                .options(selectinload(MealPlan.recipes).selectinload(MealPlanRecipe.recipe))
+                .filter(MealPlan.id == meal_plan_id)
+                .first()
+            )
+        if not meal_plan_obj:
             raise ValueError(f"Meal plan {meal_plan_id} not found")
-
-        if not meal_plan.recipes:
-            raise ValueError(f"Meal plan {meal_plan_id} has no recipes")
+        if not meal_plan_obj.recipes:
+            return []
 
         # Aggregate ingredients
         aggregated: Dict[str, Dict[str, Any]] = {}
 
-        for meal_plan_recipe in meal_plan.recipes:
+        for meal_plan_recipe in meal_plan_obj.recipes:
             recipe = meal_plan_recipe.recipe
+            if not recipe:
+                continue
             servings_multiplier = (
-                meal_plan_recipe.servings / recipe.servings if recipe.servings else 1.0
+                meal_plan_recipe.servings / (recipe.servings or 1.0)
             )
 
             # Parse each ingredient in the recipe
@@ -238,7 +239,7 @@ class GroceryAggregator:
                             "quantity": normalized_qty,
                             "unit": normalized_unit,
                             "recipe_ids": [recipe.id],
-                            "original_strings": [parsed.original],
+                            "original_strings": [parsed.original_text],
                         }
                 except Exception as e:
                     # Log parsing errors but continue processing
@@ -259,7 +260,7 @@ class GroceryAggregator:
         ]
 
     async def aggregate_from_meal_plan(
-        self, meal_plan_id: int
+        self, meal_plan_id: Union[int, MealPlan]
     ) -> List[AggregatedIngredient]:
         """
         Generate an aggregated grocery list from a meal plan (async version).
@@ -276,27 +277,28 @@ class GroceryAggregator:
         Raises:
             ValueError: If meal plan not found or has no recipes
         """
-        # Fetch meal plan with recipes
-        result = await self.db_session.execute(
-            select(MealPlan)
-            .options(selectinload(MealPlan.recipes).selectinload(MealPlanRecipe.recipe))
-            .where(MealPlan.id == meal_plan_id)
-        )
-        meal_plan = result.scalar_one_or_none()
-
-        if not meal_plan:
+        meal_plan_obj = meal_plan_id
+        if isinstance(meal_plan_id, int):
+            result = await self.db_session.execute(
+                select(MealPlan)
+                .options(selectinload(MealPlan.recipes).selectinload(MealPlanRecipe.recipe))
+                .where(MealPlan.id == meal_plan_id)
+            )
+            meal_plan_obj = result.scalar_one_or_none()
+        if not meal_plan_obj:
             raise ValueError(f"Meal plan {meal_plan_id} not found")
-
-        if not meal_plan.recipes:
-            raise ValueError(f"Meal plan {meal_plan_id} has no recipes")
+        if not meal_plan_obj.recipes:
+            return []
 
         # Aggregate ingredients
         aggregated: Dict[str, Dict[str, Any]] = {}
 
-        for meal_plan_recipe in meal_plan.recipes:
+        for meal_plan_recipe in meal_plan_obj.recipes:
             recipe = meal_plan_recipe.recipe
+            if not recipe:
+                continue
             servings_multiplier = (
-                meal_plan_recipe.servings / recipe.servings if recipe.servings else 1.0
+                meal_plan_recipe.servings / (recipe.servings or 1.0)
             )
 
             # Parse each ingredient in the recipe
@@ -335,7 +337,7 @@ class GroceryAggregator:
                             "quantity": normalized_qty,
                             "unit": normalized_unit,
                             "recipe_ids": [recipe.id],
-                            "original_strings": [parsed.original],
+                            "original_strings": [parsed.original_text],
                         }
                 except Exception as e:
                     # Log parsing errors but continue processing

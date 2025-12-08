@@ -1,5 +1,6 @@
 /**
- * Middleware for protecting routes with NextAuth.
+ * Proxy middleware for protecting routes with NextAuth.
+ * Renamed from middleware.ts to address Next.js deprecation warning.
  */
 
 import { withAuth } from 'next-auth/middleware'

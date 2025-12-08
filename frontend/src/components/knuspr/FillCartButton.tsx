@@ -33,7 +33,6 @@ export function FillCartButton({
   className = '',
 }: FillCartButtonProps) {
   const [showForm, setShowForm] = useState(false)
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberCredentials, setRememberCredentials] = useState(false)
   const [formErrors, setFormErrors] = useState<{
@@ -41,18 +40,16 @@ export function FillCartButton({
     password?: string
   }>({})
   const [showPassword, setShowPassword] = useState(false)
+  const [formEmail, setFormEmail] = useState('')
 
   // Hooks
   const fillCartMutation = useFillKnusprCart(cart_id)
   const { credentialStatus, saveCredentials } = useKnusprCredentials()
 
   // Load saved credentials if available
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (credentialStatus.data?.has_credentials && credentialStatus.data?.knuspr_email) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setEmail(credentialStatus.data.knuspr_email)
-      // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (credentialStatus.data?.has_credentials) {
+      setFormEmail(credentialStatus.data.knuspr_email || '')
       setRememberCredentials(true)
     }
   }, [credentialStatus.data])
@@ -61,9 +58,9 @@ export function FillCartButton({
   const validateForm = (): boolean => {
     const errors: { email?: string; password?: string } = {}
 
-    if (!email) {
+    if (!formEmail) {
       errors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formEmail)) {
       errors.email = 'Invalid email address'
     }
 
@@ -89,7 +86,7 @@ export function FillCartButton({
       // Save credentials if user opted in
       if (rememberCredentials) {
         await saveCredentials.mutateAsync({
-          knuspr_email: email,
+          knuspr_email: formEmail,
           knuspr_password: password,
           country: 'cz',
           test_connection: false,
@@ -99,7 +96,7 @@ export function FillCartButton({
       // Fill the Knuspr cart
       await fillCartMutation.mutateAsync({
         credentials: {
-          email,
+          email: formEmail,
           password,
         },
         match_preferences: {
@@ -118,7 +115,7 @@ export function FillCartButton({
       // Use saved credentials automatically
       fillCartMutation.mutate({
         credentials: {
-          email: credentialStatus.data.knuspr_email || email,
+          email: credentialStatus.data.knuspr_email || formEmail,
           password: '', // Backend will use saved credentials
         },
       })
@@ -187,8 +184,8 @@ export function FillCartButton({
           <Input
             type="email"
             label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={formEmail}
+            onChange={(e) => setFormEmail(e.target.value)}
             error={formErrors.email}
             placeholder="your@email.com"
             autoComplete="email"

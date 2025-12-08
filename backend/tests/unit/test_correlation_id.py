@@ -133,27 +133,12 @@ class TestCorrelationIdMiddleware:
 
     def test_context_propagation(self, client: TestClient):
         """Test that correlation ID is available throughout request context."""
-        correlation_id_from_context = None
-
-        @pytest.fixture
-        def app_with_context_check() -> FastAPI:
-            app = FastAPI()
-            app.add_middleware(CorrelationIdMiddleware)
-
-            @app.get("/test-context")
-            async def test_context():
-                nonlocal correlation_id_from_context
-                correlation_id_from_context = get_correlation_id()
-                return {"status": "ok"}
-
-            return app
-
-        client_test = TestClient(app_with_context_check())
-        response = client_test.get("/test-context")
+        response = client.get("/test")
 
         assert response.status_code == 200
-        assert correlation_id_from_context is not None
-        assert response.headers["X-Correlation-ID"] == correlation_id_from_context
+        assert "X-Correlation-ID" in response.headers
+        data = response.json()
+        assert data["correlation_id"] == response.headers["X-Correlation-ID"]
 
 
 class TestCorrelationIdUtilities:

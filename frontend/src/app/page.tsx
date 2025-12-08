@@ -14,10 +14,12 @@ export default function LandingPage() {
   return (
     <>
       <Hero />
-      <Curation />
-      <Planning />
-      <Aggregation />
-      <Checkout />
+      <main id="main-content">
+        <Curation />
+        <Planning />
+        <Aggregation />
+        <Checkout />
+      </main>
       <Footer />
     </>
   )

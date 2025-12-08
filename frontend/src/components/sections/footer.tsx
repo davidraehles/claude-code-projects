@@ -6,7 +6,7 @@ import Link from 'next/link'
 
 export function Footer() {
   return (
-    <section className="py-20 md:py-32 bg-gradient-to-t from-primary-500 via-orange-500 to-primary-600 text-white relative overflow-hidden">
+    <section id="footer" className="py-20 md:py-32 bg-gradient-to-t from-primary-500 via-orange-500 to-primary-600 text-white relative overflow-hidden">
       <Container>
         {/* Final CTA */}
         <div className="text-center mb-20">
