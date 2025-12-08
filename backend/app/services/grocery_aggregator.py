@@ -197,8 +197,10 @@ class GroceryAggregator:
 
         for meal_plan_recipe in meal_plan_obj.recipes:
             recipe = meal_plan_recipe.recipe
+            if not recipe:
+                continue
             servings_multiplier = (
-                meal_plan_recipe.servings / recipe.servings if recipe.servings else 1.0
+                meal_plan_recipe.servings / (recipe.servings or 1.0)
             )
 
             # Parse each ingredient in the recipe
@@ -237,7 +239,7 @@ class GroceryAggregator:
                             "quantity": normalized_qty,
                             "unit": normalized_unit,
                             "recipe_ids": [recipe.id],
-                            "original_strings": [parsed.original],
+                            "original_strings": [parsed.original_text],
                         }
                 except Exception as e:
                     # Log parsing errors but continue processing
@@ -293,8 +295,10 @@ class GroceryAggregator:
 
         for meal_plan_recipe in meal_plan_obj.recipes:
             recipe = meal_plan_recipe.recipe
+            if not recipe:
+                continue
             servings_multiplier = (
-                meal_plan_recipe.servings / recipe.servings if recipe.servings else 1.0
+                meal_plan_recipe.servings / (recipe.servings or 1.0)
             )
 
             # Parse each ingredient in the recipe
@@ -333,7 +337,7 @@ class GroceryAggregator:
                             "quantity": normalized_qty,
                             "unit": normalized_unit,
                             "recipe_ids": [recipe.id],
-                            "original_strings": [parsed.original],
+                            "original_strings": [parsed.original_text],
                         }
                 except Exception as e:
                     # Log parsing errors but continue processing

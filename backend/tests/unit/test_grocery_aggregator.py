@@ -95,24 +95,25 @@ def sample_meal_plan(sample_recipe_1, sample_recipe_2):
         num_people=2,
         status="ready",
     )
-    meal_plan.recipes = [
-        MealPlanRecipe(
-            id=1,
-            meal_plan_id=1,
-            recipe_id=1,
-            day_number=1,
-            meal_type="dinner",
-            servings=2,
-        ),
-        MealPlanRecipe(
-            id=2,
-            meal_plan_id=1,
-            recipe_id=2,
-            day_number=2,
-            meal_type="dinner",
-            servings=2,
-        ),
-    ]
+    mpr1 = MealPlanRecipe(
+        id=1,
+        meal_plan_id=1,
+        recipe_id=1,
+        day_number=1,
+        meal_type="dinner",
+        servings=2,
+    )
+    mpr1.recipe = sample_recipe_1
+    mpr2 = MealPlanRecipe(
+        id=2,
+        meal_plan_id=1,
+        recipe_id=2,
+        day_number=2,
+        meal_type="dinner",
+        servings=2,
+    )
+    mpr2.recipe = sample_recipe_2
+    meal_plan.recipes = [mpr1, mpr2]
     return meal_plan
 
 
