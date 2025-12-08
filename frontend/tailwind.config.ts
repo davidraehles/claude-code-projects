@@ -28,4 +28,32 @@ const config: Config = {
           200: '#CBD2D9',
           300: '#9AA5B1',
           400: '#616E7C',
-          500: '#3
+          500: '#52606D',
+          600: '#3E4C59',
+          700: '#323F4B',
+          800: '#1F2933',
+          900: '#1A202C',
+        },
+        orange: {
+          50: '#FFF5EB',
+          100: '#FFE5CC',
+          200: '#FFCC99',
+          300: '#FFB366',
+          400: '#FF9933',
+          500: '#FF8000',
+          600: '#CC6600',
+          700: '#994D00',
+          800: '#663300',
+          900: '#331A00',
+        },
+      },
+      fontFamily: {
+        sans: ['Inter', 'system-ui', 'sans-serif'],
+        display: ['Poppins', 'system-ui', 'sans-serif'],
+      },
+    },
+  },
+  plugins: [],
+}
+
+export default config

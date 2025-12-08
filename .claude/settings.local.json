@@ -89,7 +89,8 @@
       "Bash(python:*)",
       "Bash(gh pr checks:*)",
       "Bash(git worktree:*)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(git merge:*)"
     ],
     "deny": [],
     "ask": []
