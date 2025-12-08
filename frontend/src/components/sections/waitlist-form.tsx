@@ -30,7 +30,7 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
     const handleOnline = () => {
       setIsOnline(true)
       // Trigger background sync when coming back online
-      if ("serviceWorker" in navigator) {
+      const registration = navigator.serviceWorker.controller as ServiceWorkerRegistration | null;
         navigator.serviceWorker.ready.then((registration) => {
           if ("sync" in registration) {
             return (registration as any).sync.register("sync-waitlist")
@@ -125,7 +125,9 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
         if ("serviceWorker" in navigator) {
           const registration = await navigator.serviceWorker.ready
           if ("sync" in registration) {
-            await (registration as any).sync.register("sync-waitlist")
+            if (registration && 'sync' in registration) {
+              await (registration as any).sync.register("sync-waitlist")
+            }
           }
         }
 
@@ -168,7 +170,9 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
           if ("serviceWorker" in navigator) {
             const registration = await navigator.serviceWorker.ready
             if ("sync" in registration) {
+            if (registration && 'sync' in registration) {
               await (registration as any).sync.register("sync-waitlist")
+            }
             }
           }
 

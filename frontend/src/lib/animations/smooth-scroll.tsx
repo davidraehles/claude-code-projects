@@ -62,7 +62,7 @@ export function SmoothScrollProvider({ children }: { children: React.ReactNode }
  */
 export function useLenisScroll() {
   const scrollTo = (target: string | number, options?: { duration?: number; offset?: number }) => {
-    const lenis = (window as any).lenis as Lenis | undefined
+    const lenis = (window as { lenis?: Lenis }).lenis
 
     if (lenis) {
       lenis.scrollTo(target, {
