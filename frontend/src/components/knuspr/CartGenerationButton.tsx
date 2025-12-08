@@ -10,7 +10,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { useGenerateCartFromMealPlan } from '@/hooks/queries/useGroceryCarts'
 
 export interface CartGenerationButtonProps {
@@ -136,7 +136,7 @@ export function CartGenerationButton({
           </Link>
 
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleGenerateCart}
             className="flex-1"
             aria-label="Generate another grocery cart"

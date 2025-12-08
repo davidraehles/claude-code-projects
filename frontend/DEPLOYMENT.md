@@ -1,6 +1,6 @@
 # Vercel Deployment Guide
 
-Complete step-by-step guide to deploy MealPlannerAI frontend to Vercel.
+Complete step-by-step guide to deploy Go, Cart! frontend to Vercel.
 
 ## Prerequisites
 
@@ -22,7 +22,7 @@ Copy the output - you'll need it for Vercel.
 ### NEXT_PUBLIC_API_URL
 Your backend API URL. Examples:
 - Development: `http://localhost:8000`
-- Production: `https://api.mealplanner.com`
+- Production: `https://api.go-cart.com`
 - Heroku: `https://your-app.herokuapp.com`
 - Railway: `https://your-app.up.railway.app`
 
@@ -81,7 +81,7 @@ vercel
 
 # Follow prompts:
 # - Link to existing project? No
-# - Project name: mealplanner-ui
+# - Project name: go-cart-ui
 # - Directory: ./
 # - Override settings? No
 
@@ -100,7 +100,7 @@ vercel --prod
 
 ### Update NEXTAUTH_URL
 
-1. After first deployment, copy your Vercel URL (e.g., `https://mealplanner-ui-abc123.vercel.app`)
+1. After first deployment, copy your Vercel URL (e.g., `https://go-cart-ui-abc123.vercel.app`)
 
 2. In Vercel dashboard:
    - Go to Settings → Environment Variables
@@ -148,7 +148,7 @@ vercel --prod
 1. **In Vercel Dashboard**:
    - Go to Settings → Domains
    - Click "Add Domain"
-   - Enter your domain (e.g., `app.mealplanner.com`)
+   - Enter your domain (e.g., `app.go-cart.com`)
 
 2. **Configure DNS**:
    Vercel will provide DNS records. Add to your DNS provider:
@@ -161,7 +161,7 @@ vercel --prod
 3. **Update Environment Variables**:
    - Go to Settings → Environment Variables
    - Update `NEXTAUTH_URL` to your custom domain
-   - Example: `https://app.mealplanner.com`
+   - Example: `https://app.go-cart.com`
    - Click "Save"
 
 4. **Redeploy**:

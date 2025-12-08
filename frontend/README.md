@@ -1,4 +1,4 @@
-# MealPlannerAI - Frontend
+# Go, Cart! - Frontend
 
 AI-powered meal planning application built with Next.js 14, TypeScript, and Tailwind CSS.
 
@@ -224,4 +224,4 @@ For issues or questions:
 
 ## License
 
-This project is part of the MealPlannerAI application.
+This project is part of the Go, Cart! application.

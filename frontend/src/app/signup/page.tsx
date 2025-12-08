@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 
@@ -89,7 +89,7 @@ export default function SignupPage() {
         <Link href="/" className="flex items-center justify-center space-x-2 mb-8">
           <span className="text-4xl">🍽️</span>
           <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            MealPlannerAI
+            Go, Cart!
           </span>
         </Link>
 

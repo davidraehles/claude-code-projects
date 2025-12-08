@@ -11,7 +11,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRecipes } from '@/hooks/queries/useRecipes'
 import { useFilteredList } from '@/hooks/useFilteredList'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { RecipeCard } from '@/components/recipe/RecipeCard'
 
@@ -95,7 +95,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
               <Link href="/import" className="w-full sm:w-auto">
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button variant="secondary" className="w-full sm:w-auto">
                   <span className="mr-2">🔗</span>
                   <span className="hidden sm:inline">Import from URL</span>
                   <span className="sm:hidden">Import</span>
@@ -165,7 +165,7 @@ export default function DashboardPage() {
             </p>
             <div className="flex gap-3 justify-center">
               <Link href="/import">
-                <Button variant="outline">Import from URL</Button>
+                <Button variant="secondary">Import from URL</Button>
               </Link>
               <Link href="/create">
                 <Button variant="primary">Create Recipe</Button>
@@ -182,7 +182,7 @@ export default function DashboardPage() {
             <p className="text-gray-600 mb-4">
               Try adjusting your search terms or browse all recipes.
             </p>
-            <Button variant="outline" onClick={() => setSearchQuery('')}>
+            <Button variant="secondary" onClick={() => setSearchQuery('')}>
               Clear Search
             </Button>
           </div>

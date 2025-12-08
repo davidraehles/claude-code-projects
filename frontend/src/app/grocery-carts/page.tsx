@@ -8,7 +8,7 @@
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 
 export default function GroceryCartsPage() {
   // Auth state from context
@@ -49,7 +49,7 @@ export default function GroceryCartsPage() {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/meal-plans">
-              <Button variant="outline">View Meal Plans</Button>
+              <Button variant="secondary">View Meal Plans</Button>
             </Link>
             <Link href="/generate">
               <Button variant="primary">Generate New Plan</Button>

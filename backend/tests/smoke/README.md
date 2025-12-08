@@ -1,6 +1,6 @@
 # Smoke Tests
 
-Post-deployment validation tests for the AI Meal Planner backend.
+Post-deployment validation tests for the Go, Cart! backend.
 
 ## Overview
 

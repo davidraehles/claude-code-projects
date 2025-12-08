@@ -6,7 +6,7 @@
 'use client'
 
 import { ErrorInfo } from 'react'
-import { Button } from './ui/Button'
+import { Button } from './ui/button'
 
 interface ErrorFallbackProps {
   error: Error | null
@@ -68,7 +68,7 @@ export function ErrorFallback({ error, errorInfo, onReset }: ErrorFallbackProps)
                 </Button>
               )}
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={handleReload}
                 className="flex-1"
               >

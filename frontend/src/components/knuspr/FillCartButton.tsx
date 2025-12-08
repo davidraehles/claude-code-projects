@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { useFillKnusprCart } from '@/hooks/queries/useKnusprCart'
@@ -278,7 +278,7 @@ export function FillCartButton({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleReset}
               className="flex-1"
               aria-label="Cancel"
@@ -436,7 +436,7 @@ export function FillCartButton({
           )}
 
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleReset}
             className="w-full"
             aria-label="Close and return"
@@ -502,7 +502,7 @@ export function FillCartButton({
             Try Again
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleReset}
             className="flex-1"
             aria-label="Cancel"

@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useMealPlan } from '@/hooks/queries/useMealPlans'
 import { useCreateCartFromMealPlanWorkflow } from '@/hooks/queries/useWorkflows'
 import { useKnusprCredentials } from '@/hooks/queries/useKnusprCredentials'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { CartGenerationButton } from '@/components/knuspr/CartGenerationButton'
@@ -97,7 +97,7 @@ export default function MealPlanDetailPage() {
             <h3 className="text-red-900 font-semibold mb-2">Invalid meal plan ID</h3>
             <p className="text-red-700 mb-4">The meal plan ID provided is not valid.</p>
             <Link href="/meal-plans">
-              <Button variant="outline">Back to Meal Plans</Button>
+              <Button variant="secondary">Back to Meal Plans</Button>
             </Link>
           </div>
         </div>
@@ -125,7 +125,7 @@ export default function MealPlanDetailPage() {
             <h3 className="text-red-900 font-semibold mb-2">Error loading meal plan</h3>
             <p className="text-red-700 mb-4">{error}</p>
             <Link href="/meal-plans">
-              <Button variant="outline">Back to Meal Plans</Button>
+              <Button variant="secondary">Back to Meal Plans</Button>
             </Link>
           </div>
         </div>
@@ -151,7 +151,7 @@ export default function MealPlanDetailPage() {
               <Link href="/" className="flex items-center space-x-2">
                 <span className="text-3xl">🍽️</span>
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  MealPlannerAI
+                  Go, Cart!
                 </span>
               </Link>
             </div>
@@ -363,7 +363,7 @@ export default function MealPlanDetailPage() {
                 {/* Actions */}
                 <div className="flex gap-3 pt-4">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => setShowDeliveryModal(false)}
                     disabled={generatingCart}
                     className="flex-1"
@@ -410,7 +410,7 @@ export default function MealPlanDetailPage() {
                 </p>
                 <div className="flex gap-3 pt-4">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => setShowCredentialsModal(false)}
                     className="flex-1"
                   >
