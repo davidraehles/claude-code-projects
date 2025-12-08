@@ -2,7 +2,7 @@
 Waitlist API for Go, Cart! - Handles waitlist signup, verification, and status checks.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import uuid
 
@@ -40,7 +40,20 @@ def create_waitlist_response(entry: WaitlistEntry, db: Session) -> WaitlistRespo
 def join_waitlist(
     waitlist_in: WaitlistCreate,
     db: Session = Depends(get_database)
-):
+) -> WaitlistResponse:
+    """
+    Create a new waitlist entry for early access.
+
+    Args:
+        waitlist_in: Waitlist signup data with email and optional metadata
+        db: Database session
+
+    Returns:
+        WaitlistResponse with entry details and queue position
+
+    Raises:
+        HTTPException: 400 if email already registered on waitlist
+    """
     # Prevent duplicates
     existing = db.query(WaitlistEntry).filter(
         WaitlistEntry.email == waitlist_in.email
@@ -70,7 +83,20 @@ def join_waitlist(
 def verify_email(
     verify_in: WaitlistVerify,
     db: Session = Depends(get_database)
-):
+) -> WaitlistResponse:
+    """
+    Verify an email address using the verification token.
+
+    Args:
+        verify_in: Verification token from email
+        db: Database session
+
+    Returns:
+        WaitlistResponse with verified entry details and updated queue position
+
+    Raises:
+        HTTPException: 400 if token is invalid or expired, or email already verified
+    """
     entry = db.query(WaitlistEntry).filter(
         WaitlistEntry.verification_token == verify_in.token
     ).first()
@@ -89,7 +115,7 @@ def verify_email(
 
     # Mark as verified and clear token
     entry.status = "VERIFIED"
-    entry.verified_at = datetime.utcnow()
+    entry.verified_at = datetime.now(timezone.utc)
     entry.verification_token = None
     db.commit()
     db.refresh(entry)
@@ -100,7 +126,20 @@ def verify_email(
 def get_status(
     email: EmailStr = Query(..., description="Email address to check"),
     db: Session = Depends(get_database)
-):
+) -> WaitlistResponse:
+    """
+    Get the status and queue position for a waitlist entry.
+
+    Args:
+        email: Email address to check
+        db: Database session
+
+    Returns:
+        WaitlistResponse with entry details and current queue position
+
+    Raises:
+        HTTPException: 404 if email not found on waitlist
+    """
     entry = db.query(WaitlistEntry).filter(
         WaitlistEntry.email == email
     ).first()

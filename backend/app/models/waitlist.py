@@ -4,11 +4,9 @@ SQLAlchemy ORM model for WaitlistEntry entity.
 Defines the database schema for waitlist signups with status tracking and verification.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import Column, BigInteger, Integer, String, DateTime, Index
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.ext.compiler import compiles
-from sqlalchemy.types import TypeDecorator
 from app.database import Base
 from app.models.user import JSONType
 
@@ -48,7 +46,7 @@ class WaitlistEntry(Base):
     verification_token = Column(String(255), nullable=True, index=True)
 
     # Timestamps
-    created_at = Column(DateTime, nullable=False, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime, nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
     verified_at = Column(DateTime, nullable=True, index=True)
     invited_at = Column(DateTime, nullable=True, index=True)
 

@@ -18,7 +18,8 @@ export function Hero() {
     setError(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/waitlist', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+      const response = await fetch(`${apiUrl}/api/v1/waitlist`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -66,7 +67,11 @@ export function Hero() {
           {/* Waitlist Form */}
           {!submitted ? (
             <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto mb-16">
+              <label htmlFor="waitlist-email" className="sr-only">
+                Email address
+              </label>
               <input
+                id="waitlist-email"
                 type="email"
                 placeholder="Enter your email to join the waitlist"
                 value={email}
@@ -74,11 +79,13 @@ export function Hero() {
                 className="flex-1 px-6 py-4 text-lg rounded-xl bg-white/20 backdrop-blur-md border border-white/30 focus:border-white focus:outline-none placeholder:text-white/70"
                 required
                 disabled={loading}
+                aria-label="Email address"
               />
               <Button
                 type="submit"
                 className="px-12 py-4 text-xl font-semibold shadow-2xl shadow-primary-900/50 hover:shadow-primary/50 hover:-translate-y-1 whitespace-nowrap"
                 disabled={loading || !email.trim()}
+                aria-busy={loading}
               >
                 {loading ? 'Joining...' : 'Join Waitlist'}
               </Button>
@@ -97,15 +104,16 @@ export function Hero() {
           )}
 
           {error && (
-            <p className="text-red-200 text-lg mb-16 max-w-md mx-auto bg-red-500/20 p-4 rounded-xl border border-red-400/50">
-              {error}
+            <div role="alert" className="text-red-200 text-lg mb-16 max-w-md mx-auto bg-red-500/20 p-4 rounded-xl border border-red-400/50 flex items-center gap-4">
+              <p className="flex-1">{error}</p>
               <Button
-                className="ml-4 px-3 py-1"
+                className="ml-4 px-3 py-1 flex-shrink-0"
                 onClick={() => setError(null)}
+                aria-label="Dismiss error"
               >
                 Dismiss
               </Button>
-            </p>
+            </div>
           )}
 
           {/* Scroll indicator */}
