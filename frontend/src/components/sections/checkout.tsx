@@ -7,7 +7,7 @@ const deliveryApps = ['Instacart', 'Amazon Fresh', 'Walmart+', 'DoorDash', 'Uber
 
 export function Checkout() {
   return (
-    <section className="py-20 md:py-32 lg:py-40 bg-neutral-50">
+    <section id="checkout" className="py-20 md:py-32 lg:py-40 bg-neutral-50">
       <Container>
         {/* Section Label */}
         <div className="text-center mb-8">

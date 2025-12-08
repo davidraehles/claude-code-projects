@@ -216,3 +216,35 @@ export interface ToastMessage {
   message: string
   duration?: number
 }
+
+// ===== Waitlist =====
+
+export type WaitlistStatus = "PENDING" | "VERIFIED" | "INVITED" | "ONBOARDED"
+
+export interface WaitlistEntry {
+  id: string
+  email: string
+  status: WaitlistStatus
+  position?: number
+  created_at: string
+}
+
+export interface WaitlistJoinRequest {
+  email: string
+  metadata?: Record<string, unknown>
+}
+
+export interface WaitlistVerifyRequest {
+  token: string
+}
+
+export interface WaitlistStatusRequest {
+  email: string
+}
+
+export interface WaitlistQueuedEntry {
+  email: string
+  metadata?: Record<string, unknown>
+  timestamp: number
+  retryCount: number
+}

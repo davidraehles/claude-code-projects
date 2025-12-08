@@ -16,6 +16,10 @@ import type {
   MealPlanDetail,
   GroceryCart,
   PaginatedResponse,
+  WaitlistEntry,
+  WaitlistJoinRequest,
+  WaitlistVerifyRequest,
+  WaitlistStatusRequest,
 } from "./types"
 import {
   AUTH_ENDPOINTS,
@@ -24,6 +28,7 @@ import {
   GROCERY_CART_ENDPOINTS,
   WORKFLOW_ENDPOINTS,
   SYSTEM_ENDPOINTS,
+  WAITLIST_ENDPOINTS,
 } from "./apiEndpoints"
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
@@ -288,6 +293,26 @@ class ApiClient {
 
   async healthCheck(): Promise<{ status: string }> {
     return this.request<{ status: string }>(SYSTEM_ENDPOINTS.HEALTH)
+  }
+
+  // ===== Waitlist Endpoints (no token required) =====
+
+  async joinWaitlist(data: WaitlistJoinRequest): Promise<WaitlistEntry> {
+    return this.request<WaitlistEntry>(WAITLIST_ENDPOINTS.JOIN, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async verifyWaitlistEmail(data: WaitlistVerifyRequest): Promise<WaitlistEntry> {
+    return this.request<WaitlistEntry>(WAITLIST_ENDPOINTS.VERIFY, {
+      method: "POST",
+      body: JSON.stringify(data),
+    })
+  }
+
+  async getWaitlistStatus(data: WaitlistStatusRequest): Promise<WaitlistEntry> {
+    return this.request<WaitlistEntry>(WAITLIST_ENDPOINTS.STATUS(data.email))
   }
 }
 

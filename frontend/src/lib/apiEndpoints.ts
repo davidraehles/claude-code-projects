@@ -71,6 +71,15 @@ export const SYSTEM_ENDPOINTS = {
 } as const;
 
 /**
+ * Waitlist endpoints
+ */
+export const WAITLIST_ENDPOINTS = {
+  JOIN: `${API_V1}/waitlist`,
+  VERIFY: `${API_V1}/waitlist/verify`,
+  STATUS: (email: string) => `${API_V1}/waitlist/status?email=${encodeURIComponent(email)}`,
+} as const;
+
+/**
  * All endpoints grouped for easy reference
  */
 export const API_ENDPOINTS = {
@@ -80,4 +89,5 @@ export const API_ENDPOINTS = {
   GROCERY_CARTS: GROCERY_CART_ENDPOINTS,
   WORKFLOWS: WORKFLOW_ENDPOINTS,
   SYSTEM: SYSTEM_ENDPOINTS,
+  WAITLIST: WAITLIST_ENDPOINTS,
 } as const;
