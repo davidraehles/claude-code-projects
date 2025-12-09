@@ -5,6 +5,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { MobileNav } from './MobileNav'
 
@@ -20,8 +21,15 @@ export function Header({ userEmail }: HeaderProps) {
           {/* Logo */}
           <div className="flex items-center space-x-2">
             <Link href="/" className="flex items-center space-x-2" aria-label="Go, Cart! Home">
-              <span className="text-2xl sm:text-3xl" role="img" aria-label="Food icon">🍽️</span>
-              <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <Image
+                src="/logo-icon.svg"
+                alt="Go, Cart! Logo"
+                width={32}
+                height={32}
+                className="w-8 h-8 sm:w-10 sm:h-10"
+                priority
+              />
+              <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary-500 to-orange-500 bg-clip-text text-transparent">
                 Go, Cart!
               </span>
             </Link>

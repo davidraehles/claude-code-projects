@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Shopping cart body -->
+  <path d="M8 12h4l5 20h18l4-14H14" stroke="#E85A4F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Cart wheels -->
+  <circle cx="17" cy="38" r="3" fill="#E85A4F"/>
+  <circle cx="31" cy="38" r="3" fill="#E85A4F"/>
+  <!-- Speed lines (motion) -->
+  <path d="M4 16h4M2 20h6M4 24h4" stroke="#7EC8A3" stroke-width="2" stroke-linecap="round"/>
+  <!-- Food items in cart -->
+  <circle cx="20" cy="24" r="3" fill="#7EC8A3"/>
+  <circle cx="28" cy="22" r="2.5" fill="#E85A4F" opacity="0.7"/>
+  <rect x="23" y="26" width="4" height="5" rx="1" fill="#7EC8A3" opacity="0.8"/>
+</svg>
