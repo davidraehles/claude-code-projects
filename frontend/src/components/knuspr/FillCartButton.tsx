@@ -46,13 +46,13 @@ export function FillCartButton({
   const fillCartMutation = useFillKnusprCart(cart_id)
   const { credentialStatus, saveCredentials } = useKnusprCredentials()
 
-  // Load saved credentials if available
+  // Load saved credentials if available (only once when credentials first load)
   useEffect(() => {
-    if (credentialStatus.data?.has_credentials) {
+    if (credentialStatus.data?.has_credentials && !formEmail) {
       setFormEmail(credentialStatus.data.knuspr_email || '')
       setRememberCredentials(true)
     }
-  }, [credentialStatus.data])
+  }, [credentialStatus.data, formEmail])
 
   // Validate form
   const validateForm = (): boolean => {
