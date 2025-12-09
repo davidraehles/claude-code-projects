@@ -3,16 +3,6 @@ import { render, screen } from '@testing-library/react'
 import '@testing-library/jest-dom'
 import { Header } from '@/components/layout/Header'
 
-// Mock next/image
-jest.mock('next/image', () => ({
-  __esModule: true,
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement> & { priority?: boolean }) => {
-    const { priority, ...rest } = props
-    // eslint-disable-next-line @next/next/no-img-element
-    return <img {...rest} data-priority={priority ? 'true' : 'false'} />
-  },
-}))
-
 // Mock next/link
 jest.mock('next/link', () => ({
   __esModule: true,
@@ -27,12 +17,12 @@ jest.mock('@/components/layout/MobileNav', () => ({
 }))
 
 describe('Header Component', () => {
-  it('renders the logo SVG image', () => {
+  it('renders the logo SVG', () => {
     render(<Header />)
 
-    const logo = screen.getByAltText('Go, Cart! Logo')
+    const logo = screen.getByLabelText('Go, Cart! Logo')
     expect(logo).toBeInTheDocument()
-    expect(logo).toHaveAttribute('src', '/logo-icon.svg')
+    expect(logo.tagName).toBe('svg')
   })
 
   it('renders the Go, Cart! brand name', () => {
@@ -44,8 +34,7 @@ describe('Header Component', () => {
   it('renders the home link with correct href', () => {
     render(<Header />)
 
-    // The link text includes both the logo alt text and the brand name
-    const homeLink = screen.getByRole('link', { name: /Go, Cart! Logo.*Go, Cart!/i })
+    const homeLink = screen.getByRole('link', { name: /Go, Cart! Home/i })
     expect(homeLink).toHaveAttribute('href', '/')
   })
 
@@ -70,10 +59,10 @@ describe('Header Component', () => {
     expect(screen.getByRole('link', { name: /generate plan/i })).toBeInTheDocument()
   })
 
-  it('logo has priority loading attribute', () => {
+  it('logo SVG has correct viewBox for proper scaling', () => {
     render(<Header />)
 
-    const logo = screen.getByAltText('Go, Cart! Logo')
-    expect(logo).toHaveAttribute('data-priority', 'true')
+    const logo = screen.getByLabelText('Go, Cart! Logo')
+    expect(logo).toHaveAttribute('viewBox', '0 0 32 32')
   })
 })
