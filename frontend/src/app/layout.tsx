@@ -47,13 +47,6 @@ export const metadata: Metadata = {
         alt: 'Go, Cart! - AI-Powered Meal Planning',
         type: 'image/png',
       },
-      {
-        url: '/og-image-square.png',
-        width: 1200,
-        height: 1200,
-        alt: 'Go, Cart! Logo',
-        type: 'image/png',
-      }
     ],
   },
   twitter: {
@@ -61,7 +54,7 @@ export const metadata: Metadata = {
     title: 'Go, Cart! - Favorites on repeat. New loves on deck. Groceries on autopilot.',
     description: 'Meal planning that feels like making a playlist. Smart recipes, automatic grocery lists, zero duplicates.',
     creator: '@gocartapp',
-    images: ['/twitter-card.png'],
+    images: ['/og-image.png'],
   },
   robots: {
     index: true,
@@ -78,13 +71,12 @@ export const metadata: Metadata = {
     icon: [
       { url: '/favicon-16x16.png', sizes: '16x16', type: 'image/png' },
       { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/favicon-96x96.png', sizes: '96x96', type: 'image/png' },
+      { url: '/favicon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/favicon-512x512.png', sizes: '512x512', type: 'image/png' },
     ],
     apple: [
-      { url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
-    other: [
-      { url: '/android-chrome-192x192.png', rel: 'icon', sizes: '192x192', type: 'image/png' },
-      { url: '/android-chrome-512x512.png', rel: 'icon', sizes: '512x512', type: 'image/png' },
+      { url: '/apple-touch-icon-180x180.png', sizes: '180x180', type: 'image/png' },
     ],
   },
   manifest: '/site.webmanifest',

@@ -3,7 +3,13 @@
 import { Container } from '../ui/container'
 import { Button } from '../ui/button'
 
-const deliveryApps = ['Instacart', 'Amazon Fresh', 'Walmart+', 'DoorDash', 'Uber Eats']
+const deliveryApps = [
+  { name: 'Knuspr', integrated: true },
+  { name: 'Instacart', integrated: false },
+  { name: 'Amazon Fresh', integrated: false },
+  { name: 'Walmart+', integrated: false },
+  { name: 'DoorDash', integrated: false },
+]
 
 export function Checkout() {
   return (
@@ -30,17 +36,37 @@ export function Checkout() {
           {/* Delivery Partners */}
           <div>
             <h3 className="text-2xl font-bold text-secondary-800 mb-8">Choose Your Store</h3>
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               {deliveryApps.map((app, index) => (
                 <div
                   key={index}
-                  className="group p-6 border-2 border-neutral-200 rounded-2xl hover:border-primary-400 hover:shadow-primary/20 hover:scale-105 transition-all duration-300 cursor-pointer bg-white shadow-sm"
+                  className={`group p-4 md:p-6 border-2 rounded-2xl hover:scale-105 transition-all duration-300 cursor-pointer shadow-sm relative ${
+                    app.integrated
+                      ? 'border-primary-400 bg-primary-50 shadow-primary/20'
+                      : 'border-neutral-200 bg-white hover:border-primary-400 hover:shadow-primary/20'
+                  }`}
                 >
-                  <div className="h-12 w-24 bg-gradient-to-br from-neutral-200 to-neutral-300 rounded-lg flex items-center justify-center group-hover:from-primary-100">
-                    <span className="font-semibold text-sm text-neutral-700 uppercase tracking-wide">
-                      {app}
+                  {app.integrated && (
+                    <span className="absolute -top-2 -right-2 bg-primary-500 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                      Integrated
+                    </span>
+                  )}
+                  <div className={`h-12 w-full rounded-lg flex items-center justify-center ${
+                    app.integrated
+                      ? 'bg-gradient-to-br from-primary-100 to-primary-200'
+                      : 'bg-gradient-to-br from-neutral-200 to-neutral-300 group-hover:from-primary-100'
+                  }`}>
+                    <span className={`font-semibold text-sm uppercase tracking-wide ${
+                      app.integrated ? 'text-primary-700' : 'text-neutral-700'
+                    }`}>
+                      {app.name}
                     </span>
                   </div>
+                  {app.integrated && (
+                    <p className="text-xs text-primary-600 mt-2 text-center font-medium">
+                      One-click cart fill
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
