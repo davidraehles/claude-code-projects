@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { Container } from '../ui/container'
 
 const recipeCards = [
@@ -62,12 +63,16 @@ export function Curation() {
               className="group recipe-card bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl hover:-translate-y-4 transition-all duration-500 cursor-pointer border border-neutral-200 hover:border-primary-200"
               role="listitem"
             >
-              <div
-                className="w-full h-64 bg-gradient-to-br from-neutral-200 to-neutral-300 group-hover:scale-105 transition-transform duration-500"
-                style={{ backgroundImage: `url(${card.image})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                role="img"
-                aria-label={`Photo of ${card.title}`}
-              />
+              <div className="relative w-full h-64 bg-gradient-to-br from-neutral-200 to-neutral-300 overflow-hidden">
+                <Image
+                  src={card.image}
+                  alt={`Photo of ${card.title}`}
+                  fill
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading={index < 3 ? "eager" : "lazy"}
+                />
+              </div>
               <div className="p-6">
                 <h3 className="heading-card mb-4 group-hover:text-primary-600 transition-colors">{card.title}</h3>
                 <div className="flex flex-wrap gap-2" role="list" aria-label={`Recipe details for ${card.title}`}>
