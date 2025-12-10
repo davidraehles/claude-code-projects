@@ -31,6 +31,8 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@next/bundle-analyzer": "^16.0.8",
     "@playwright/test": "^1.49.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.1.5",
@@ -40,11 +42,13 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "axe-playwright": "^2.2.2",
     "eslint": "^9",
     "eslint-config-next": "16.0.3",
     "jest": "^29.7.0",
     "jest-environment-jsdom": "^29.7.0",
     "playwright-lighthouse": "^4.0.0",
+    "puppeteer": "^24.32.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

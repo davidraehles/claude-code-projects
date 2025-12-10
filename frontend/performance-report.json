@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-12-10T21:14:03.551Z",
+  "estimatedBundleSize": 290,
+  "targetBundleSize": 200,
+  "status": "needs_optimization",
+  "largeDependencies": [
+    {
+      "name": "framer-motion",
+      "size": "60KB"
+    },
+    {
+      "name": "gsap",
+      "size": "80KB"
+    },
+    {
+      "name": "next",
+      "size": "100KB"
+    },
+    {
+      "name": "react-dom",
+      "size": "80KB"
+    }
+  ],
+  "recommendations": [
+    "Implement code splitting",
+    "Use dynamic imports for heavy components",
+    "Optimize image assets",
+    "Review GSAP usage",
+    "Enable Next.js static optimization"
+  ]
+}
