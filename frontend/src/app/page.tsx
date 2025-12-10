@@ -1,7 +1,7 @@
 import { Hero } from '@/components/sections/hero'
 import { Curation } from '@/components/sections/curation'
 import { Planning } from '@/components/sections/planning'
-import { Aggregation } from '@/components/sections/aggregation'
+import { AggregationDynamic } from '@/components/sections/AggregationDynamic'
 import { Checkout } from '@/components/sections/checkout'
 import { Footer } from '@/components/sections/footer'
 
@@ -17,7 +17,7 @@ export default function LandingPage() {
       <main id="main-content">
         <Curation />
         <Planning />
-        <Aggregation />
+        <AggregationDynamic />
         <Checkout />
       </main>
       <Footer />
