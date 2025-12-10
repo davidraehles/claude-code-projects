@@ -4,7 +4,7 @@ import { lazy, Suspense } from 'react'
 import { Container } from '../ui/container'
 
 // Dynamically import the heavy aggregation component
-const AggregationComponent = lazy(() => import('./aggregation'))
+const AggregationComponent = lazy(() => import('./aggregation').then(module => ({ default: module.Aggregation })))
 
 /**
  * Dynamically loaded Aggregation section with code splitting
