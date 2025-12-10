@@ -25,6 +25,37 @@ test.describe('Logo, Images, and Knuspr Integration', () => {
       const logo = page.locator('header img[alt="Go, Cart! Logo"]');
       await expect(logo).toBeVisible();
     });
+
+    test('logo is not transparent and has proper dimensions', async ({ page }) => {
+      await page.goto('/dashboard');
+
+      const logo = page.locator('header a[aria-label="Go, Cart! Home"] img');
+      await expect(logo).toBeVisible();
+
+      // Check that logo has proper dimensions (not collapsed)
+      const boundingBox = await logo.boundingBox();
+      expect(boundingBox?.width).toBeGreaterThan(20);
+      expect(boundingBox?.height).toBeGreaterThan(20);
+
+      // Verify logo is actually loaded (not a broken image)
+      const src = await logo.getAttribute('src');
+      const response = await page.request.get(src);
+      expect(response.ok(), `Logo image ${src} should load successfully`).toBeTruthy();
+    });
+
+    test('logo displays consistently across pages', async ({ page }) => {
+      const pagesToTest = ['/', '/dashboard', '/generate'];
+
+      for (const path of pagesToTest) {
+        await page.goto(path);
+        
+        const logo = page.locator('header a[aria-label="Go, Cart! Home"] img');
+        await expect(logo).toBeVisible();
+
+        const src = await logo.getAttribute('src');
+        expect(src).toContain('logo-icon');
+      }
+    });
   });
 
   test.describe('PWA Manifest Icons', () => {
@@ -79,6 +110,48 @@ test.describe('Logo, Images, and Knuspr Integration', () => {
       const style = await imageDiv.getAttribute('style');
       expect(style).toContain('background-image');
       expect(style).toContain('images.unsplash.com');
+    });
+
+    test('all recipe cards have loaded images (not broken)', async ({ page }) => {
+      await page.goto('/');
+
+      const curationSection = page.locator('#curation');
+      await expect(curationSection).toBeVisible();
+
+      const recipeCards = curationSection.locator('article.recipe-card');
+      
+      // Check each card for broken image indicators
+      for (let i = 0; i < await recipeCards.count(); i++) {
+        const card = recipeCards.nth(i);
+        const imageDiv = card.locator('div[role="img"]');
+        const style = await imageDiv.getAttribute('style');
+        
+        // Ensure the image URL is not a broken image placeholder
+        expect(style).not.toContain('broken');
+        expect(style).not.toContain('placeholder');
+        expect(style).toContain('images.unsplash.com');
+      }
+    });
+
+    test('recipe card images are visible and not transparent', async ({ page }) => {
+      await page.goto('/');
+
+      const curationSection = page.locator('#curation');
+      await expect(curationSection).toBeVisible();
+
+      const recipeCards = curationSection.locator('article.recipe-card');
+      const firstCard = recipeCards.first();
+      const imageDiv = firstCard.locator('div[role="img"]');
+
+      // Check that the image has proper dimensions and is not collapsed
+      const boundingBox = await imageDiv.boundingBox();
+      expect(boundingBox?.width).toBeGreaterThan(100);
+      expect(boundingBox?.height).toBeGreaterThan(100);
+
+      // Check that the background image is not transparent or missing
+      const style = await imageDiv.getAttribute('style');
+      expect(style).toContain('background-image');
+      expect(style).toContain('url(');
     });
 
     test('recipe card images load without errors', async ({ page }) => {
