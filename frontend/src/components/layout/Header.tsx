@@ -12,6 +12,26 @@ interface HeaderProps {
   userEmail?: string | null
 }
 
+// Inline SVG logo for better iOS compatibility
+function LogoIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 32 32"
+      fill="none"
+      className={className}
+      role="img"
+      aria-label="Go, Cart! Logo"
+    >
+      <path d="M5 8h3l4 14h12l3-10H10" stroke="#E85A4F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <circle cx="12" cy="26" r="2" fill="#E85A4F"/>
+      <circle cx="22" cy="26" r="2" fill="#E85A4F"/>
+      <circle cx="15" cy="16" r="2" fill="#7EC8A3"/>
+      <circle cx="20" cy="15" r="1.5" fill="#7EC8A3" opacity="0.8"/>
+    </svg>
+  )
+}
+
 export function Header({ userEmail }: HeaderProps) {
   return (
     <header className="bg-white border-b border-gray-200">
@@ -20,8 +40,8 @@ export function Header({ userEmail }: HeaderProps) {
           {/* Logo */}
           <div className="flex items-center space-x-2">
             <Link href="/" className="flex items-center space-x-2" aria-label="Go, Cart! Home">
-              <span className="text-2xl sm:text-3xl" role="img" aria-label="Food icon">🍽️</span>
-              <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              <LogoIcon className="w-8 h-8 sm:w-10 sm:h-10" />
+              <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-primary-500 to-orange-500 bg-clip-text text-transparent">
                 Go, Cart!
               </span>
             </Link>

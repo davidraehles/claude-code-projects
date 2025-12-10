@@ -11,6 +11,15 @@ import { Button } from "@/components/ui/button"
 import { api } from "@/lib/api"
 import { addToQueue, getQueueCount } from "@/lib/offline-storage"
 
+// Type definitions for ServiceWorker Background Sync API
+interface SyncManager {
+  register(tag: string): Promise<void>
+}
+
+interface ServiceWorkerRegistrationWithSync extends ServiceWorkerRegistration {
+  readonly sync: SyncManager
+}
+
 interface WaitlistFormProps {
   className?: string
   onSuccess?: () => void
@@ -32,7 +41,7 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
       // Trigger background sync when coming back online
       navigator.serviceWorker.ready.then((registration) => {
         if ("sync" in registration) {
-          return (registration.sync as any).register("sync-waitlist")
+          return (registration as ServiceWorkerRegistrationWithSync).sync.register("sync-waitlist")
         }
       }).catch((error) => {
         console.error("Background sync registration failed:", error)
@@ -121,7 +130,7 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
         if ("serviceWorker" in navigator) {
           const registration = await navigator.serviceWorker.ready
           if ("sync" in registration) {
-            await (registration.sync as any).register("sync-waitlist")
+            await (registration as ServiceWorkerRegistrationWithSync).sync.register("sync-waitlist")
           }
         }
 
@@ -164,7 +173,7 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
           if ("serviceWorker" in navigator) {
             const registration = await navigator.serviceWorker.ready
             if ("sync" in registration) {
-              await (registration.sync as any).register("sync-waitlist")
+              await (registration as ServiceWorkerRegistrationWithSync).sync.register("sync-waitlist")
             }
           }
 
