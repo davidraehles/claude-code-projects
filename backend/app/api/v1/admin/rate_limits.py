@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -37,7 +37,8 @@ class RateLimitPolicyCreate(BaseModel):
     enabled: bool = Field(default=True)
     description: Optional[str] = Field(None, max_length=1000)
 
-    @validator("endpoint_pattern")
+    @field_validator("endpoint_pattern")
+    @classmethod
     def validate_regex(cls, v: str) -> str:
         """Validate that endpoint_pattern is a valid regex."""
         import re
@@ -88,7 +89,8 @@ class RateLimitOverrideCreate(BaseModel):
     reason: str = Field(..., min_length=1, max_length=255)
     expires_at: Optional[datetime] = None
 
-    @validator("endpoint_pattern")
+    @field_validator("endpoint_pattern")
+    @classmethod
     def validate_regex(cls, v: str) -> str:
         """Validate that endpoint_pattern is a valid regex."""
         import re
@@ -99,7 +101,8 @@ class RateLimitOverrideCreate(BaseModel):
             raise ValueError(f"Invalid regex pattern: {str(e)}")
         return v
 
-    @validator("expires_at")
+    @field_validator("expires_at")
+    @classmethod
     def validate_expiry(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Ensure expiry is in the future."""
         if v and v <= datetime.utcnow():
@@ -135,7 +138,8 @@ class RateLimitWhitelistCreate(BaseModel):
     expires_at: Optional[datetime] = None
     created_by: Optional[str] = Field(None, max_length=100)
 
-    @validator("expires_at")
+    @field_validator("expires_at")
+    @classmethod
     def validate_expiry(cls, v: Optional[datetime]) -> Optional[datetime]:
         """Ensure expiry is in the future."""
         if v and v <= datetime.utcnow():
