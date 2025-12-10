@@ -255,4 +255,116 @@ test.describe('Logo, Images, and Knuspr Integration', () => {
       expect(contentType).toContain('image');
     });
   });
+
+  test.describe('Visual Consistency - Logos and Photos Always Showing', () => {
+    test('logos and photos are consistently visible across page loads', async ({ page }) => {
+      // Test multiple page loads to ensure consistency
+      const testPages = ['/', '/dashboard', '/generate'];
+      
+      for (const path of testPages) {
+        // Load page multiple times to test consistency
+        for (let i = 0; i < 3; i++) {
+          await page.goto(path);
+          await page.waitForLoadState('networkidle');
+          
+          // Check header logo is visible
+          const logo = page.locator('header a[aria-label="Go, Cart! Home"] img');
+          await expect(logo).toBeVisible();
+          
+          // Check logo has proper dimensions (not collapsed/transparent)
+          const logoBox = await logo.boundingBox();
+          expect(logoBox?.width, `Logo width on ${path} load ${i+1}`).toBeGreaterThan(20);
+          expect(logoBox?.height, `Logo height on ${path} load ${i+1}`).toBeGreaterThan(20);
+          
+          // Check that logo image actually loads (not broken)
+          const logoSrc = await logo.getAttribute('src');
+          const logoResponse = await page.request.get(logoSrc);
+          expect(logoResponse.ok(), `Logo should load on ${path} load ${i+1}`).toBeTruthy();
+          
+          // On landing page, check recipe images
+          if (path === '/') {
+            const curationSection = page.locator('#curation');
+            if (await curationSection.isVisible()) {
+              const recipeCards = curationSection.locator('article.recipe-card');
+              const cardCount = await recipeCards.count();
+              
+              for (let j = 0; j < cardCount; j++) {
+                const card = recipeCards.nth(j);
+                const imageDiv = card.locator('div[role="img"]');
+                
+                // Check image container is visible and has proper dimensions
+                const imageBox = await imageDiv.boundingBox();
+                expect(imageBox?.width, `Recipe card ${j} width on load ${i+1}`).toBeGreaterThan(100);
+                expect(imageBox?.height, `Recipe card ${j} height on load ${i+1}`).toBeGreaterThan(100);
+                
+                // Check that background image is set
+                const style = await imageDiv.getAttribute('style');
+                expect(style, `Recipe card ${j} should have background image on load ${i+1}`).toContain('background-image');
+                expect(style, `Recipe card ${j} should not be broken on load ${i+1}`).not.toContain('broken');
+              }
+            }
+          }
+        }
+      }
+    });
+
+    test('images load correctly on slow network conditions', async ({ page, browserName }) => {
+      // Skip this test on WebKit due to network throttling limitations
+      test.skip(browserName === 'webkit', 'Network throttling not reliable on WebKit');
+
+      // Simulate slow network conditions
+      const client = await page.context().newCDPSession(page);
+      await client.send('Network.emulateNetworkConditions', {
+        offline: false,
+        downloadThroughput: 150 * 1024 / 8, // 150 kbps
+        uploadThroughput: 75 * 1024 / 8,   // 75 kbps
+        latency: 200,                      // 200ms latency
+      });
+
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
+
+      // Check that logo still loads on slow network
+      const logo = page.locator('header a[aria-label="Go, Cart! Home"] img');
+      await expect(logo).toBeVisible({ timeout: 10000 });
+
+      // Check recipe images load (may take longer)
+      const curationSection = page.locator('#curation');
+      await expect(curationSection).toBeVisible({ timeout: 15000 });
+
+      const recipeCards = curationSection.locator('article.recipe-card');
+      const firstCard = recipeCards.first();
+      const imageDiv = firstCard.locator('div[role="img"]');
+      
+      // Wait for image to be properly styled (background image loaded)
+      await expect(imageDiv).toHaveCSS('background-image', /url/, { timeout: 20000 });
+    });
+
+    test('fallback mechanisms work when images fail to load', async ({ page }) => {
+      // Intercept image requests and make some fail
+      await page.route('**/*.{png,jpg,jpeg,svg,webp}', route => {
+        // Randomly fail 30% of image requests to test fallback
+        if (Math.random() < 0.3) {
+          route.abort();
+        } else {
+          route.continue();
+        }
+      });
+
+      await page.goto('/');
+      await page.waitForLoadState('networkidle');
+
+      // Even with some image failures, the page should still be functional
+      const header = page.locator('header');
+      await expect(header).toBeVisible();
+
+      // Logo should still be visible (it's inline SVG, so more resilient)
+      const logo = page.locator('header a[aria-label="Go, Cart! Home"]');
+      await expect(logo).toBeVisible();
+
+      // Page should not show broken image icons
+      const brokenImages = page.locator('img[src*="broken"]');
+      await expect(brokenImages).toHaveCount(0);
+    });
+  });
 });
