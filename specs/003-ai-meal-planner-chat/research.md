@@ -338,7 +338,7 @@ Total: 8,000 tokens
 - Best for: Authoritative source
 
 **L4 Cache (Vector DB)**: Semantic Search
-- Qdrant or Pinecone
+- Vector database solution
 - Recipe embeddings
 - Query embeddings for similarity matching
 
@@ -424,7 +424,7 @@ Total: 8,000 tokens
 | **Session Store** | Redis | Pub/Sub, persistence, TTL |
 | **Message Queue** | RabbitMQ | Reliability, priority queue, DLQ |
 | **Database** | PostgreSQL | ACID, JSON support, extensions |
-| **Vector DB** | Qdrant (self-hosted) | Open-source, cost-effective |
+| **Vector DB** | Vector database solution | Open-source, cost-effective |
 | **Cache Layer** | Redis Cluster | HA, automatic failover |
 | **Orchestration** | Docker + Kubernetes | Horizontal scaling, self-healing |
 
@@ -559,7 +559,7 @@ All technical unknowns have been resolved through:
 - Redis cluster hosting
 - RabbitMQ cluster
 - PostgreSQL read replicas
-- Vector database (Qdrant self-hosted)
+- Vector database solution
 
 **Observability & Tools**: $50
 - Monitoring and logging

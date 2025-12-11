@@ -236,8 +236,6 @@ async def test_full_meal_plan_to_cart_workflow(
     result = await agent.create_cart_from_meal_plan(
         meal_plan_id=1,
         user_id=1,
-        db=mock_db,
-        credential_manager=None,
         delivery_preferences={
             "preferred_dates": [],
             "preferred_time_slot": "afternoon",
@@ -287,9 +285,7 @@ async def test_workflow_handles_missing_meal_plan(
     with pytest.raises(ValueError, match="Meal plan"):
         await agent.create_cart_from_meal_plan(
             meal_plan_id=999,
-            user_id=1,
-            db=mock_db,
-            credential_manager=None
+            user_id=1
         )
 
 
@@ -316,9 +312,7 @@ async def test_workflow_handles_no_ingredients(
     with pytest.raises(ValueError, match="no ingredients"):
         await agent.create_cart_from_meal_plan(
             meal_plan_id=1,
-            user_id=1,
-            db=mock_db,
-            credential_manager=None
+            user_id=1
         )
 
 
@@ -363,9 +357,7 @@ async def test_workflow_handles_unmapped_ingredients(
     # Execute - should succeed with partial mapping
     result = await agent.create_cart_from_meal_plan(
         meal_plan_id=1,
-        user_id=1,
-        db=mock_db,
-        credential_manager=None
+        user_id=1
     )
 
     assert result is not None
@@ -397,9 +389,7 @@ async def test_workflow_publishes_events_on_success(
 
     await agent.create_cart_from_meal_plan(
         meal_plan_id=1,
-        user_id=1,
-        db=mock_db,
-        credential_manager=None
+        user_id=1
     )
 
     # Verify event published
@@ -435,9 +425,7 @@ async def test_workflow_publishes_events_on_failure(
     with pytest.raises(RuntimeError):
         await agent.create_cart_from_meal_plan(
             meal_plan_id=1,
-            user_id=1,
-            db=mock_db,
-            credential_manager=None
+            user_id=1
         )
 
     # Verify failure event published
@@ -500,8 +488,6 @@ async def test_workflow_selects_delivery_slot_by_preferences(
     result = await agent.create_cart_from_meal_plan(
         meal_plan_id=1,
         user_id=1,
-        db=mock_db,
-        credential_manager=None,
         delivery_preferences={
             "preferred_dates": [],
             "preferred_time_slot": "afternoon",

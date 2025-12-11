@@ -7,6 +7,23 @@
         "--url",
         "redis://default:gjWuRAlGXbBvnWGoVwSUIUwWyBvkRCMv@switchback.proxy.rlwy.net:51029"
       ]
-    }
+    },
+    "sqlite": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-sqlite",
+        "--db-path",
+        "backend/"
+      ]
+    },
+    "postgres": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgres",
+        "postgresql://postgres:FOxNYviCCzWKNNJCVswOqoCYZtQwDfkC@shortline.proxy.rlwy.net:56297/railway"
+      ]
+    },
+
   }
 }
