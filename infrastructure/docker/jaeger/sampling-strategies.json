@@ -1,0 +1,40 @@
+{
+  "service_strategies": [
+    {
+      "service": "ai-meal-planner-api",
+      "type": "probabilistic",
+      "param": 0.1,
+      "operation_strategies": [
+        {
+          "operation": "GET /health",
+          "type": "probabilistic",
+          "param": 0.01
+        },
+        {
+          "operation": "GET /metrics",
+          "type": "probabilistic",
+          "param": 0.01
+        },
+        {
+          "operation": "POST /api/v1/recipes",
+          "type": "probabilistic",
+          "param": 0.5
+        },
+        {
+          "operation": "POST /api/v1/meal-plans",
+          "type": "probabilistic",
+          "param": 0.5
+        },
+        {
+          "operation": "POST /api/v1/grocery-carts",
+          "type": "probabilistic",
+          "param": 0.5
+        }
+      ]
+    }
+  ],
+  "default_strategy": {
+    "type": "probabilistic",
+    "param": 0.1
+  }
+}

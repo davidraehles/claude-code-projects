@@ -6,7 +6,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthToken } from '@/contexts/AuthContext'
 import { api } from '@/lib/api'
-import type { Recipe, RecipeCreateRequest, RecipeImportRequest } from '@/lib/types'
+import type { RecipeCreateRequest, RecipeImportRequest } from '@/lib/types'
 
 /**
  * Query keys for recipes.

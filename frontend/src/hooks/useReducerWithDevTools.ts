@@ -37,10 +37,10 @@ interface DevToolsOptions {
 }
 
 interface DevToolsConnection {
-  subscribe(listener: (message: any) => void): () => void
+  subscribe(listener: (message: Record<string, unknown>) => void): () => void
   unsubscribe(): void
-  send(action: any, state: any): void
-  init(state: any): void
+  send(action: Record<string, unknown>, state: unknown): void
+  init(state: unknown): void
 }
 
 // Extend Window interface if not already extended
@@ -72,11 +72,9 @@ export function useReducerWithDevTools<S, A>(
   name: string = 'Reducer',
   init?: (initialState: S) => S
 ): [S, React.Dispatch<A>] {
-  const [state, dispatch] = useReducer(
-    reducer,
-    initialState,
-    init as any
-  )
+  // Always call useReducer with init function (wrapper allows undefined)
+  const actualInit = init || ((state: S) => state)
+  const [state, dispatch] = useReducer(reducer, initialState, actualInit) as [S, React.Dispatch<A>]
 
   const devToolsRef = useRef<DevToolsConnection | null>(null)
   const isTimeTravel = useRef(false)
@@ -118,9 +116,10 @@ export function useReducerWithDevTools<S, A>(
       devTools.init(state)
 
       // Subscribe to time-travel actions
-      const unsubscribe = devTools.subscribe((message) => {
+      const unsubscribe = devTools.subscribe((message: Record<string, unknown>) => {
         if (message.type === 'DISPATCH') {
-          switch (message.payload.type) {
+          const payload = message.payload as Record<string, unknown>
+          switch (payload.type) {
             case 'JUMP_TO_STATE':
             case 'JUMP_TO_ACTION':
               isTimeTravel.current = true
@@ -138,9 +137,10 @@ export function useReducerWithDevTools<S, A>(
               break
             case 'IMPORT_STATE':
               // Import state from file
-              if (message.payload.nextLiftedState) {
-                const { computedStates } = message.payload.nextLiftedState
-                if (computedStates && computedStates.length > 0) {
+              if ((payload as Record<string, unknown>).nextLiftedState) {
+                const nextLiftedState = (payload as Record<string, unknown>).nextLiftedState as Record<string, unknown>
+                const { computedStates } = nextLiftedState
+                if (computedStates && Array.isArray(computedStates) && computedStates.length > 0) {
                   isTimeTravel.current = true
                 }
               }
@@ -170,24 +170,14 @@ export function useReducerWithDevTools<S, A>(
   }, [state])
 
   // Wrap dispatch to send actions to DevTools
-  const enhancedDispatch = useRef((action: A) => {
+  const dispatchWithDevTools = (action: A) => {
     if (devToolsRef.current) {
-      devToolsRef.current.send(action, state)
+      devToolsRef.current.send(action as Record<string, unknown>, state)
     }
     dispatch(action)
-  })
+  }
 
-  // Update the dispatch wrapper when state changes
-  useEffect(() => {
-    enhancedDispatch.current = (action: A) => {
-      if (devToolsRef.current) {
-        devToolsRef.current.send(action, state)
-      }
-      dispatch(action)
-    }
-  }, [state])
-
-  return [state, enhancedDispatch.current as React.Dispatch<A>]
+  return [state, dispatchWithDevTools as React.Dispatch<A>]
 }
 
 /**

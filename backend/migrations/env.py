@@ -43,13 +43,32 @@ target_metadata = Base.metadata
 
 # Get database URL from environment or config
 def get_url():
-    """Get database URL from environment variables or config."""
+    """
+    Get database URL from environment variables or config.
+
+    Reads the following environment variables with sensible defaults:
+    - DB_USER: Database username (default: postgres)
+    - DB_PASSWORD: Database password (default: postgres)
+    - DB_HOST: Database host (default: localhost)
+    - DB_PORT: Database port (default: 5432)
+    - DB_NAME: Database name (default: recipe_app)
+
+    For testing, you can set TEST_DB_NAME to use a separate test database.
+
+    Production deployments should set all environment variables explicitly
+    to avoid using development defaults.
+
+    Returns:
+        str: PostgreSQL connection URL
+    """
     # Read from environment variables (preferred)
     db_user = os.getenv("DB_USER", "postgres")
     db_password = os.getenv("DB_PASSWORD", "postgres")
     db_host = os.getenv("DB_HOST", "localhost")
     db_port = os.getenv("DB_PORT", "5432")
-    db_name = os.getenv("DB_NAME", "recipe_app")
+
+    # Allow TEST_DB_NAME to override DB_NAME for test environments
+    db_name = os.getenv("TEST_DB_NAME") or os.getenv("DB_NAME", "recipe_app")
 
     return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
 

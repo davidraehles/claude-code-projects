@@ -3,9 +3,33 @@
  */
 
 import NextAuth, { NextAuthOptions } from 'next-auth'
+import type { Session } from 'next-auth'
+import type { JWT } from 'next-auth/jwt'
 import CredentialsProvider from 'next-auth/providers/credentials'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
+interface CustomUser {
+  id: string
+  email: string
+  name: string
+  accessToken: string
+}
+
+interface CustomJWT extends JWT {
+  accessToken?: string
+  id?: string
+}
+
+interface CustomSession extends Session {
+  accessToken?: string
+  user: {
+    id: string
+    email?: string
+    name?: string
+    image?: string
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -58,7 +82,7 @@ export const authOptions: NextAuthOptions = {
               email: credentials.email,
               name: credentials.email.split('@')[0],
               accessToken: tokens.access_token,
-            }
+            } as CustomUser
           }
 
           const user = await userRes.json()
@@ -69,7 +93,7 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.email.split('@')[0],
             accessToken: tokens.access_token,
-          }
+          } as CustomUser
         } catch (error) {
           console.error('Auth error:', error)
           return null
@@ -81,18 +105,23 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       // Add access_token to the token right after signin
       if (user) {
-        token.accessToken = (user as any).accessToken
-        token.id = user.id
+        const customToken = token as CustomJWT
+        const customUser = user as CustomUser
+        customToken.accessToken = customUser.accessToken
+        customToken.id = customUser.id
       }
-      return token
+      return token as CustomJWT
     },
     async session({ session, token }) {
       // Send properties to the client
-      if (token && session.user) {
-        session.user.id = token.id as string
-        ;(session as any).accessToken = token.accessToken
+      const customSession = session as CustomSession
+      const customToken = token as CustomJWT
+      if (customToken && customSession.user) {
+        // Set id with fallback to sub from token
+        customSession.user.id = customToken.id || customToken.sub || ''
+        customSession.accessToken = customToken.accessToken
       }
-      return session
+      return customSession
     },
   },
   pages: {

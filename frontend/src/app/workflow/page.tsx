@@ -3,7 +3,7 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Loader } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import CartPreview, { CartPreviewData } from '@/components/knuspr/CartPreview';
 import DeliverySlotPicker, { DeliverySlot } from '@/components/knuspr/DeliverySlotPicker';
 import MissingItemsSuggestions from '@/components/knuspr/MissingItemsSuggestions';
@@ -26,7 +26,6 @@ const isStepComplete = (step: WorkflowStep, currentStep: WorkflowStep): boolean 
 const isStepAccessible = (step: WorkflowStep, currentStep: WorkflowStep): boolean => getStepIndex(step) <= getStepIndex(currentStep);
 
 function WorkflowPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const mealPlanId = searchParams.get('meal_plan_id');
 
@@ -174,7 +173,7 @@ function WorkflowPageContent() {
               </div>
               <h2 className="text-2xl font-bold text-gray-900">Generating Your Cart</h2>
               <p className="text-gray-600">
-                We're converting your meal plan into a Knuspr shopping cart...
+                We&apos;re converting your meal plan into a Knuspr shopping cart...
               </p>
             </div>
           </div>
@@ -288,7 +287,7 @@ function WorkflowPageContent() {
 
           {/* Missing Items */}
           {(state.step === 'delivery-selection' || state.step === 'review') &&
-            state.cartData?.unavailable_items.length! > 0 && (
+            (state.cartData?.unavailable_items?.length ?? 0) > 0 && (
               <div className="rounded-lg bg-white p-6 shadow-sm">
                 <MissingItemsSuggestions
                   unavailableItems={state.cartData?.unavailable_items || []}
@@ -334,7 +333,7 @@ function WorkflowPageContent() {
                 Complete Order on Knuspr →
               </button>
               <p className="text-xs text-green-700 text-center">
-                You'll be redirected to Knuspr to finalize your order
+                You&apos;ll be redirected to Knuspr to finalize your order
               </p>
             </div>
           )}

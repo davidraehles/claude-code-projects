@@ -5,6 +5,8 @@ Provides reusable dependencies for database sessions, authentication, etc.
 """
 
 import os
+import secrets
+import logging
 from typing import Generator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -14,9 +16,42 @@ import jwt
 from app.database import get_db
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
+
+
+def get_jwt_secret_key() -> str:
+    """
+    Get JWT secret key with fail-secure pattern.
+
+    In production, requires JWT_SECRET_KEY env var (fails if missing).
+    In development, generates random key with warning.
+
+    Returns:
+        str: JWT secret key
+
+    Raises:
+        ValueError: In production if JWT_SECRET_KEY env var not set
+    """
+    secret = os.getenv("JWT_SECRET_KEY")
+    if not secret:
+        app_env = os.getenv("APP_ENV", "development")
+        if app_env == "production":
+            raise ValueError(
+                "JWT_SECRET_KEY environment variable is required in production. "
+                "Generate a secure key with: python -c 'import secrets; "
+                "print(secrets.token_urlsafe(32))'"
+            )
+        # Development: generate random key
+        secret = secrets.token_urlsafe(32)
+        logger.warning(
+            "JWT_SECRET_KEY not set. Using randomly generated key for development. "
+            "Set JWT_SECRET_KEY environment variable for production."
+        )
+    return secret
+
 
 # JWT Configuration
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+SECRET_KEY = get_jwt_secret_key()
 ALGORITHM = "HS256"
 
 

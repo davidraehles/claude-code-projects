@@ -174,7 +174,7 @@ const CartPreviewComponent: React.FC<CartPreviewProps> = ({
                 {data.unavailable_items.length} Item(s) Not Available
               </h3>
               <p className="text-sm text-amber-800 mt-1">
-                These items aren't currently available at Knuspr:
+                These items aren&apos;t currently available at Knuspr:
               </p>
               <ul className="mt-2 space-y-1">
                 {data.unavailable_items.map((item, idx) => (

@@ -24,6 +24,14 @@
         "postgresql://postgres:FOxNYviCCzWKNNJCVswOqoCYZtQwDfkC@shortline.proxy.rlwy.net:56297/railway"
       ]
     },
-
+    "qdrant": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-qdrant",
+        "--url",
+        "http://localhost:6333"
+      ]
+    }
   }
 }

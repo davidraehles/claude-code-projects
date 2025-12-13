@@ -83,8 +83,6 @@ class CartOptimizerAgent:
         self,
         meal_plan_id: int,
         user_id: int,
-        db,
-        credential_manager,
         delivery_preferences: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         """
@@ -350,7 +348,7 @@ class CartOptimizerAgent:
 
         return slots[0] if slots else None
 
-    async def _extract_ingredients_from_meal_plan(self, meal_plan_id: str) -> List[str]:
+    async def _extract_ingredients_from_meal_plan(self, meal_plan_id: int) -> List[str]:
         """
         Extract all unique ingredients from meal plan recipes.
 

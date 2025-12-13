@@ -347,10 +347,8 @@ async def create_cart_from_meal_plan_with_knuspr(
         # For this phase, we'll run it inline but handle errors gracefully.
 
         result = await agent.create_cart_from_meal_plan(
-            meal_plan_id=request.meal_plan_id,  # Pass as int, not string
-            user_id=user_id,  # Pass as int, not string
-            db=db,
-            credential_manager=credential_manager,
+            meal_plan_id=request.meal_plan_id,
+            user_id=user_id,
             delivery_preferences=prefs_dict
         )
 

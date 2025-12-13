@@ -12,10 +12,11 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useMealPlan } from '@/hooks/queries/useMealPlans'
 import { useCreateCartFromMealPlanWorkflow } from '@/hooks/queries/useWorkflows'
 import { useKnusprCredentials } from '@/hooks/queries/useKnusprCredentials'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { CartGenerationButton } from '@/components/knuspr/CartGenerationButton'
+import type { MealPlanDetail } from '@/lib/types'
 
 export default function MealPlanDetailPage() {
   const params = useParams()
@@ -26,8 +27,9 @@ export default function MealPlanDetailPage() {
   const mealPlanId = typeof rawId === 'string' ? parseInt(rawId, 10) : NaN
   const isValidId = !isNaN(mealPlanId) && mealPlanId > 0
 
-  // Local state for delivery preferences modal
+  // Local state for modals
   const [showDeliveryModal, setShowDeliveryModal] = useState(false)
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false)
   const [preferredTimeSlot, setPreferredTimeSlot] = useState<'morning' | 'afternoon' | 'evening'>('afternoon')
   const [budgetOptimization, setBudgetOptimization] = useState(false)
 
@@ -52,8 +54,8 @@ export default function MealPlanDetailPage() {
   // Generate grocery cart with delivery preferences
   const handleGenerateCart = () => {
     if (!hasKnusprCredentials) {
-      // Show credentials setup prompt
-      alert('Please configure Knuspr credentials first. Go to your account settings.')
+      // Show credentials setup modal
+      setShowCredentialsModal(true)
       return
     }
     // Show delivery preferences modal
@@ -95,7 +97,7 @@ export default function MealPlanDetailPage() {
             <h3 className="text-red-900 font-semibold mb-2">Invalid meal plan ID</h3>
             <p className="text-red-700 mb-4">The meal plan ID provided is not valid.</p>
             <Link href="/meal-plans">
-              <Button variant="outline">Back to Meal Plans</Button>
+              <Button variant="secondary">Back to Meal Plans</Button>
             </Link>
           </div>
         </div>
@@ -123,7 +125,7 @@ export default function MealPlanDetailPage() {
             <h3 className="text-red-900 font-semibold mb-2">Error loading meal plan</h3>
             <p className="text-red-700 mb-4">{error}</p>
             <Link href="/meal-plans">
-              <Button variant="outline">Back to Meal Plans</Button>
+              <Button variant="secondary">Back to Meal Plans</Button>
             </Link>
           </div>
         </div>
@@ -135,8 +137,9 @@ export default function MealPlanDetailPage() {
     return null
   }
 
-  // Days are already organized - ensure days array exists
-  const days = (mealPlan.days || []).sort((a, b) => a.day_number - b.day_number)
+  // API returns MealPlanDetail structure with nested meal_plan property
+  const planData = (mealPlan as MealPlanDetail).meal_plan
+  const days = ((mealPlan as MealPlanDetail).days || []).sort((a, b) => a.day_number - b.day_number)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -148,7 +151,7 @@ export default function MealPlanDetailPage() {
               <Link href="/" className="flex items-center space-x-2">
                 <span className="text-3xl">🍽️</span>
                 <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                  MealPlannerAI
+                  Go, Cart!
                 </span>
               </Link>
             </div>
@@ -185,15 +188,15 @@ export default function MealPlanDetailPage() {
             ← Back to Meal Plans
           </Link>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Meal Plan for {new Date(mealPlan.start_date).toLocaleDateString()}
+            Meal Plan for {new Date(planData.start_date).toLocaleDateString()}
           </h1>
           <p className="text-gray-600">
-            {mealPlan.num_days} days • {mealPlan.num_people} people • {mealPlan.meals_per_day} meals/day
+            {planData.num_days} days • {planData.num_people} people • {planData.meals_per_day} meals/day
           </p>
         </div>
 
         {/* Actions - Simple Cart Generation */}
-        {mealPlan.total_recipes && mealPlan.total_recipes > 0 && (
+        {planData.total_recipes && planData.total_recipes > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
             <div className="flex flex-col gap-4">
               <div>
@@ -262,7 +265,7 @@ export default function MealPlanDetailPage() {
 
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {day.meals.map((meal, idx) => (
-                    <Card key={meal.id} hover>
+                    <Card key={`${day.day_number}-${meal.recipe_id}-${idx}`} hover>
                       <CardHeader>
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-sm font-semibold text-blue-600 uppercase">
@@ -272,61 +275,27 @@ export default function MealPlanDetailPage() {
                             {meal.servings} servings
                           </span>
                         </div>
-                        <CardTitle className="text-lg">{meal.recipe.title}</CardTitle>
+                        <CardTitle className="text-lg">{meal.recipe_name}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        {/* Ingredients */}
-                        <div className="mb-3">
-                          <p className="text-xs font-semibold text-gray-700 mb-1">Ingredients:</p>
-                          <ul className="text-xs text-gray-600 space-y-0.5">
-                            {meal.recipe.ingredients.slice(0, 3).map((ing, idx) => (
-                              <li key={idx} className="line-clamp-1">• {ing}</li>
-                            ))}
-                            {meal.recipe.ingredients.length > 3 && (
-                              <li className="text-gray-500 italic">
-                                +{meal.recipe.ingredients.length - 3} more...
-                              </li>
-                            )}
-                          </ul>
+                        {/* Basic meal info */}
+                        <div className="space-y-3 text-sm text-gray-600">
+                          {meal.calories && (
+                            <div className="flex justify-between items-center">
+                              <span>Calories:</span>
+                              <span className="font-semibold text-gray-900">{Math.round(meal.calories)}</span>
+                            </div>
+                          )}
+                          {meal.cost && (
+                            <div className="flex justify-between items-center">
+                              <span>Est. Cost:</span>
+                              <span className="font-semibold text-gray-900">${meal.cost.toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center border-t pt-3">
+                            <span className="text-xs text-gray-500">Recipe ID: {meal.recipe_id}</span>
+                          </div>
                         </div>
-
-                        {/* Dietary tags */}
-                        {meal.recipe.dietary_tags && meal.recipe.dietary_tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-3">
-                            {meal.recipe.dietary_tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Nutrition */}
-                        {meal.recipe.nutrition && (
-                          <div className="grid grid-cols-3 gap-2 text-xs text-gray-600 border-t pt-2">
-                            <div className="text-center">
-                              <div className="font-semibold text-gray-900">
-                                {Math.round(meal.recipe.nutrition.calories || 0)}
-                              </div>
-                              <div className="text-gray-500">cal</div>
-                            </div>
-                            <div className="text-center border-l border-r">
-                              <div className="font-semibold text-gray-900">
-                                {Math.round(meal.recipe.nutrition.protein || 0)}g
-                              </div>
-                              <div className="text-gray-500">protein</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="font-semibold text-gray-900">
-                                {Math.round(meal.recipe.nutrition.carbs || 0)}g
-                              </div>
-                              <div className="text-gray-500">carbs</div>
-                            </div>
-                          </div>
-                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -394,7 +363,7 @@ export default function MealPlanDetailPage() {
                 {/* Actions */}
                 <div className="flex gap-3 pt-4">
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     onClick={() => setShowDeliveryModal(false)}
                     disabled={generatingCart}
                     className="flex-1"
@@ -418,6 +387,44 @@ export default function MealPlanDetailPage() {
                     ) : (
                       'Create Cart'
                     )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Credentials Setup Modal */}
+        {showCredentialsModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle>Knuspr Credentials Required</CardTitle>
+                <CardDescription>
+                  Configure your Knuspr credentials to generate grocery carts
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-gray-700 mb-4">
+                  Please set up your Knuspr credentials in your account settings to create grocery carts from meal plans.
+                </p>
+                <div className="flex gap-3 pt-4">
+                  <Button
+                    variant="secondary"
+                    onClick={() => setShowCredentialsModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="primary"
+                    onClick={() => {
+                      setShowCredentialsModal(false)
+                      router.push('/account/settings')
+                    }}
+                    className="flex-1"
+                  >
+                    Go to Settings
                   </Button>
                 </div>
               </CardContent>

@@ -15,13 +15,10 @@ import {
   groceryCartReducer,
   getInitialCartState,
   selectCheckedCount,
-  selectIsItemChecked,
   type GroceryCartState,
 } from '@/reducers/groceryCartReducer'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
-import { Checkbox } from '@/components/ui/Checkbox'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
+import { Button } from '@/components/ui/button'
 import { ViewToggle } from '@/components/grocery/ViewToggle'
 import { RecipeView } from '@/components/grocery/RecipeView'
 import { CategoryView } from '@/components/grocery/CategoryView'
@@ -97,7 +94,7 @@ export default function GroceryCartPage() {
         dispatch({ type: 'SET_VIEW_MODE', payload: { viewMode: savedView } })
       }
     }
-  }, [cartId, isValidId])
+  }, [cartId, isValidId, dispatch])
 
   // Print grocery list
   const handlePrint = () => {
@@ -130,7 +127,7 @@ export default function GroceryCartPage() {
             <h3 className="text-red-900 font-semibold mb-2">Invalid grocery cart ID</h3>
             <p className="text-red-700 mb-4">The grocery cart ID provided is not valid.</p>
             <Link href="/meal-plans">
-              <Button variant="outline">Back to Meal Plans</Button>
+              <Button variant="secondary">Back to Meal Plans</Button>
             </Link>
           </div>
         </div>
@@ -158,7 +155,7 @@ export default function GroceryCartPage() {
             <h3 className="text-red-900 font-semibold mb-2">Error loading grocery cart</h3>
             <p className="text-red-700 mb-4">{error}</p>
             <Link href="/meal-plans">
-              <Button variant="outline">Back to Meal Plans</Button>
+              <Button variant="secondary">Back to Meal Plans</Button>
             </Link>
           </div>
         </div>
@@ -215,7 +212,7 @@ export default function GroceryCartPage() {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              <Button variant="outline" onClick={handleExport} className="w-full sm:w-auto">
+              <Button variant="secondary" onClick={handleExport} className="w-full sm:w-auto">
                 <span className="mr-2">📄</span>
                 Export TXT
               </Button>

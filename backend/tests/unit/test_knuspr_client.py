@@ -14,6 +14,7 @@ from app.services.knuspr_mcp_client import (
 from tenacity import RetryError
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta
+from freezegun import freeze_time
 
 
 @pytest.fixture
@@ -311,6 +312,7 @@ async def test_create_cart_tool_execution_error(client, mock_mcp_session):
 
 
 @pytest.mark.asyncio
+@freeze_time("2025-12-07T17:46:12.385310")
 async def test_get_delivery_slots_success(client, mock_mcp_session):
     """Test successful retrieval of delivery slots."""
     client.authenticated = True

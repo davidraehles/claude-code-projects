@@ -7,7 +7,7 @@ Defines request and response schemas for API endpoints and data validation.
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class RecipeCreate(BaseModel):
@@ -23,12 +23,14 @@ class RecipeCreate(BaseModel):
     source_url: str = Field(..., description="Original source URL")
     source_type: str = Field(..., description="Type of source (html, api, rss)")
 
-    @validator("ingredients")
+    @field_validator("ingredients")
+    @classmethod
     def validate_ingredients(cls, v):
         """Ensure ingredients are non-empty strings."""
         return [ing.strip() for ing in v if ing.strip()]
 
-    @validator("source_type")
+    @field_validator("source_type")
+    @classmethod
     def validate_source_type(cls, v):
         """Ensure source_type is valid."""
         valid_types = {"html", "api", "rss", "file_upload"}
@@ -151,7 +153,8 @@ class RecipeHarvestRequest(BaseModel):
         description="Type of source (html, api, rss). Auto-detected if not provided."
     )
 
-    @validator("source_type")
+    @field_validator("source_type")
+    @classmethod
     def validate_source_type(cls, v):
         """Ensure source_type is valid."""
         if v is None:

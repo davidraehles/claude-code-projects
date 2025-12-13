@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useImportRecipe } from '@/hooks/queries/useRecipes'
 import { useFileUpload } from '@/hooks/queries/useFileUpload'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 
@@ -109,7 +109,7 @@ export default function ImportPage() {
           </Link>
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Import Recipe</h1>
           <p className="text-gray-600">
-            Paste a recipe URL from any cooking website. We'll automatically extract ingredients, instructions, and nutrition info.
+            Paste a recipe URL from any cooking website. We&apos;ll automatically extract ingredients, instructions, and nutrition info.
           </p>
         </div>
 

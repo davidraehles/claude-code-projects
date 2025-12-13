@@ -7,7 +7,7 @@ Defines request and response schemas for grocery cart API endpoints.
 from datetime import datetime
 from typing import Optional, List, Dict, Any
 
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class RecipeSource(BaseModel):
@@ -63,7 +63,8 @@ class CartItemSchema(BaseModel):
     knuspr_url: Optional[str] = Field(None, description="Knuspr product URL")
     is_purchased: bool = Field(False, description="Purchase status")
 
-    @validator("quantity")
+    @field_validator("quantity")
+    @classmethod
     def validate_quantity(cls, v):
         """Ensure quantity is positive."""
         if v <= 0:
@@ -118,7 +119,8 @@ class GroceryCartSchema(BaseModel):
     created_at: Optional[datetime] = Field(None, description="Creation timestamp")
     updated_at: Optional[datetime] = Field(None, description="Last update timestamp")
 
-    @validator("status")
+    @field_validator("status")
+    @classmethod
     def validate_status(cls, v):
         """Ensure status is valid."""
         valid_statuses = {"active", "ordered", "completed"}

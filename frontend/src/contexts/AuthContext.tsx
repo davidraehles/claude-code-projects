@@ -43,13 +43,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     if (status === 'loading') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState(prev => ({ ...prev, isLoading: true }))
       return
     }
 
     if (status === 'authenticated' && session) {
       // Extract token from session (assuming it's added to session in next-auth config)
-      const token = (session as any).accessToken || null
+      const token = ((session as unknown) as { accessToken?: string }).accessToken || null
 
       setState({
         token,

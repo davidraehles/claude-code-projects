@@ -5,7 +5,7 @@ Defines the database schema for users with authentication and preferences.
 """
 
 from datetime import datetime
-from sqlalchemy import Column, BigInteger, String, DateTime, Index, JSON, Integer
+from sqlalchemy import Column, BigInteger, String, DateTime, Index, JSON, Integer, Boolean
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.ext.compiler import compiles
@@ -71,6 +71,14 @@ class User(Base):
         comment="Subscription level: free, basic, premium",
     )
     subscription_expires_at = Column(DateTime, nullable=True, index=True)
+
+    # Admin flag for authorization
+    is_admin = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        comment="Whether user has admin privileges"
+    )
 
     # User preferences (flexible JSON field)
     preferences = Column(

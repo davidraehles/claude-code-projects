@@ -279,6 +279,33 @@ class KnusprMCPClient:
                 response = await session.call_tool(tool_name, arguments=arguments)
                 logger.debug(f"Received response from '{tool_name}': {response}")
 
+                # Handle CallToolResult from mcp library
+                content_blocks = []
+                if hasattr(response, "content"):
+                    content_blocks = response.content
+                elif isinstance(response, dict) and "content" in response:
+                    content_blocks = response["content"]
+
+                # Parse text content
+                full_text = ""
+                if content_blocks:
+                    for block in content_blocks:
+                        # block can be TextContent object or dict
+                        if hasattr(block, "type") and block.type == "text":
+                            full_text += block.text
+                        elif isinstance(block, dict) and block.get("type") == "text":
+                            full_text += block.get("text", "")
+
+                if full_text:
+                    try:
+                        import json
+                        return json.loads(full_text)
+                    except json.JSONDecodeError:
+                        logger.warning(f"Failed to parse tool response as JSON: {full_text}")
+                        # Fallback to returning raw text if not JSON
+                        return {"raw_text": full_text}
+
+                # Fallback for older behavior or different structures
                 if hasattr(response, "result") and isinstance(response.result, dict):
                     return response.result
                 if isinstance(response, dict):

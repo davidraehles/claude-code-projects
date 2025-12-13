@@ -6,12 +6,51 @@
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: 0 0% 100%;
+  --color-foreground: 222.2 84% 4.9%;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* Light theme (default) */
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Primary - Coral */
+  --color-primary-50: 20 83% 95%;
+  --color-primary-100: 20 100% 94%;
+  --color-primary-200: 21.3 100% 99.5%;
+  --color-primary-300: 23 100% 98.5%;
+  --color-primary-400: 24 100% 96.8%;
+  --color-primary-500: 25.7 100% 95.1%;
+  --color-primary-600: 27.8 100% 92.6%;
+  --color-primary-700: 10.5 100% 30.1%;
+  --color-primary-800: 0 83% 7%;
+  --color-primary-900: 0 93% 1%;
+
+  --color-info: 231.5 100% 49.4%;
+  --color-success: 161 100% 56.5%;
+  --color-danger: 349 93.9% 54.9%;
+  --color-warning: 45 100% 55%;
+
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* Typography */
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-base: 16px;
+  --text-lg: 18px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 30px;
+  --text-4xl: 36px;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Dark theme */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,8 +58,143 @@
   }
 }
 
+/* Background Color Utility Classes */
+.background-white {
+  background-color: var(--background) !important;
+}
+.background-transparent {
+  background-color: transparent !important;
+}
+
+/* Foreground Color Utility Classes */
+.foreground-white {
+  color: var(--background) !important;
+}
+.foreground-transparent {
+  color: transparent !important;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ==========================================
+   Accessibility Enhancements
+   ========================================== */
+
+/* Skip to content link - WCAG 2.1 requirement */
+.skip-to-content {
+  position: absolute;
+  top: -100px;
+  left: 0;
+  background: #E85A4F;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  text-decoration: none;
+  font-weight: 600;
+  border-radius: 0 0 0.5rem 0;
+  z-index: 9999;
+  transition: top 0.2s;
+}
+
+.skip-to-content:focus {
+  top: 0;
+  outline: 3px solid #7EC8A3;
+  outline-offset: 2px;
+}
+
+/* Improved focus indicators - WCAG 2.1 AAA */
+*:focus-visible {
+  outline: 3px solid #E85A4F;
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #E85A4F;
+  outline-offset: 2px;
+}
+
+/* Ensure sufficient color contrast for text */
+.text-muted {
+  color: #635A50; /* Ensures 4.5:1 contrast ratio */
+}
+
+/* Reduced motion support - WCAG 2.1 */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  button,
+  a {
+    border: 2px solid currentColor;
+  }
+
+  .btn-primary {
+    background: #E85A4F;
+    color: white;
+    border: 3px solid #000;
+  }
+
+  .btn-secondary {
+    background: white;
+    color: #2D3748;
+    border: 3px solid #2D3748;
+  }
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ensure minimum touch target size (44x44px) - WCAG 2.1 AAA Mobile */
+@media (max-width: 768px) {
+  button,
+  a.btn,
+  input[type="button"],
+  input[type="submit"],
+  .touchable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Print styles for accessibility */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+
+  a[href^="#"]::after,
+  a[href^="javascript:"]::after {
+    content: "";
+  }
 }

@@ -1,1 +1,1 @@
-"""Meal planner app package."""
+"""Go, Cart! app package."""

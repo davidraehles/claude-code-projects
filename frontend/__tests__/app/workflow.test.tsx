@@ -1,6 +1,11 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+
+interface MockProps {
+  children?: React.ReactNode;
+  href?: string;
+}
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({
@@ -17,56 +22,89 @@ jest.mock('next/navigation', () => ({
 
 // Mock next/link
 jest.mock('next/link', () => {
-  return ({ children, href }: any) => <a href={href}>{children}</a>;
+  const MockLink: React.FC<MockProps> = ({ children, href }) => (
+    <a href={href}>{children}</a>
+  );
+  MockLink.displayName = 'MockLink';
+  return MockLink;
 });
+
+interface CartPreviewProps {
+  data: { item_count: number };
+  onCheckout?: () => void;
+}
+
+interface DeliverySlot {
+  slot_id: string;
+  date: string;
+  time_window: string;
+  price: number;
+}
+
+interface DeliveryPickerProps {
+  onSelect: (slot: DeliverySlot) => void;
+}
+
+interface MissingItemsProps {
+  unavailableItems: string[];
+}
+
+interface ErrorObj {
+  message: string;
+}
+
+interface CartErrorProps {
+  error?: ErrorObj | null;
+  onRetry?: () => void;
+}
 
 // Mock the components
 jest.mock('@/components/knuspr/CartPreview', () => {
-  return function DummyCartPreview({ data, onCheckout }: any) {
-    return (
-      <div data-testid="cart-preview">
-        <h2>Your Shopping Cart</h2>
-        <p>{data.item_count} items</p>
-        <button onClick={onCheckout}>Continue to Checkout</button>
-      </div>
-    );
-  };
+  const DummyCartPreview: React.FC<CartPreviewProps> = ({ data, onCheckout }) => (
+    <div data-testid="cart-preview">
+      <h2>Your Shopping Cart</h2>
+      <p>{data.item_count} items</p>
+      <button onClick={onCheckout}>Continue to Checkout</button>
+    </div>
+  );
+  DummyCartPreview.displayName = 'DummyCartPreview';
+  return DummyCartPreview;
 });
 
 jest.mock('@/components/knuspr/DeliverySlotPicker', () => {
-  return function DummyDeliverySlotPicker({ onSelect }: any) {
-    return (
-      <div data-testid="delivery-picker">
-        <h3>Select Delivery Slot</h3>
-        <button
-          onClick={() =>
-            onSelect({
-              slot_id: 'slot_001',
-              date: '2025-11-24',
-              time_window: '14:00-16:00',
-              price: 4.99,
-            })
-          }
-        >
-          Select Slot
-        </button>
-      </div>
-    );
-  };
+  const DummyDeliverySlotPicker: React.FC<DeliveryPickerProps> = ({ onSelect }) => (
+    <div data-testid="delivery-picker">
+      <h3>Select Delivery Slot</h3>
+      <button
+        onClick={() =>
+          onSelect({
+            slot_id: 'slot_001',
+            date: '2025-11-24',
+            time_window: '14:00-16:00',
+            price: 4.99,
+          })
+        }
+      >
+        Select Slot
+      </button>
+    </div>
+  );
+  DummyDeliverySlotPicker.displayName = 'DummyDeliverySlotPicker';
+  return DummyDeliverySlotPicker;
 });
 
 jest.mock('@/components/knuspr/MissingItemsSuggestions', () => {
-  return function DummyMissingItems({ unavailableItems }: any) {
-    return (
-      <div data-testid="missing-items">
-        <p>{unavailableItems.length} items missing</p>
-      </div>
-    );
-  };
+  const DummyMissingItems: React.FC<MissingItemsProps> = ({ unavailableItems }) => (
+    <div data-testid="missing-items">
+      <p>{unavailableItems.length} items missing</p>
+    </div>
+  );
+  DummyMissingItems.displayName = 'DummyMissingItems';
+  return DummyMissingItems;
 });
 
 jest.mock('@/components/knuspr/CartErrorHandler', () => {
-  return function DummyErrorHandler({ error, onRetry }: any) {
+  const DummyErrorHandler: React.FC<CartErrorProps> = ({ error, onRetry }) => {
     if (!error) return null;
     return (
       <div data-testid="error-handler">
@@ -75,6 +113,8 @@ jest.mock('@/components/knuspr/CartErrorHandler', () => {
       </div>
     );
   };
+  DummyErrorHandler.displayName = 'DummyErrorHandler';
+  return DummyErrorHandler;
 });
 
 describe('Workflow Page', () => {

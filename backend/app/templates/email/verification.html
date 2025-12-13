@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Verify your email - Go, Cart!</title>
+    <!--[if mso]>
+    <style type="text/css">
+        body, table, td {font-family: Arial, Helvetica, sans-serif !important;}
+    </style>
+    <![endif]-->
+</head>
+<body style="margin: 0; padding: 0; font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #FAF7F5; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;">
+    <!-- Email container -->
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #FAF7F5;">
+        <tr>
+            <td style="padding: 40px 20px;">
+                <!-- Main content card -->
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07); overflow: hidden;">
+
+                    <!-- Header with gradient -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #E85A4F 0%, #FF9472 100%); padding: 48px 32px; text-align: center;">
+                            <h1 style="margin: 0; font-size: 32px; font-weight: 800; color: #ffffff; letter-spacing: -0.03em; line-height: 1.2;">
+                                Go, Cart!
+                            </h1>
+                            <p style="margin: 12px 0 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.95); font-weight: 500;">
+                                Favorites on repeat. Groceries on autopilot.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Main content -->
+                    <tr>
+                        <td style="padding: 48px 40px;">
+                            <!-- Greeting -->
+                            <p style="margin: 0 0 24px 0; font-size: 20px; color: #2A2521; font-weight: 600;">
+                                Hi {{user_name}},
+                            </p>
+
+                            <!-- Main message -->
+                            <p style="margin: 0 0 20px 0; font-size: 16px; line-height: 1.65; color: #635A50;">
+                                Thanks for joining the Go, Cart! waitlist! We're excited to have you on board.
+                            </p>
+
+                            <p style="margin: 0 0 32px 0; font-size: 16px; line-height: 1.65; color: #635A50;">
+                                To confirm your email address and secure your spot, please click the button below:
+                            </p>
+
+                            <!-- CTA Button -->
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center; padding: 0 0 32px 0;">
+                                        <a href="{{verification_url}}"
+                                           style="display: inline-block; padding: 16px 40px; background: linear-gradient(135deg, #E85A4F 0%, #FF9472 100%); color: #ffffff; text-decoration: none; border-radius: 12px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 6px rgba(232, 90, 79, 0.3); letter-spacing: 0.025em;">
+                                            Verify Email
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Alternative link -->
+                            <div style="background-color: #F0EBE6; border-left: 4px solid #7EC8A3; padding: 20px 24px; border-radius: 8px; margin: 0 0 32px 0;">
+                                <p style="margin: 0 0 12px 0; font-size: 14px; font-weight: 600; color: #2A2521;">
+                                    Button not working?
+                                </p>
+                                <p style="margin: 0; font-size: 13px; line-height: 1.5; color: #635A50; word-break: break-all;">
+                                    Copy and paste this link into your browser:<br>
+                                    <a href="{{verification_url}}" style="color: #E85A4F; text-decoration: underline;">{{verification_url}}</a>
+                                </p>
+                            </div>
+
+                            <!-- What's next -->
+                            <div style="background-color: #FFF5F4; padding: 24px; border-radius: 12px; margin: 0 0 32px 0;">
+                                <p style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #2A2521;">
+                                    What happens next?
+                                </p>
+                                <ul style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.65; color: #635A50;">
+                                    <li style="margin-bottom: 8px;">Verify your email to secure your spot on the waitlist</li>
+                                    <li style="margin-bottom: 8px;">We'll keep you updated on our progress</li>
+                                    <li style="margin-bottom: 0;">You'll be among the first to access Go, Cart! when we launch</li>
+                                </ul>
+                            </div>
+
+                            <!-- Security notice -->
+                            <p style="margin: 0 0 12px 0; font-size: 13px; color: #857A6E; line-height: 1.5;">
+                                If you didn't sign up for Go, Cart!, you can safely ignore this email.
+                            </p>
+
+                            <!-- Sign-off -->
+                            <p style="margin: 32px 0 0 0; font-size: 15px; color: #2A2521; line-height: 1.6;">
+                                Thanks,<br>
+                                <strong>The Go, Cart! Team</strong>
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="background-color: #F0EBE6; padding: 32px 40px; border-top: 1px solid #E2DBD4;">
+                            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <!-- Social links (optional - can be added later) -->
+                                        <p style="margin: 0 0 16px 0; font-size: 13px; color: #857A6E;">
+                                            Go, Cart! - Making grocery shopping effortless
+                                        </p>
+
+                                        <p style="margin: 0; font-size: 12px; color: #A69B8F; line-height: 1.5;">
+                                            Need help? Contact us at <a href="mailto:{{support_email}}" style="color: #E85A4F; text-decoration: none;">{{support_email}}</a>
+                                        </p>
+
+                                        <p style="margin: 12px 0 0 0; font-size: 11px; color: #C4BAB0;">
+                                            &copy; {{year}} Go, Cart! All rights reserved.
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
+
+    <!-- Accessibility improvements -->
+    <div style="display: none; max-height: 0px; overflow: hidden;">
+        Verify your email address to join the Go, Cart! waitlist and be among the first to access our meal planning and grocery automation platform.
+    </div>
+</body>
+</html>

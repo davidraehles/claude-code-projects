@@ -6,7 +6,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 
 interface MobileNavProps {
   userEmail?: string | null
@@ -23,8 +23,10 @@ export function MobileNav({ userEmail }: MobileNavProps) {
       {/* Hamburger Button */}
       <button
         onClick={toggleMenu}
-        className="md:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none"
-        aria-label="Toggle menu"
+        className="md:hidden p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg"
+        aria-label={isOpen ? "Close menu" : "Open menu"}
+        aria-expanded={isOpen}
+        aria-controls="mobile-menu"
       >
         {isOpen ? (
           // Close icon
@@ -64,11 +66,16 @@ export function MobileNav({ userEmail }: MobileNavProps) {
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
           onClick={closeMenu}
+          aria-hidden="true"
         />
       )}
 
       {/* Mobile Menu Panel */}
       <div
+        id="mobile-menu"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Mobile navigation menu"
         className={`fixed top-0 right-0 h-full w-64 bg-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
           isOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
@@ -77,7 +84,7 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           {/* Close button */}
           <button
             onClick={closeMenu}
-            className="absolute top-4 right-4 p-2 text-gray-600 hover:text-gray-900"
+            className="absolute top-4 right-4 p-2 text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 rounded-lg"
             aria-label="Close menu"
           >
             <svg
@@ -98,15 +105,15 @@ export function MobileNav({ userEmail }: MobileNavProps) {
           {/* User email */}
           {userEmail && (
             <div className="mb-6 pb-4 border-b border-gray-200">
-              <p className="text-sm text-gray-600 flex items-center">
-                <span className="mr-2">👤</span>
+              <p className="text-sm text-gray-600 flex items-center" aria-label="Current user">
+                <span className="mr-2" role="img" aria-label="User icon">👤</span>
                 {userEmail}
               </p>
             </div>
           )}
 
           {/* Navigation Links */}
-          <nav className="space-y-4">
+          <nav className="space-y-4" aria-label="Mobile navigation links">
             <Link
               href="/dashboard"
               onClick={closeMenu}
@@ -120,6 +127,13 @@ export function MobileNav({ userEmail }: MobileNavProps) {
               className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
             >
               Meal Plans
+            </Link>
+            <Link
+              href="/grocery-carts"
+              onClick={closeMenu}
+              className="block py-2 px-4 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <span role="img" aria-label="Shopping cart">🛒</span> Grocery Lists
             </Link>
             <Link
               href="/generate"

@@ -16,7 +16,7 @@ import {
   selectTotalMeals,
 } from '@/reducers/mealPlanFormReducer'
 import { Header } from '@/components/layout/Header'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'

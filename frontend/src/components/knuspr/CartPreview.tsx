@@ -1,18 +1,16 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import Link from 'next/link';
 import {
   ShoppingCart,
   Package,
   AlertCircle,
   ChevronDown,
   ChevronUp,
-  DollarSign,
   Truck,
   CheckCircle,
-  Clock,
 } from 'lucide-react';
+import { formatEUR } from '@/lib/formatCurrency';
 
 export interface CartItem {
   name: string;
@@ -141,7 +139,7 @@ export const CartPreview: React.FC<CartPreviewProps> = ({
             </div>
           </div>
           <div className="text-right">
-            <p className="text-3xl font-bold text-gray-900">€{total.toFixed(2)}</p>
+            <p className="text-3xl font-bold text-gray-900">{formatEUR(total)}</p>
             <p className="text-xs text-gray-500 mt-1">Total with delivery</p>
           </div>
         </div>
@@ -161,7 +159,7 @@ export const CartPreview: React.FC<CartPreviewProps> = ({
                   day: 'numeric',
                   year: 'numeric',
                 })}{' '}
-                • {data.delivery_slot.time_window} (€{data.delivery_slot.price.toFixed(2)})
+                • {data.delivery_slot.time_window} ({formatEUR(data.delivery_slot.price)})
               </p>
             </div>
           </div>
@@ -193,10 +191,8 @@ export const CartPreview: React.FC<CartPreviewProps> = ({
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium text-gray-900">
-                  €
-                  {items
-                    .reduce((sum, item) => sum + item.price * item.quantity, 0)
-                    .toFixed(2)}
+                  {formatEUR(items
+                    .reduce((sum, item) => sum + item.price * item.quantity, 0))}
                 </span>
                 {expandedSections.has(section) ? (
                   <ChevronUp className="h-5 w-5 text-gray-400" />
@@ -226,10 +222,10 @@ export const CartPreview: React.FC<CartPreviewProps> = ({
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="font-semibold text-gray-900">
-                          €{(item.price * item.quantity).toFixed(2)}
+                          {formatEUR(item.price * item.quantity)}
                         </p>
                         <p className="text-xs text-gray-500">
-                          €{item.price.toFixed(2)}/{item.unit}
+                          {formatEUR(item.price)}/{item.unit}
                         </p>
                       </div>
                     </div>
@@ -270,7 +266,7 @@ export const CartPreview: React.FC<CartPreviewProps> = ({
       <div className="rounded-lg border border-gray-200 bg-white p-4 space-y-3">
         <div className="flex justify-between items-center">
           <span className="text-gray-600">Subtotal ({data.item_count} items)</span>
-          <span className="font-medium text-gray-900">€{subtotal.toFixed(2)}</span>
+          <span className="font-medium text-gray-900">{formatEUR(subtotal)}</span>
         </div>
         {data.delivery_slot && (
           <div className="flex justify-between items-center pb-3 border-b border-gray-200">
@@ -278,12 +274,12 @@ export const CartPreview: React.FC<CartPreviewProps> = ({
               <Truck className="inline h-4 w-4 mr-1" />
               Delivery Fee
             </span>
-            <span className="font-medium text-gray-900">€{deliveryPrice.toFixed(2)}</span>
+            <span className="font-medium text-gray-900">{formatEUR(deliveryPrice)}</span>
           </div>
         )}
         <div className="flex justify-between items-center pt-3">
           <span className="text-lg font-semibold text-gray-900">Total</span>
-          <span className="text-2xl font-bold text-blue-600">€{total.toFixed(2)}</span>
+          <span className="text-2xl font-bold text-blue-600">{formatEUR(total)}</span>
         </div>
       </div>
 

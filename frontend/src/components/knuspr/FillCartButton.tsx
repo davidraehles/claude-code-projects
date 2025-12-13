@@ -14,7 +14,7 @@
  */
 
 import React, { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/Button'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { useFillKnusprCart } from '@/hooks/queries/useKnusprCart'
@@ -33,7 +33,6 @@ export function FillCartButton({
   className = '',
 }: FillCartButtonProps) {
   const [showForm, setShowForm] = useState(false)
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [rememberCredentials, setRememberCredentials] = useState(false)
   const [formErrors, setFormErrors] = useState<{
@@ -41,26 +40,27 @@ export function FillCartButton({
     password?: string
   }>({})
   const [showPassword, setShowPassword] = useState(false)
+  const [formEmail, setFormEmail] = useState('')
 
   // Hooks
   const fillCartMutation = useFillKnusprCart(cart_id)
   const { credentialStatus, saveCredentials } = useKnusprCredentials()
 
-  // Load saved credentials if available
+  // Load saved credentials if available (only once when credentials first load)
   useEffect(() => {
-    if (credentialStatus.data?.has_credentials && credentialStatus.data?.knuspr_email) {
-      setEmail(credentialStatus.data.knuspr_email)
+    if (credentialStatus.data?.has_credentials && !formEmail) {
+      setFormEmail(credentialStatus.data.knuspr_email || '')
       setRememberCredentials(true)
     }
-  }, [credentialStatus.data])
+  }, [credentialStatus.data, formEmail])
 
   // Validate form
   const validateForm = (): boolean => {
     const errors: { email?: string; password?: string } = {}
 
-    if (!email) {
+    if (!formEmail) {
       errors.email = 'Email is required'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formEmail)) {
       errors.email = 'Invalid email address'
     }
 
@@ -86,7 +86,7 @@ export function FillCartButton({
       // Save credentials if user opted in
       if (rememberCredentials) {
         await saveCredentials.mutateAsync({
-          knuspr_email: email,
+          knuspr_email: formEmail,
           knuspr_password: password,
           country: 'cz',
           test_connection: false,
@@ -96,7 +96,7 @@ export function FillCartButton({
       // Fill the Knuspr cart
       await fillCartMutation.mutateAsync({
         credentials: {
-          email,
+          email: formEmail,
           password,
         },
         match_preferences: {
@@ -115,7 +115,7 @@ export function FillCartButton({
       // Use saved credentials automatically
       fillCartMutation.mutate({
         credentials: {
-          email: credentialStatus.data.knuspr_email || email,
+          email: credentialStatus.data.knuspr_email || formEmail,
           password: '', // Backend will use saved credentials
         },
       })
@@ -184,8 +184,8 @@ export function FillCartButton({
           <Input
             type="email"
             label="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            value={formEmail}
+            onChange={(e) => setFormEmail(e.target.value)}
             error={formErrors.email}
             placeholder="your@email.com"
             autoComplete="email"
@@ -251,7 +251,7 @@ export function FillCartButton({
 
           <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
             <p className="text-xs text-blue-800">
-              Don't have a Knuspr account?{' '}
+              Don&apos;t have a Knuspr account?{' '}
               <a
                 href="https://knuspr.cz/register"
                 target="_blank"
@@ -275,7 +275,7 @@ export function FillCartButton({
             </Button>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               onClick={handleReset}
               className="flex-1"
               aria-label="Cancel"
@@ -433,7 +433,7 @@ export function FillCartButton({
           )}
 
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleReset}
             className="w-full"
             aria-label="Close and return"
@@ -499,7 +499,7 @@ export function FillCartButton({
             Try Again
           </Button>
           <Button
-            variant="outline"
+            variant="secondary"
             onClick={handleReset}
             className="flex-1"
             aria-label="Cancel"
