@@ -46,7 +46,8 @@ def get_url():
     """
     Get database URL from environment variables or config.
 
-    Reads the following environment variables with sensible defaults:
+    First checks for DATABASE_URL (used by Railway, Heroku, etc.),
+    then falls back to individual environment variables with sensible defaults:
     - DB_USER: Database username (default: postgres)
     - DB_PASSWORD: Database password (default: postgres)
     - DB_HOST: Database host (default: localhost)
@@ -55,13 +56,19 @@ def get_url():
 
     For testing, you can set TEST_DB_NAME to use a separate test database.
 
-    Production deployments should set all environment variables explicitly
-    to avoid using development defaults.
+    Production deployments should set DATABASE_URL or individual environment
+    variables explicitly to avoid using development defaults.
 
     Returns:
         str: PostgreSQL connection URL
     """
-    # Read from environment variables (preferred)
+    # Check for DATABASE_URL first (Railway, Heroku, etc.)
+    database_url = os.getenv("DATABASE_URL")
+
+    if database_url:
+        return database_url
+
+    # Fall back to individual environment variables for local development
     db_user = os.getenv("DB_USER", "postgres")
     db_password = os.getenv("DB_PASSWORD", "postgres")
     db_host = os.getenv("DB_HOST", "localhost")
