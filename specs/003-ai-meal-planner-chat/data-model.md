@@ -1016,7 +1016,7 @@ This data model is designed to coexist with the existing recipe database:
 
 - Partition chat_messages by session_id (sharding for 1M+ messages)
 - Archive old messages to S3 with Athena query support
-- Vector search via Qdrant for recipe similarity
+- Vector search for recipe similarity
 - Time-series database for analytics (Timescale)
 
 ---

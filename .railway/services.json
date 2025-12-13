@@ -1,0 +1,81 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "services": [
+    {
+      "name": "backend",
+      "source": {
+        "repo": "davidraehles/meal-planner",
+        "type": "github",
+        "rootDirectory": "."
+      },
+      "build": {
+        "dockerfile": "backend/Dockerfile",
+        "watchPatterns": ["backend/**"]
+      },
+      "deploy": {
+        "startCommand": "sh -c 'cd /app && alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}'",
+        "healthcheckPath": "/health",
+        "healthcheckTimeout": 100,
+        "restartPolicyType": "on-failure",
+        "restartPolicyMaxRetries": 3
+      },
+      "domains": {
+        "public": true
+      }
+    },
+    {
+      "name": "postgres",
+      "source": {
+        "image": "postgres:15-alpine",
+        "type": "image"
+      },
+      "variables": {
+        "POSTGRES_DB": "${POSTGRES_DB:-recipe_app}",
+        "POSTGRES_USER": "${POSTGRES_USER:-postgres}",
+        "POSTGRES_PASSWORD": "${POSTGRES_PASSWORD}",
+        "PGDATA": "/var/lib/postgresql/data/pgdata"
+      },
+      "volumes": [
+        {
+          "mountPath": "/var/lib/postgresql/data",
+          "name": "postgres_data"
+        }
+      ],
+      "healthcheck": {
+        "command": ["pg_isready", "-U", "${POSTGRES_USER:-postgres}"],
+        "interval": 10,
+        "timeout": 5,
+        "retries": 5
+      }
+    },
+    {
+      "name": "redis",
+      "source": {
+        "image": "redis:7-alpine",
+        "type": "image"
+      },
+      "deploy": {
+        "startCommand": "redis-server --appendonly yes --appendfsync everysec"
+      },
+      "volumes": [
+        {
+          "mountPath": "/data",
+          "name": "redis_data"
+        }
+      ],
+      "healthcheck": {
+        "command": ["redis-cli", "ping"],
+        "interval": 10,
+        "timeout": 3,
+        "retries": 5
+      }
+    }
+  ],
+  "environments": {
+    "pr": {
+      "autoLink": true,
+      "autoClone": true,
+      "autoRemove": true
+    }
+  }
+}

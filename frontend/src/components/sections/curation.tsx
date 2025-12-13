@@ -5,32 +5,32 @@ import { Container } from '../ui/container'
 const recipeCards = [
   {
     title: `Ottolenghi's Roasted Ratatouille`,
-    image: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1572453800999-e8d2d1589b7c?w=400&h=300&fit=crop&auto=format',
     meta: ['Vegan', '30 min', 'Serves 4']
   },
   {
     title: 'Creamy Mushroom Risotto',
-    image: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1476124369491-e7addf5db371?w=400&h=300&fit=crop&auto=format',
     meta: ['Vegetarian', '45 min', 'Serves 2']
   },
   {
     title: 'Spicy Thai Basil Chicken',
-    image: 'https://images.unsplash.com/photo-1559314809-0f31657ffa3f?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?w=400&h=300&fit=crop&auto=format',
     meta: ['Gluten-free', '20 min', 'Serves 3']
   },
   {
     title: 'Lemon Garlic Shrimp Pasta',
-    image: 'https://images.unsplash.com/photo-1513565658846-b55d46be4c02?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1473093295043-cdd812d0e601?w=400&h=300&fit=crop&auto=format',
     meta: ['Quick', '25 min', 'Serves 4']
   },
   {
     title: 'Baked Feta Pasta',
-    image: 'https://images.unsplash.com/photo-1621996346565-e3dbc353d2e5?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9d9?w=400&h=300&fit=crop&auto=format',
     meta: ['Viral', '40 min', 'Serves 6']
   },
   {
     title: 'Korean Bibimbap Bowl',
-    image: 'https://images.unsplash.com/photo-1579586140626-462c933496ce?w=400&h=300&fit=crop',
+    image: 'https://images.unsplash.com/photo-1553163147-622ab57be1c7?w=400&h=300&fit=crop&auto=format',
     meta: ['Healthy', '35 min', 'Serves 2']
   }
 ]

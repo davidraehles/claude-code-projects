@@ -136,7 +136,7 @@ jobs:
       id-token: write
     environment:
       name: staging
-      url: ${{ secrets.STAGING_BACKEND_URL }}
+      url: https://meal-planner-staging.up.railway.app
 
     steps:
     - name: Checkout code
@@ -254,7 +254,7 @@ jobs:
       id-token: write
     environment:
       name: staging
-      url: ${{ secrets.STAGING_FRONTEND_URL }}
+      url: https://meal-planner-staging.vercel.app
 
     steps:
     - name: Checkout code
