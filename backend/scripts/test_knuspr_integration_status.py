@@ -48,13 +48,13 @@ def test_mock_workflow():
         from app.events.bus import EventBus
         from unittest.mock import AsyncMock, MagicMock
         from datetime import datetime, timedelta
-        
+
         # Create mock objects
         mock_knuspr_client = AsyncMock(spec=KnusprMCPClient)
         mock_ingredient_mapper = AsyncMock(spec=IngredientMapper)
         mock_db = MagicMock()
         mock_event_bus = AsyncMock(spec=EventBus)
-        
+
         # Mock product search
         mock_knuspr_client.search_products.return_value = [
             KnusprProduct(
@@ -68,7 +68,7 @@ def test_mock_workflow():
                 confidence=0.95
             )
         ]
-        
+
         # Mock cart creation
         cart_items = [
             KnusprProduct(
@@ -88,7 +88,7 @@ def test_mock_workflow():
             delivery_slot=None,
             created_at=datetime.utcnow()
         )
-        
+
         # Mock delivery slot
         delivery_slot = DeliverySlot(
             slot_id="slot_test_001",
@@ -100,7 +100,7 @@ def test_mock_workflow():
         mock_knuspr_client.get_delivery_slots.return_value = [delivery_slot]
         mock_knuspr_client.select_delivery_slot.return_value = True
         mock_knuspr_client.get_domain.return_value = "https://www.knuspr.cz"
-        
+
         # Mock ingredient mapping
         mock_ingredient_mapper.map_ingredients_to_products.return_value = (
             [
@@ -117,7 +117,7 @@ def test_mock_workflow():
             ],
             []  # No unmapped ingredients
         )
-        
+
         mock_ingredient_mapper.categorize_products.return_value = {
             "dairy": [
                 {
@@ -129,7 +129,7 @@ def test_mock_workflow():
                 }
             ]
         }
-        
+
         # Initialize agent
         agent = CartOptimizerAgent(
             knuspr_client=mock_knuspr_client,
@@ -137,11 +137,11 @@ def test_mock_workflow():
             db=mock_db,
             event_bus=mock_event_bus
         )
-        
+
         # Mock internal methods
         agent._extract_ingredients_from_meal_plan = AsyncMock(return_value=["milk"])
         agent._store_cart_in_database = AsyncMock()
-        
+
         # Execute workflow
         async def run_workflow():
             result = await agent.create_cart_from_meal_plan(
@@ -154,19 +154,19 @@ def test_mock_workflow():
                 }
             )
             return result
-        
+
         result = asyncio.run(run_workflow())
-        
+
         # Verify results
         assert result is not None
         assert result["cart_id"] == "test_cart_123"
         assert result["total_price"] == 2.50
         assert result["item_count"] == 1
         assert "dairy" in result["items_by_section"]
-        
+
         print("✅ Mock workflow test passed")
         return True
-        
+
     except Exception as e:
         print(f"❌ Mock workflow test failed: {e}")
         return False
@@ -177,22 +177,22 @@ def test_database_models():
     try:
         from app.models.meal_plan import MealPlan, MealPlanRecipe, GroceryCart, CartItem
         from app.models.recipe import Recipe
-        
+
         # Test that models have required attributes
         assert hasattr(GroceryCart, 'user_id')
         assert hasattr(GroceryCart, 'meal_plan_id')
         assert hasattr(GroceryCart, 'knuspr_cart_id')
         assert hasattr(GroceryCart, 'total_cost')
-        
+
         assert hasattr(CartItem, 'cart_id')
         assert hasattr(CartItem, 'name')
         assert hasattr(CartItem, 'quantity')
         assert hasattr(CartItem, 'category')
         assert hasattr(CartItem, 'knuspr_product_id')
-        
+
         print("✅ Database models test passed")
         return True
-        
+
     except Exception as e:
         print(f"❌ Database models test failed: {e}")
         return False
@@ -202,15 +202,15 @@ def test_api_endpoints():
     print("\n🔍 Testing API endpoints...")
     try:
         from app.api.v1 import grocery_carts
-        
+
         # Check that key functions exist
         assert hasattr(grocery_carts, 'create_grocery_cart')
         assert hasattr(grocery_carts, 'get_grocery_cart')
         assert hasattr(grocery_carts, 'delete_grocery_cart')
-        
+
         print("✅ API endpoints test passed")
         return True
-        
+
     except Exception as e:
         print(f"❌ API endpoints test failed: {e}")
         return False
@@ -219,14 +219,14 @@ def main():
     """Run all tests and report results."""
     print("🧪 Knuspr Integration Status Test")
     print("=" * 50)
-    
+
     tests = [
         ("Imports", test_imports),
         ("Mock Workflow", test_mock_workflow),
         ("Database Models", test_database_models),
         ("API Endpoints", test_api_endpoints),
     ]
-    
+
     results = []
     for test_name, test_func in tests:
         try:
@@ -235,20 +235,20 @@ def main():
         except Exception as e:
             print(f"❌ {test_name} test crashed: {e}")
             results.append((test_name, False))
-    
+
     print("\n" + "=" * 50)
     print("📊 Test Results Summary")
     print("=" * 50)
-    
+
     passed = sum(1 for _, result in results if result)
     total = len(results)
-    
+
     for test_name, result in results:
         status = "✅ PASS" if result else "❌ FAIL"
         print(f"{status}: {test_name}")
-    
+
     print(f"\n📈 Overall: {passed}/{total} tests passed")
-    
+
     if passed == total:
         print("\n🎉 All tests passed! The Knuspr integration is properly structured.")
         print("\n🔐 What we CAN test (without real credentials):")
