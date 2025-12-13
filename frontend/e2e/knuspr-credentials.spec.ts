@@ -11,7 +11,7 @@ import { test, expect } from '@playwright/test';
  * 5. Error handling
  */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://claude-code-projects-production.up.railway.app';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://meal-planner.up.railway.app';
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://meal-planner-h7g716e6b-the-raedical-cos-projects.vercel.app';
 
 const TEST_USER = {

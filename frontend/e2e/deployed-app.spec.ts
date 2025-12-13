@@ -15,7 +15,7 @@ import { test, expect } from '@playwright/test';
  */
 
 const FRONTEND_URL = 'https://claude-code-projects.vercel.app';
-const API_URL = 'https://claude-code-projects-production.up.railway.app';
+const API_URL = 'https://meal-planner.up.railway.app';
 
 // Generate unique test data per run to avoid conflicts
 function generateTestEmail(prefix: string = 'test'): string {
