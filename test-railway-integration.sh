@@ -62,7 +62,8 @@ echo ""
 echo "4️⃣  Checking Frontend Configuration..."
 if [ -f "frontend/.env.local" ]; then
     echo "✅ .env.local exists"
-    cat frontend/.env.local
+    echo "   Variables configured:"
+    grep -E '^[A-Z_]+=' frontend/.env.local | sed 's/=.*/=***/' || echo "   No variables found"
 else
     echo "❌ .env.local not found in frontend directory"
 fi

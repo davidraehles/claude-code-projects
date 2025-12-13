@@ -1,0 +1,3 @@
+# Local Railway development files
+*.local
+.railway-data/

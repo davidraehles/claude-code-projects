@@ -196,15 +196,15 @@ async function runAllTests() {
 
   // Test 1: Health Check
   const healthOk = await testHealthCheck();
-  allPassed = allPassed && healthOk;
+  if (!healthOk) allPassed = false;
 
   // Test 2: Registration
   const regResult = await testUserRegistration();
-  allPassed = allPassed && regResult.success;
+  if (!regResult.success) allPassed = false;
 
   // Test 3: Login
   const loginResult = await testUserLogin();
-  allPassed = allPassed && loginResult.success;
+  if (!loginResult.success) allPassed = false;
 
   // Test 4: Protected Endpoint
   if (loginResult.success && loginResult.token) {

@@ -18,7 +18,6 @@ What we CANNOT test without credentials:
 import sys
 import os
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
 
 # Add project root to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -23,10 +23,6 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.main import app
 from app.models.user import User
-from app.models.recipe import Recipe
-from app.models.meal_plan import MealPlan
-from app.models.grocery_cart import GroceryCart
-from app.database import get_db
 from app.services.auth import create_access_token
 from app.agents.meal_architect import MealArchitectAgent
 from app.agents.recipe_harvester import RecipeScraper

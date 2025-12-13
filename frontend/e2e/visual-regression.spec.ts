@@ -145,23 +145,3 @@ test.describe('Visual Regression Tests', () => {
     });
   });
 });
-
-/**
- * Helper function to check if images are actually loaded (not just placeholders)
- */
-async function checkImagesLoaded(page: any, selector: string) {
-  const images = await page.locator(selector).all();
-  const loadedImages = [];
-  
-  for (const img of images) {
-    const src = await img.getAttribute('src');
-    if (src && !src.includes('data:') && !src.includes('placeholder')) {
-      const response = await page.request.get(src);
-      if (response.ok()) {
-        loadedImages.push(src);
-      }
-    }
-  }
-  
-  return loadedImages;
-}

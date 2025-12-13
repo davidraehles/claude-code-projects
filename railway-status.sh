@@ -39,7 +39,8 @@ echo ""
 echo "3. Configuration:"
 if [ -f "/home/darae/meal-planner/frontend/.env.local" ]; then
     echo "   ✅ .env.local exists"
-    cat /home/darae/meal-planner/frontend/.env.local | grep -v "^#"
+    echo "   Variables configured:"
+    grep -E '^[A-Z_]+=' /home/darae/meal-planner/frontend/.env.local | sed 's/=.*/=***/' | sed 's/^/   /' || echo "   No variables found"
 else
     echo "   ❌ .env.local missing"
 fi
