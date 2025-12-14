@@ -103,7 +103,7 @@ class CartOptimizerAgent:
 
         Args:
             knuspr_client: KnusprMCPClient for Knuspr API access
-            ingredient_mapper: IngredientMapper for ingredient→product mapping
+            ingredient_mapper: IngredientMapper for ingredient to product mapping
             db: Database connection for cart storage
             event_bus: EventBus for publishing events
         """
