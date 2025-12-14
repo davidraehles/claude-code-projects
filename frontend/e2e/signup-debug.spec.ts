@@ -97,14 +97,19 @@ test.describe('Auth Flow Debug - Vercel Preview', () => {
       const currentUrl = page.url();
       console.log('Current URL after submit:', currentUrl);
 
-      // Check for error messages
-      const errorElements = await page.locator('[role="alert"], .error, .text-red-500, .text-red-600').all();
-      if (errorElements.length > 0) {
-        console.log('Found error messages:');
-        for (const el of errorElements) {
-          const text = await el.textContent();
-          console.log('  -', text);
-        }
+      // Wait a bit for any errors to populate
+      await page.waitForTimeout(1000);
+
+      // Check for error messages (look for error text in various places)
+      const errorAlert = await page.locator('[role="alert"]').first().textContent().catch(() => null);
+      const errorDiv = await page.locator('.error, [class*="error"]').first().textContent().catch(() => null);
+      const errorText = await page.locator('.text-red-500, .text-red-600, .text-danger').first().textContent().catch(() => null);
+      
+      const allErrors = [errorAlert, errorDiv, errorText].filter(Boolean);
+      if (allErrors.length > 0) {
+        console.log('Found error messages:', allErrors);
+      } else {
+        console.log('No error messages found');
       }
 
       // Check if redirected to dashboard/login

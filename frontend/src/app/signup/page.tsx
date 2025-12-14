@@ -69,10 +69,18 @@ export default function SignupPage() {
       })
 
       console.log('SignIn result:', result)
+      console.log('SignIn result?.error:', result?.error)
+      console.log('SignIn result?.status:', result?.status)
+      console.log('SignIn result?.ok:', result?.ok)
+      console.log('Result keys:', result ? Object.keys(result) : 'null')
 
       if (result?.error) {
         console.error('Login after signup failed:', result.error)
         setError('Account created but login failed. Please try logging in.')
+        setLoading(false)
+      } else if (result?.ok === false) {
+        console.error('SignIn returned not ok')
+        setError('Login failed. Please try again.')
         setLoading(false)
       } else {
         // Successful login
