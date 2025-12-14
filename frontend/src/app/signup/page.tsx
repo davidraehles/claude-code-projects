@@ -55,29 +55,35 @@ export default function SignupPage() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({ detail: 'Signup failed' }))
+        console.error('Signup failed:', res.status, data)
         setError(data.detail || 'Failed to create account')
         setLoading(false)
         return
       }
 
       // Successful signup, now sign in
+      console.log('Signup successful, attempting login...')
       const result = await signIn('credentials', {
         email,
         password,
         redirect: false,
       })
 
+      console.log('SignIn result:', result)
+
       if (result?.error) {
+        console.error('Login after signup failed:', result.error)
         setError('Account created but login failed. Please try logging in.')
         setLoading(false)
       } else {
         // Successful login
+        console.log('Login successful, redirecting to dashboard')
         router.push('/dashboard')
         router.refresh()
       }
     } catch (err) {
       console.error('Signup error:', err)
-      setError('An error occurred. Please try again.')
+      setError(`An error occurred: ${err instanceof Error ? err.message : 'Please try again.'}`)
       setLoading(false)
     }
   }
