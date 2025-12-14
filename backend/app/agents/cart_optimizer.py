@@ -80,9 +80,6 @@ class CartOptimizerAgent:
     - get_announcements() - Service notifications
     - get_shopping_scenarios() - Usage examples
 
-    """
-    Cart Optimizer Agent - Converts meal plans to Knuspr shopping carts
-
     Responsibilities:
     - Extract ingredients from meal plan recipes
     - Map ingredients to Knuspr products (via MCP client)
