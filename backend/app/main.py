@@ -84,7 +84,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             db = SessionLocal()
             try:
                 existing_user = db.query(User).filter(User.email == TEST_EMAIL).first()
-                
+
                 if existing_user:
                     logger.info(f"Test user already exists (ID: {existing_user.id}), updating password")
                     existing_user.password_hash = hash_password(TEST_PASSWORD)
@@ -104,7 +104,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
                     db.commit()
                     db.refresh(new_user)
                     logger.info(f"Test user created successfully (ID: {new_user.id})")
-                
+
                 logger.info(f"Test user ready: {TEST_EMAIL} / {TEST_PASSWORD}")
             finally:
                 db.close()

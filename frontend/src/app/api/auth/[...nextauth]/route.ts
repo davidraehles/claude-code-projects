@@ -49,7 +49,7 @@ export const authOptions: NextAuthOptions = {
           // Use full Railway URL for server-side requests (NextAuth runs on server)
           // Don't use the /api/v1 proxy as that only works client-side
           const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-          
+
           // Call backend login endpoint
           const loginRes = await fetch(`${backendUrl}/api/v1/auth/login`, {
             method: 'POST',
