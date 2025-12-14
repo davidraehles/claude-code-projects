@@ -48,7 +48,13 @@ export const authOptions: NextAuthOptions = {
         try {
           // Use full Railway URL for server-side requests (NextAuth runs on server)
           // Don't use the /api/v1 proxy as that only works client-side
-          const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+          // For Vercel deployment, NEXT_PUBLIC_API_URL should be set to Railway URL
+          // If not set, use Railway URL directly as fallback instead of localhost
+          const backendUrl = process.env.NEXT_PUBLIC_API_URL ||
+                            process.env.BACKEND_URL ||
+                            'https://meal-planner.up.railway.app'
+
+          console.log('NextAuth authorize - using backend URL:', backendUrl)
 
           // Call backend login endpoint
           const loginRes = await fetch(`${backendUrl}/api/v1/auth/login`, {
@@ -69,6 +75,7 @@ export const authOptions: NextAuthOptions = {
           }
 
           const tokens = await loginRes.json()
+          console.log('NextAuth - Login successful, fetching user info')
 
           // Fetch user info using access token
           const userRes = await fetch(`${backendUrl}/api/v1/auth/me`, {
