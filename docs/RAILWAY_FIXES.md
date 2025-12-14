@@ -2,24 +2,30 @@
 
 ## Issues Identified
 
-### 1. ✅ Alembic Migration "Multiple Head Revisions" - FIXED
+### 1. ✅ Alembic Migration Revision ID Length - FIXED
 
-**Status:** Already resolved! A merge migration exists at `1f5528e26798_merge_multiple_heads.py`
+**Status:** CRITICAL FIX APPLIED
 
 **What was the problem:**
-Two migrations branched from `005_add_dietary_tags`:
-- `006_add_delivery_slot_and_unavailable_items`
-- `006_create_rate_limit_tables`
+Migration revision IDs were too long for Alembic's `alembic_version.version_num` VARCHAR(32) column:
+- `008_create_waitlist_entries_table` = 35 characters (exceeds limit!)
+- `007_add_is_admin_to_users` = 26 characters  
+- `006_create_rate_limit_tables` = 30 characters
 
-This created parallel branches that needed to be merged.
-
-**Solution:**
-The merge migration already exists. Railway will automatically apply it on next deployment via:
-```bash
-alembic upgrade head
+**Error:**
+```
+psycopg2.errors.StringDataRightTruncation: value too long for type character varying(32)
+[SQL: UPDATE alembic_version SET version_num='008_create_waitlist_entries_table']
 ```
 
-This runs automatically through the `startCommand` in `railway.toml`.
+**Solution Applied:**
+Renamed migrations to use standard 12-character hash-style revision IDs:
+- `006_create_rate_limit_tables` → `963f23794be8_create_rate_limit_tables`
+- `007_add_is_admin_to_users` → `cabfd298eed6_add_is_admin_to_users`
+- `008_create_waitlist_entries_table` → `a93e177bf056_create_waitlist_entries`
+- Updated merge migration to reference new IDs
+
+All revision IDs now fit within the 32-character limit.
 
 **Verification:**
 After Railway redeploys, check logs for:
