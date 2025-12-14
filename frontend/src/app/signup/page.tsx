@@ -12,8 +12,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-
 export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')
@@ -40,8 +38,9 @@ export default function SignupPage() {
     setLoading(true)
 
     try {
-      // Call backend signup endpoint
-      const res = await fetch(`${API_URL}/api/v1/auth/register`, {
+      // Call backend signup endpoint via Vercel proxy
+      // Use /api/v1 which Vercel rewrites to Railway backend
+      const res = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

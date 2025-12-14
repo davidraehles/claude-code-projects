@@ -9,7 +9,7 @@
 **What was the problem:**
 Migration revision IDs were too long for Alembic's `alembic_version.version_num` VARCHAR(32) column:
 - `008_create_waitlist_entries_table` = 35 characters (exceeds limit!)
-- `007_add_is_admin_to_users` = 26 characters  
+- `007_add_is_admin_to_users` = 26 characters
 - `006_create_rate_limit_tables` = 30 characters
 
 **Error:**
