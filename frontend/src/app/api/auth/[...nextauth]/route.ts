@@ -69,8 +69,20 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!loginRes.ok) {
-            const error = await loginRes.json().catch(() => ({ detail: 'Login failed' }))
-            console.error('Login failed:', error)
+            const errorText = await loginRes.text()
+            let error
+            try {
+              error = JSON.parse(errorText)
+            } catch {
+              error = { detail: errorText || 'Login failed' }
+            }
+            console.error('NextAuth - Login failed:', {
+              status: loginRes.status,
+              statusText: loginRes.statusText,
+              error,
+              email: credentials.email,
+              backendUrl
+            })
             return null
           }
 

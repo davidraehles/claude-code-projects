@@ -10,7 +10,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   reporter: [['html', { outputFolder: 'test-results/html' }], ['list']],
-  
+
   use: {
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
