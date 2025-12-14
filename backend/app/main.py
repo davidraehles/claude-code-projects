@@ -69,6 +69,48 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         logger.info("Creating database tables (development mode)")
         Base.metadata.create_all(bind=engine)
 
+    # Seed test user for development/testing (if enabled)
+    if os.getenv("SEED_TEST_USER", "false").lower() in ("true", "1", "yes"):
+        logger.info("Seeding test user for development/testing...")
+        try:
+            from app.database import SessionLocal
+            from app.models.user import User
+            from app.api.v1.auth import hash_password
+
+            TEST_EMAIL = "test@example.com"
+            TEST_PASSWORD = "testpassword123"
+            TEST_COUNTRY = "US"
+
+            db = SessionLocal()
+            try:
+                existing_user = db.query(User).filter(User.email == TEST_EMAIL).first()
+                
+                if existing_user:
+                    logger.info(f"Test user already exists (ID: {existing_user.id}), updating password")
+                    existing_user.password_hash = hash_password(TEST_PASSWORD)
+                    existing_user.country = TEST_COUNTRY
+                    existing_user.deleted_at = None
+                    db.commit()
+                else:
+                    logger.info("Creating new test user")
+                    new_user = User(
+                        email=TEST_EMAIL,
+                        password_hash=hash_password(TEST_PASSWORD),
+                        country=TEST_COUNTRY,
+                        subscription_tier="free",
+                        preferences={}
+                    )
+                    db.add(new_user)
+                    db.commit()
+                    db.refresh(new_user)
+                    logger.info(f"Test user created successfully (ID: {new_user.id})")
+                
+                logger.info(f"Test user ready: {TEST_EMAIL} / {TEST_PASSWORD}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Failed to seed test user: {e}", exc_info=True)
+
     # Initialize Redis event bus
     try:
         event_bus = get_event_bus()
