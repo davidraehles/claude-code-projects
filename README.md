@@ -9,7 +9,7 @@
 Go, Cart! transforms meal planning into a delightful experience:
 
 - **AI Meal Architect** generates personalized weekly plans
-- **Smart Grocery Lists** with ingredient optimization  
+- **Smart Grocery Lists** with ingredient optimization
 - **One-click Knuspr** cart population
 - **60fps Animations** with Lenis + GSAP + Framer Motion
 - **Offline-first** PWA with Service Worker
@@ -60,7 +60,7 @@ Next.js 16 + React 19 → FastAPI → PostgreSQL + LangGraph Agents → Knuspr M
 # Backend (Railway)
 cd backend && railway up
 
-# Frontend (Vercel)  
+# Frontend (Vercel)
 cd frontend && vercel --prod
 ```
 
@@ -70,10 +70,15 @@ cd frontend && vercel --prod
 
 | Topic | Link |
 |-------|------|
-| [Quickstart](docs/quickstart.md) | Local development |
-| [Architecture](docs/architecture.md) | System design |
-| [Deployment](docs/deployment.md) | Production setup |
-| [API Docs](http://localhost:8000/api/docs) | Interactive Swagger |
+| **Getting Started** | |
+| [Quickstart](docs/quickstart.md) | Local development setup |
+| [Development Guide](docs/DEVELOPMENT_GUIDE.md) | Complete development workflow |
+| **Integration** | |
+| [Knuspr Integration](docs/KNUSPR_INTEGRATION.md) | Grocery delivery integration |
+| [API Documentation](http://localhost:8000/api/docs) | Interactive Swagger UI |
+| **Deployment** | |
+| [Railway Deployment](docs/DEPLOYMENT_RAILWAY.md) | Production deployment guide |
+| [Architecture](docs/architecture.md) | System architecture overview |
 
 ## 🧪 Testing
 
@@ -116,7 +121,7 @@ git push origin feat/your-feature
 
 Built with multi-agent AI development using:
 - **LangGraph** for agent orchestration
-- **FastAPI** for production-ready APIs  
+- **FastAPI** for production-ready APIs
 - **Next.js 16** for modern frontend
 - **Spec-Kit** for structured development
 

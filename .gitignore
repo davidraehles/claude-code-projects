@@ -92,3 +92,4 @@ frontend/playwright/.auth/
 
 # Qdrant
 qdrant_storage/
+rohlik-mcp-temp/

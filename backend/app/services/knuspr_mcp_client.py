@@ -902,6 +902,179 @@ class KnusprMCPClient:
 
         return result
 
+    async def get_cart_content(self) -> Dict[str, Any]:
+        """
+        Get current cart contents from Knuspr.
+
+        Returns:
+            Dict containing cart items, total price, and other cart details
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_cart_content")
+
+    async def remove_from_cart(self, product_ids: List[int]) -> Dict[str, Any]:
+        """
+        Remove products from the cart.
+
+        Args:
+            product_ids: List of product IDs to remove
+
+        Returns:
+            Dict with removal results
+        """
+        await self._ensure_session()
+        return await self._call_tool("remove_from_cart", product_ids=product_ids)
+
+    async def get_frequent_items(self) -> Dict[str, Any]:
+        """
+        Get frequently ordered items for the current user.
+
+        Returns:
+            Dict containing list of frequently purchased products
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_frequent_items")
+
+    async def get_meal_suggestions(
+        self,
+        meal_type: str = "dinner",
+        items_count: int = 10,
+        orders_to_analyze: int = 5,
+        prefer_frequent: bool = True
+    ) -> Dict[str, Any]:
+        """
+        Get meal suggestions from Knuspr/Rohlik based on meal type.
+
+        Args:
+            meal_type: Type of meal - "breakfast", "lunch", "dinner", "snack", "baking", "drinks", or "healthy"
+            items_count: Number of items to suggest (3-30, default 10)
+            orders_to_analyze: Number of recent orders to analyze (1-20, default 5)
+            prefer_frequent: Prefer frequently ordered items (default True)
+
+        Returns:
+            Dict containing meal recommendations and recipes
+        """
+        await self._ensure_session()
+        return await self._call_tool(
+            "get_meal_suggestions",
+            meal_type=meal_type,
+            items_count=items_count,
+            orders_to_analyze=orders_to_analyze,
+            prefer_frequent=prefer_frequent
+        )
+
+    async def get_order_history(self, limit: Optional[int] = None) -> Dict[str, Any]:
+        """
+        Get user's order history.
+
+        Args:
+            limit: Optional maximum number of orders to retrieve
+
+        Returns:
+            Dict containing list of past orders
+        """
+        await self._ensure_session()
+        params = {}
+        if limit is not None:
+            params["limit"] = limit
+        return await self._call_tool("get_order_history", **params)
+
+    async def get_order_detail(self, order_id: str) -> Dict[str, Any]:
+        """
+        Get detailed information about a specific order.
+
+        Args:
+            order_id: The ID of the order to retrieve
+
+        Returns:
+            Dict containing order details
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_order_detail", order_id=order_id)
+
+    async def get_upcoming_orders(self) -> Dict[str, Any]:
+        """
+        Get upcoming scheduled orders.
+
+        Returns:
+            Dict containing list of upcoming/scheduled deliveries
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_upcoming_orders")
+
+    async def get_premium_info(self) -> Dict[str, Any]:
+        """
+        Get user's premium/subscription information.
+
+        Returns:
+            Dict containing premium status and benefits
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_premium_info")
+
+    async def get_reusable_bags_info(self) -> Dict[str, Any]:
+        """
+        Get information about reusable bags credits.
+
+        Returns:
+            Dict containing bag credits and deposit information
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_reusable_bags_info")
+
+    async def get_shopping_list(self, shopping_list_id: str) -> Dict[str, Any]:
+        """
+        Get user's saved shopping list by ID.
+
+        Args:
+            shopping_list_id: The ID of the shopping list to retrieve
+
+        Returns:
+            Dict containing saved shopping list items
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_shopping_list", shopping_list_id=shopping_list_id)
+
+    async def get_shopping_scenarios(self) -> Dict[str, Any]:
+        """
+        Get shopping scenarios and usage examples.
+
+        Returns:
+            Dict containing recommended shopping scenarios
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_shopping_scenarios")
+
+    async def get_announcements(self) -> Dict[str, Any]:
+        """
+        Get service announcements and notifications.
+
+        Returns:
+            Dict containing current announcements
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_announcements")
+
+    async def get_account_data(self) -> Dict[str, Any]:
+        """
+        Get user's account information.
+
+        Returns:
+            Dict containing account details (email, address, preferences)
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_account_data")
+
+    async def get_delivery_info(self) -> Dict[str, Any]:
+        """
+        Get general delivery service information.
+
+        Returns:
+            Dict containing delivery zones, fees, and service details
+        """
+        await self._ensure_session()
+        return await self._call_tool("get_delivery_info")
+
     async def close(self):
         """Clean up resources and logout from Knuspr"""
         self.authenticated = False
