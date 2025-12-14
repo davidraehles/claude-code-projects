@@ -4,7 +4,7 @@ import { test, expect } from '@playwright/test';
  * Debug tests for signup and login flows on Vercel preview
  */
 
-const VERCEL_PREVIEW_URL = 'https://meal-planner-git-001-grocery-l-d31004-the-raedical-cos-projects.vercel.app';
+const VERCEL_PREVIEW_URL = 'https://meal-planner-dab7mgsjm-the-raedical-cos-projects.vercel.app';
 
 test.describe('Auth Flow Debug - Vercel Preview', () => {
   test('should complete signup flow end-to-end', async ({ page }) => {

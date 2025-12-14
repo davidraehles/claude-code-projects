@@ -9,9 +9,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
     }
 
-    const backendUrl = (process.env.NEXT_PUBLIC_API_URL ||
-                       process.env.BACKEND_URL ||
-                       'https://meal-planner.up.railway.app').trim();
+    const rawUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || '').trim();
+    // Validate URL - if it's not meal-planner.up.railway.app, use the correct one
+    const backendUrl = (rawUrl && rawUrl.includes('meal-planner.up.railway.app'))
+      ? rawUrl
+      : 'https://meal-planner.up.railway.app';
 
     console.log('Test auth - backend URL:', backendUrl);
 

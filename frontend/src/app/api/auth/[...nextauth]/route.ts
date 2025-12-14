@@ -50,9 +50,11 @@ export const authOptions: NextAuthOptions = {
           // Don't use the /api/v1 proxy as that only works client-side
           // For Vercel deployment, NEXT_PUBLIC_API_URL should be set to Railway URL
           // If not set, use Railway URL directly as fallback instead of localhost
-          const backendUrl = (process.env.NEXT_PUBLIC_API_URL ||
-                            process.env.BACKEND_URL ||
-                            'https://meal-planner.up.railway.app').trim()
+          const rawUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || '').trim()
+          // Validate URL - if it's not meal-planner.up.railway.app, use the correct one
+          const backendUrl = (rawUrl && rawUrl.includes('meal-planner.up.railway.app'))
+            ? rawUrl
+            : 'https://meal-planner.up.railway.app'
 
           console.log('NextAuth authorize - using backend URL:', backendUrl)
 
