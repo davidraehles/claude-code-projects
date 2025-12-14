@@ -59,6 +59,7 @@ description: "Task list for Go, Cart! Rebranding feature implementation"
 - [x] T015 [US1] Implement Waitlist API endpoints (including resend logic) in `backend/app/api/v1/waitlist.py`
 - [x] T016 [US1] Register waitlist router in `backend/app/api/v1/__init__.py`
 - [x] T038 [US1] Instrument Waitlist API with Prometheus metrics in `backend/app/api/v1/waitlist.py`
+- [ ] T041 [US1] Enable email verification in waitlist signup flow (uncomment email service, configure SMTP credentials, test full verification flow)
 
 **Checkpoint**: Backend API is fully functional and passes tests.
 

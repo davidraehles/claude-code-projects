@@ -20,7 +20,7 @@ export function Hero() {
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/api/v1/waitlist`, {
+      const response = await fetch(`${apiUrl}/api/v1/waitlist/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -170,8 +170,8 @@ export function Hero() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ type: 'spring', stiffness: 200, damping: 25 }}
             >
-              <h3 className="text-2xl font-bold mb-4">🎉 Welcome to the waitlist!</h3>
-              <p className="text-lg">Check your email to verify and secure your spot.</p>
+              <h3 className="text-2xl font-bold mb-4">🎉 Thanks for joining the waitlist!</h3>
+              <p className="text-lg">We'll be in touch soon.</p>
               <Button
                 className="mt-6"
                 onClick={() => setSubmitted(false)}
