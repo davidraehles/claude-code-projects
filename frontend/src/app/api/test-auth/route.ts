@@ -9,9 +9,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Missing credentials' }, { status: 400 });
     }
 
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL ||
+    const backendUrl = (process.env.NEXT_PUBLIC_API_URL ||
                        process.env.BACKEND_URL ||
-                       'https://meal-planner.up.railway.app';
+                       'https://meal-planner.up.railway.app').trim();
 
     console.log('Test auth - backend URL:', backendUrl);
 
