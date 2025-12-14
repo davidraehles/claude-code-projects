@@ -1,7 +1,7 @@
 """Create waitlist_entries table for Go Cart rebranding waitlist.
 
-Revision ID: 008_create_waitlist_entries_table
-Revises: 007_add_is_admin_to_users
+Revision ID: a93e177bf056
+Revises: cabfd298eed6
 Create Date: 2025-12-07
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = '008_create_waitlist_entries_table'
-down_revision = '007_add_is_admin_to_users'
+revision = 'a93e177bf056'
+down_revision = 'cabfd298eed6'
 branch_labels = None
 depends_on = None
 

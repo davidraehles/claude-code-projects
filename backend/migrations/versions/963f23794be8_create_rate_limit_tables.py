@@ -1,6 +1,6 @@
 """Create rate limiting tables.
 
-Revision ID: 006_create_rate_limit_tables
+Revision ID: 963f23794be8
 Revises: 005_add_dietary_tags
 Create Date: 2025-12-05
 
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision = "006_create_rate_limit_tables"
+revision = "963f23794be8"
 down_revision = "005_add_dietary_tags"
 branch_labels = None
 depends_on = None

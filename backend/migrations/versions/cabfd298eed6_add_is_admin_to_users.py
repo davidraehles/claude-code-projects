@@ -1,7 +1,7 @@
 """Add is_admin field to users table for admin authorization.
 
-Revision ID: 007_add_is_admin_to_users
-Revises: 006_create_rate_limit_tables
+Revision ID: cabfd298eed6
+Revises: 963f23794be8
 Create Date: 2025-12-05
 
 """
@@ -9,8 +9,8 @@ from alembic import op
 import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
-revision = '007_add_is_admin_to_users'
-down_revision = '006_create_rate_limit_tables'
+revision = 'cabfd298eed6'
+down_revision = '963f23794be8'
 branch_labels = None
 depends_on = None
 
