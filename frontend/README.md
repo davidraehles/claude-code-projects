@@ -1,6 +1,6 @@
 # Go, Cart! - Frontend
 
-AI-powered meal planning application built with Next.js 14, TypeScript, and Tailwind CSS.
+AI-powered meal planning application built with Next.js 16, TypeScript, Tailwind CSS, and Material Design 3.
 
 ## Features
 
@@ -10,15 +10,40 @@ AI-powered meal planning application built with Next.js 14, TypeScript, and Tail
 - **Meal Plan Generator**: AI-powered meal plan creation with dietary restrictions
 - **Grocery Lists**: Automatic shopping list generation with print/export
 - **Mobile Responsive**: Fully optimized for mobile, tablet, and desktop
+- **Material Design 3**: Modern, accessible UI with orange branding
 
 ## Tech Stack
 
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
+- **Framework**: Next.js 16 (App Router, Turbopack)
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 4 + Material Design 3
+- **UI Components**: Material UI v6 with custom theme
+- **Typography**: Roboto font family
 - **Authentication**: NextAuth.js
-- **State Management**: React Hooks
+- **State Management**: React Hooks + React Query
 - **API Client**: Fetch API
+- **Accessibility**: WCAG 2.1 AA compliant
+
+## Design System
+
+The application uses **Material Design 3** (Material You) with a custom **orange color scheme**.
+
+### Color Palette
+- **Primary**: `#FF6F00` (Deep Orange) - Brand color
+- **Secondary**: `#424242` (Dark Grey) - Neutral elements
+- **Success**: `#4CAF50` (Green)
+- **Error**: `#F44336` (Red)
+- **Warning**: `#FF9800` (Orange)
+- **Info**: `#2196F3` (Blue)
+
+### Key Features
+- **Elevation System**: 5 levels of subtle shadows
+- **Border Radius**: Rounded corners (12-24px)
+- **Typography**: Roboto font with Material Design 3 type scale
+- **Accessibility**: Focus indicators, skip links, ARIA labels, keyboard navigation
+- **Responsive**: Mobile-first design with proper touch targets (44x44px minimum)
+
+For detailed design system documentation, see [MATERIAL_DESIGN_3.md](./MATERIAL_DESIGN_3.md).
 
 ## Getting Started
 

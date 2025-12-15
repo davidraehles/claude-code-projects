@@ -1,12 +1,7 @@
 {
-  "name": "Go, Cart!",
-  "short_name": "GoCart",
-  "description": "AI-powered meal planning that feels like making a playlist",
-  "start_url": "/",
-  "display": "standalone",
-  "background_color": "#FAF7F5",
-  "theme_color": "#E85A4F",
-  "orientation": "portrait",
+  "name": "Go, Cart! - Meal Planning & Grocery Lists",
+  "short_name": "Go, Cart!",
+  "description": "AI-powered meal planning that feels like making a playlist. Smart recipes, automatic grocery lists, zero duplicates.",
   "icons": [
     {
       "src": "/favicon-192x192.png",
@@ -21,28 +16,11 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["food", "lifestyle", "productivity"],
-  "shortcuts": [
-    {
-      "name": "New Meal Plan",
-      "short_name": "New Plan",
-      "description": "Create a new meal plan",
-      "url": "/generate",
-      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Recipes",
-      "short_name": "Recipes",
-      "description": "Browse your recipes",
-      "url": "/dashboard",
-      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Grocery Cart",
-      "short_name": "Cart",
-      "description": "View your grocery cart",
-      "url": "/grocery-carts",
-      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
-    }
-  ]
+  "theme_color": "#FF6F00",
+  "background_color": "#FAFAFA",
+  "display": "standalone",
+  "start_url": "/",
+  "scope": "/",
+  "orientation": "portrait-primary",
+  "categories": ["food", "lifestyle", "productivity"]
 }
