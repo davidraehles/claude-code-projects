@@ -652,7 +652,7 @@ class TestPhase5DependencyVulnerabilities:
         import os
 
         # Check for requirements.txt or similar
-        requirements_file = "/home/darae/claude-code-projects/requirements.txt"
+        requirements_file = "requirements.txt"
         assert os.path.exists(requirements_file), "requirements.txt not found"
 
         with open(requirements_file) as f:

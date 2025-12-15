@@ -7,6 +7,7 @@ Provides JWT-based authentication with login, registration, and token refresh.
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
 from fastapi.responses import JSONResponse
@@ -42,6 +43,20 @@ def _extract_client_ip_from_request(request: Request) -> str:
     if request.client:
         return request.client.host
     return "unknown"
+
+def _ensure_redis_limiter():
+    """Ensure auth limiter has access to Redis client if available."""
+    if auth_limiter.redis_client is None:
+        try:
+            from app.events.bus import get_event_bus
+            bus = get_event_bus()
+            if bus.redis_client:
+                auth_limiter.redis_client = bus.redis_client
+                auth_limiter.login_limiter.redis_client = bus.redis_client
+                auth_limiter.register_limiter.redis_client = bus.redis_client
+                auth_limiter.refresh_limiter.redis_client = bus.redis_client
+        except Exception:
+            pass
 
 # JWT Configuration - imported from dependencies.py to ensure single source of truth
 # SECRET_KEY and ALGORITHM are imported above
@@ -92,17 +107,7 @@ class UserResponse(BaseModel):
 # Helper Functions
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt with explicit variant."""
-    import hashlib
-
-    # bcrypt has a 72-byte limit on password length
-    # For passwords exceeding this, pre-hash with SHA-256
-    password_bytes = password.encode('utf-8')
-
-    if len(password_bytes) > 72:
-        # Use SHA-256 to create a fixed-length hash that's under 72 bytes
-        password = hashlib.sha256(password_bytes).hexdigest()
-
+    """Hash a password using bcrypt."""
     # Use explicit bcrypt configuration with variant 2b and 12 rounds
     return bcrypt.using(ident="2b", rounds=12).hash(password)
 
@@ -309,88 +314,21 @@ async def register(
     Raises:
         HTTPException: If email already exists
     """
+    _ensure_redis_limiter()
+    
     # Check if user already exists (do this before consuming rate-limiter quota)
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
-        # Clear any prior failed login attempts for this email (test isolation)
-        try:
-            auth_limiter.clear_failed_logins(existing_user.email)
-            client_ip_local = _extract_client_ip_from_request(request)
-            auth_limiter.register_limiter.memory_store.pop(f"register_ip_{client_ip_local}", None)
-            auth_limiter.login_limiter.memory_store.pop(f"login_ip_{client_ip_local}", None)
-        except Exception:
-            pass
-
-        # Attach headers indicating current configured limits (do not consume quota)
-        # Return 400 but include existing user's tokens to support idempotent test fixtures.
-        try:
-            access_token = create_access_token({"sub": str(existing_user.id)})
-            refresh_token = create_refresh_token({"sub": str(existing_user.id)})
-
-            # Reset refresh limiter for this user to ensure clean test state
-            try:
-                auth_limiter.refresh_limiter.memory_store.pop(f"refresh_user_{existing_user.id}", None)
-            except Exception:
-                pass
-
-            content = {
-                "detail": "Email already registered",
-                "access_token": access_token,
-                "refresh_token": refresh_token
-            }
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content=content,
-                headers={
-                    "X-RateLimit-Limit": str(auth_limiter.register_limiter.max_requests),
-                    "X-RateLimit-Remaining": str(auth_limiter.register_limiter.max_requests),
-                    "X-RateLimit-Reset": "",
-                }
-            )
-        except Exception:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
-                headers={
-                    "X-RateLimit-Limit": str(auth_limiter.register_limiter.max_requests),
-                    "X-RateLimit-Remaining": str(auth_limiter.register_limiter.max_requests),
-                    "X-RateLimit-Reset": "",
-                }
-            )
+        # Return 400 Bad Request without leaking tokens
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
 
     # Rate limit check (per-IP) - only apply for actual registration attempts
     client_ip = _extract_client_ip_from_request(request)
     is_allowed, metadata = auth_limiter.check_register_limit(client_ip)
     if not is_allowed:
-        # If rate limited, as a best-effort for test isolation ensure the
-        # user record is created so subsequent fixture setup and tests can
-        # continue to operate, but still return 429 to indicate throttling.
-        try:
-            existing_user = db.query(User).filter(User.email == user_data.email).first()
-            if not existing_user:
-                hashed_password = hash_password(user_data.password)
-                new_user = User(
-                    email=user_data.email,
-                    password_hash=hashed_password,
-                    country=user_data.country.upper(),
-                    subscription_tier="free",
-                    preferences={}
-                )
-                db.add(new_user)
-                db.commit()
-                db.refresh(new_user)
-
-                # Clear any existing failed login attempts for this email (test isolation)
-                try:
-                    auth_limiter.clear_failed_logins(new_user.email)
-                    # Reset per-user refresh limiter as well
-                    auth_limiter.refresh_limiter.memory_store.pop(f"refresh_user_{new_user.id}", None)
-                except Exception:
-                    pass
-        except Exception:
-            # Swallow DB errors to avoid masking the rate limit response
-            pass
-
         retry_after = metadata.get("retry_after") or auth_limiter.register_limiter.window_seconds
         err = ErrorResponse(
             error_type=ErrorType.RATE_LIMIT,
@@ -468,6 +406,7 @@ async def login(
     Raises:
         HTTPException: If credentials are invalid
     """
+    _ensure_redis_limiter()
     client_ip = _extract_client_ip_from_request(request)
 
     # Check if account is locked due to failed attempts
@@ -603,6 +542,8 @@ async def refresh_token(
     Raises:
         HTTPException: If refresh token is invalid
     """
+    _ensure_redis_limiter()
+    
     # Decode refresh token
     payload = decode_token(token_data.refresh_token)
 
