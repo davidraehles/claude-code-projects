@@ -21,11 +21,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-import sys
-sys.path.insert(0, '/home/darae/claude-code-projects')
-
-from src.main import app
-from src.services.auth import create_access_token, hash_password
+from app.main import app
+from app.services.auth import create_access_token, hash_password
 
 
 client = TestClient(app)
@@ -34,7 +31,7 @@ client = TestClient(app)
 @pytest.fixture
 def db_session():
     """Get database session"""
-    from src.db.session import SessionLocal
+    from app.database import SessionLocal
     session = SessionLocal()
     yield session
     session.close()
@@ -43,7 +40,7 @@ def db_session():
 @pytest.fixture
 def test_user_1(db_session):
     """Create first test user"""
-    from src.db.models import User
+    from app.models.user import User
 
     user = User(
         email=f"sectest1-{time.time()}@example.com",

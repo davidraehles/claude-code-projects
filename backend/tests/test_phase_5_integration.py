@@ -19,7 +19,6 @@ from fastapi.testclient import TestClient
 # Import backend components
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.main import app
 from app.models.user import User
@@ -35,7 +34,7 @@ client = TestClient(app)
 @pytest.fixture
 def db_session():
     """Get database session for tests"""
-    from src.db.session import SessionLocal
+    from app.database import SessionLocal
     session = SessionLocal()
     yield session
     session.close()
@@ -44,7 +43,7 @@ def db_session():
 @pytest.fixture
 def test_user(db_session):
     """Create test user"""
-    from src.services.auth import hash_password
+    from app.services.auth import hash_password
 
     user = User(
         email=f"test-{time.time()}@example.com",
