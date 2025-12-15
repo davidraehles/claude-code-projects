@@ -147,7 +147,7 @@ class RecipeListResponse(BaseModel):
 class RecipeHarvestRequest(BaseModel):
     """Schema for requesting recipe harvest from a URL."""
 
-    url: str = Field(..., description="URL to harvest recipe from")
+    url: str = Field(..., min_length=1, description="URL to harvest recipe from")
     source_type: Optional[str] = Field(
         "html",
         description="Type of source (html, api, rss). Auto-detected if not provided."

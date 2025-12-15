@@ -8,12 +8,14 @@ and management.
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query, BackgroundTasks, UploadFile, File
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import desc, select, func
 import uuid
 import tempfile
 import os
 
-from app.api.dependencies import get_database, get_current_user_id
+from app.api.dependencies import get_database, get_current_user_id, get_async_database
+from app.database import AsyncSessionLocal
 from app.models.recipe import Recipe
 from app.models.user import User
 from app.schemas.recipe import (
@@ -65,8 +67,8 @@ def calculate_similarity(text1: str, text2: str) -> float:
     return len(intersection) / len(union) if union else 0.0
 
 
-def find_duplicate_recipe(
-    db: Session, title: str, source_url: str, user_id: int, threshold: float = 0.85
+async def find_duplicate_recipe(
+    db: AsyncSession, title: str, source_url: str, user_id: int, threshold: float = 0.85
 ) -> Optional[Recipe]:
     """
     Find if a recipe is a duplicate based on title similarity or URL.
@@ -82,19 +84,25 @@ def find_duplicate_recipe(
         Recipe if duplicate found, None otherwise
     """
     # Check for exact URL match first
-    existing = db.query(Recipe).filter(
-        Recipe.source_url == source_url,
-        Recipe.user_id == user_id
-    ).first()
+    result = await db.execute(
+        select(Recipe).filter(
+            Recipe.source_url == source_url,
+            Recipe.user_id == user_id
+        )
+    )
+    existing = result.scalars().first()
 
     if existing:
         return existing
 
     # Check for similar titles
-    user_recipes = db.query(Recipe).filter(
-        Recipe.user_id == user_id,
-        Recipe.duplicate_of_id.is_(None)  # Only check against non-duplicates
-    ).all()
+    result = await db.execute(
+        select(Recipe).filter(
+            Recipe.user_id == user_id,
+            Recipe.duplicate_of_id.is_(None)  # Only check against non-duplicates
+        )
+    )
+    user_recipes = result.scalars().all()
 
     for recipe in user_recipes:
         similarity = calculate_similarity(title, recipe.title)
@@ -109,7 +117,6 @@ async def harvest_recipe_background(
     source_type: str,
     user_id: int,
     correlation_id: str,
-    db_session: Session
 ):
     """
     Background task to harvest recipe from URL.
@@ -119,7 +126,6 @@ async def harvest_recipe_background(
         source_type: Type of source (html, api, rss)
         user_id: User ID
         correlation_id: Correlation ID for event tracking
-        db_session: Database session
     """
     event_bus = get_event_bus()
 
@@ -132,126 +138,128 @@ async def harvest_recipe_background(
             payload={"url": url, "source_type": source_type}
         ))
 
-        # Select appropriate scraper
-        if source_type == "html":
-            scraper = HTMLRecipeScraper(timeout=30, db_session=db_session)
-        elif source_type == "api":
-            scraper = APIRecipeScraper(db_session=db_session)
-        elif source_type == "rss":
-            scraper = RSSRecipeScraper(db_session=db_session)
-        else:
-            raise ValueError(f"Invalid source_type: {source_type}")
+        async with AsyncSessionLocal() as db_session:
+            # Select appropriate scraper
+            if source_type == "html":
+                scraper = HTMLRecipeScraper(timeout=30, db_session=db_session)
+            elif source_type == "api":
+                scraper = APIRecipeScraper(db_session=db_session)
+            elif source_type == "rss":
+                scraper = RSSRecipeScraper(db_session=db_session)
+            else:
+                raise ValueError(f"Invalid source_type: {source_type}")
 
-        # Scrape recipe
-        recipes_found = []
-        async for recipe_result in scraper.scrape(url):
-            recipes_found.append(recipe_result)
+            # Scrape recipe
+            recipes_found = []
+            async for recipe_result in scraper.scrape(url):
+                recipes_found.append(recipe_result)
 
-        if not recipes_found:
-            raise ValueError("No recipes found at URL")
+            if not recipes_found:
+                raise ValueError("No recipes found at URL")
 
-        # Take the first recipe (most scrapers return 1 recipe per URL)
-        recipe_data = recipes_found[0]
+            # Take the first recipe (most scrapers return 1 recipe per URL)
+            recipe_data = recipes_found[0]
 
-        # Check for duplicates
-        duplicate = find_duplicate_recipe(
-            db_session,
-            recipe_data.title,
-            recipe_data.source_url,
-            user_id
-        )
-
-        if duplicate:
-            # Publish duplicate detected event
-            await event_bus.publish(Event(
-                event_type=EventType.RECIPE_DUPLICATE_DETECTED,
-                correlation_id=correlation_id,
-                user_id=user_id,
-                payload={
-                    "title": recipe_data.title,
-                    "url": url,
-                    "duplicate_of_id": duplicate.id
-                }
-            ))
-
-            # Create duplicate entry
-            new_recipe = Recipe(
-                user_id=user_id,
-                title=recipe_data.title,
-                ingredients=recipe_data.ingredients,
-                instructions=recipe_data.instructions,
-                prep_time=recipe_data.prep_time,
-                cook_time=recipe_data.cook_time,
-                servings=recipe_data.servings,
-                nutrition=recipe_data.nutrition,
-                source_url=recipe_data.source_url,
-                source_type=recipe_data.source_type,
-                duplicate_of_id=duplicate.id
+            # Check for duplicates
+            duplicate = await find_duplicate_recipe(
+                db_session,
+                recipe_data.title,
+                recipe_data.source_url,
+                user_id
             )
-            db_session.add(new_recipe)
-            db_session.commit()
-            db_session.refresh(new_recipe)
 
-            # Publish completed event
-            await event_bus.publish(Event(
-                event_type=EventType.RECIPE_HARVEST_COMPLETED,
-                correlation_id=correlation_id,
-                user_id=user_id,
-                payload=RecipeHarvestCompletedEvent(
-                    recipe_id=new_recipe.id,
-                    title=new_recipe.title,
-                    source_url=new_recipe.source_url,
-                    is_duplicate=True,
+            if duplicate:
+                # Publish duplicate detected event
+                await event_bus.publish(Event(
+                    event_type=EventType.RECIPE_DUPLICATE_DETECTED,
+                    correlation_id=correlation_id,
+                    user_id=user_id,
+                    payload={
+                        "title": recipe_data.title,
+                        "url": url,
+                        "duplicate_of_id": duplicate.id
+                    }
+                ))
+
+                # Create duplicate entry
+                new_recipe = Recipe(
+                    user_id=user_id,
+                    title=recipe_data.title,
+                    ingredients=recipe_data.ingredients,
+                    instructions=recipe_data.instructions,
+                    prep_time=recipe_data.prep_time,
+                    cook_time=recipe_data.cook_time,
+                    servings=recipe_data.servings,
+                    nutrition=recipe_data.nutrition,
+                    source_url=recipe_data.source_url,
+                    source_type=recipe_data.source_type,
                     duplicate_of_id=duplicate.id
-                ).model_dump()
-            ))
+                )
+                db_session.add(new_recipe)
+                await db_session.commit()
+                await db_session.refresh(new_recipe)
 
-        else:
-            # Save new recipe
-            new_recipe = Recipe(
-                user_id=user_id,
-                title=recipe_data.title,
-                ingredients=recipe_data.ingredients,
-                instructions=recipe_data.instructions,
-                prep_time=recipe_data.prep_time,
-                cook_time=recipe_data.cook_time,
-                servings=recipe_data.servings,
-                nutrition=recipe_data.nutrition,
-                source_url=recipe_data.source_url,
-                source_type=recipe_data.source_type,
-                duplicate_of_id=None
-            )
-            db_session.add(new_recipe)
-            db_session.commit()
-            db_session.refresh(new_recipe)
+                # Publish completed event
+                await event_bus.publish(Event(
+                    event_type=EventType.RECIPE_HARVEST_COMPLETED,
+                    correlation_id=correlation_id,
+                    user_id=user_id,
+                    payload=RecipeHarvestCompletedEvent(
+                        recipe_id=new_recipe.id,
+                        title=new_recipe.title,
+                        source_url=new_recipe.source_url,
+                        is_duplicate=True,
+                        duplicate_of_id=duplicate.id
+                    ).model_dump()
+                ))
 
-            # Publish saved event
-            await event_bus.publish(Event(
-                event_type=EventType.RECIPE_SAVED,
-                correlation_id=correlation_id,
-                user_id=user_id,
-                payload={"recipe_id": new_recipe.id, "title": new_recipe.title}
-            ))
-
-            # Publish completed event
-            await event_bus.publish(Event(
-                event_type=EventType.RECIPE_HARVEST_COMPLETED,
-                correlation_id=correlation_id,
-                user_id=user_id,
-                payload=RecipeHarvestCompletedEvent(
-                    recipe_id=new_recipe.id,
-                    title=new_recipe.title,
-                    source_url=new_recipe.source_url,
-                    is_duplicate=False,
+            else:
+                # Save new recipe
+                new_recipe = Recipe(
+                    user_id=user_id,
+                    title=recipe_data.title,
+                    ingredients=recipe_data.ingredients,
+                    instructions=recipe_data.instructions,
+                    prep_time=recipe_data.prep_time,
+                    cook_time=recipe_data.cook_time,
+                    servings=recipe_data.servings,
+                    nutrition=recipe_data.nutrition,
+                    source_url=recipe_data.source_url,
+                    source_type=recipe_data.source_type,
                     duplicate_of_id=None
-                ).model_dump()
-            ))
+                )
+                db_session.add(new_recipe)
+                await db_session.commit()
+                await db_session.refresh(new_recipe)
 
-        # Clean up scraper
-        if hasattr(scraper, 'close'):
-            await scraper.close()
+                # Publish saved event
+                await event_bus.publish(Event(
+                    event_type=EventType.RECIPE_SAVED,
+                    correlation_id=correlation_id,
+                    user_id=user_id,
+                    payload={"recipe_id": new_recipe.id, "title": new_recipe.title}
+                ))
+
+                # Publish completed event
+                await event_bus.publish(Event(
+                    event_type=EventType.RECIPE_HARVEST_COMPLETED,
+                    correlation_id=correlation_id,
+                    user_id=user_id,
+                    payload=RecipeHarvestCompletedEvent(
+                        recipe_id=new_recipe.id,
+                        title=new_recipe.title,
+                        source_url=new_recipe.source_url,
+                        is_duplicate=False,
+                        duplicate_of_id=None
+                    ).model_dump()
+                ))
+
+            # Clean up scraper
+            if hasattr(scraper, 'close'):
+                await scraper.close()
 
     except Exception as e:
+
         # Publish failed event
         await event_bus.publish(Event(
             event_type=EventType.RECIPE_HARVEST_FAILED,
@@ -271,7 +279,6 @@ async def harvest_recipe_background(
 async def harvest_recipe(
     request: RecipeHarvestRequest,
     background_tasks: BackgroundTasks,
-    db: Session = Depends(get_database),
     user_id: int = Depends(get_current_user_id),
 ):
     """
@@ -284,7 +291,6 @@ async def harvest_recipe(
     Args:
         request: Recipe harvest request with URL and source type
         background_tasks: FastAPI background tasks
-        db: Database session
         user_id: Current user ID from JWT token
 
     Returns:
@@ -312,8 +318,7 @@ async def harvest_recipe(
         request.url,
         request.source_type,
         user_id,
-        correlation_id,
-        db
+        correlation_id
     )
 
     return RecipeHarvestResponse(
@@ -328,7 +333,7 @@ async def harvest_recipe(
 @router.post("/upload", response_model=RecipeHarvestResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_recipe_file(
     file: UploadFile = File(...),
-    db: Session = Depends(get_database),
+    db: AsyncSession = Depends(get_async_database),
     user_id: int = Depends(get_current_user_id),
 ):
     """
@@ -379,7 +384,7 @@ async def upload_recipe_file(
 
         # Check for duplicates
         source_url = f"file://{file.filename}"
-        duplicate_recipe = find_duplicate_recipe(
+        duplicate_recipe = await find_duplicate_recipe(
             db,
             parsed_recipe['title'],
             source_url,
@@ -409,8 +414,8 @@ async def upload_recipe_file(
         )
 
         db.add(recipe)
-        db.commit()
-        db.refresh(recipe)
+        await db.commit()
+        await db.refresh(recipe)
 
         # Publish success event
         event_bus = get_event_bus()
@@ -452,7 +457,7 @@ async def list_recipes(
     limit: int = Query(10, ge=1, le=100, description="Number of items to return"),
     include_duplicates: bool = Query(False, description="Include duplicate recipes"),
     source_type: Optional[str] = Query(None, description="Filter by source type"),
-    db: Session = Depends(get_database),
+    db: AsyncSession = Depends(get_async_database),
     user_id: int = Depends(get_current_user_id),
 ):
     """
@@ -470,7 +475,7 @@ async def list_recipes(
         RecipeListResponse: List of recipes with pagination info
     """
     # Build query
-    query = db.query(Recipe).filter(Recipe.user_id == user_id)
+    query = select(Recipe).filter(Recipe.user_id == user_id)
 
     # Filter duplicates
     if not include_duplicates:
@@ -481,10 +486,14 @@ async def list_recipes(
         query = query.filter(Recipe.source_type == source_type.lower())
 
     # Get total count
-    total = query.count()
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
 
     # Apply pagination and ordering
-    recipes = query.order_by(desc(Recipe.created_at)).offset(skip).limit(limit).all()
+    query = query.order_by(desc(Recipe.created_at)).offset(skip).limit(limit)
+    result = await db.execute(query)
+    recipes = result.scalars().all()
 
     return RecipeListResponse(
         items=[RecipeResponse.model_validate(recipe) for recipe in recipes],
@@ -497,7 +506,7 @@ async def list_recipes(
 @router.get("/{recipe_id}", response_model=RecipeResponse)
 async def get_recipe(
     recipe_id: int,
-    db: Session = Depends(get_database),
+    db: AsyncSession = Depends(get_async_database),
     user_id: int = Depends(get_current_user_id),
 ):
     """
@@ -514,10 +523,13 @@ async def get_recipe(
     Raises:
         HTTPException: If recipe not found or access denied
     """
-    recipe = db.query(Recipe).filter(
-        Recipe.id == recipe_id,
-        Recipe.user_id == user_id
-    ).first()
+    result = await db.execute(
+        select(Recipe).filter(
+            Recipe.id == recipe_id,
+            Recipe.user_id == user_id
+        )
+    )
+    recipe = result.scalars().first()
 
     if not recipe:
         raise HTTPException(
@@ -531,7 +543,7 @@ async def get_recipe(
 @router.delete("/{recipe_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_recipe(
     recipe_id: int,
-    db: Session = Depends(get_database),
+    db: AsyncSession = Depends(get_async_database),
     user_id: int = Depends(get_current_user_id),
 ):
     """
@@ -545,10 +557,13 @@ async def delete_recipe(
     Raises:
         HTTPException: If recipe not found or access denied
     """
-    recipe = db.query(Recipe).filter(
-        Recipe.id == recipe_id,
-        Recipe.user_id == user_id
-    ).first()
+    result = await db.execute(
+        select(Recipe).filter(
+            Recipe.id == recipe_id,
+            Recipe.user_id == user_id
+        )
+    )
+    recipe = result.scalars().first()
 
     if not recipe:
         raise HTTPException(
@@ -556,15 +571,15 @@ async def delete_recipe(
             detail=f"Recipe {recipe_id} not found"
         )
 
-    db.delete(recipe)
-    db.commit()
+    await db.delete(recipe)
+    await db.commit()
 
 
 @router.put("/{recipe_id}", response_model=RecipeResponse)
 async def update_recipe(
     recipe_id: int,
     update_data: RecipeUpdate,
-    db: Session = Depends(get_database),
+    db: AsyncSession = Depends(get_async_database),
     user_id: int = Depends(get_current_user_id),
 ):
     """
@@ -582,10 +597,13 @@ async def update_recipe(
     Raises:
         HTTPException: If recipe not found or access denied
     """
-    recipe = db.query(Recipe).filter(
-        Recipe.id == recipe_id,
-        Recipe.user_id == user_id
-    ).first()
+    result = await db.execute(
+        select(Recipe).filter(
+            Recipe.id == recipe_id,
+            Recipe.user_id == user_id
+        )
+    )
+    recipe = result.scalars().first()
 
     if not recipe:
         raise HTTPException(
@@ -598,7 +616,7 @@ async def update_recipe(
     for field, value in update_dict.items():
         setattr(recipe, field, value)
 
-    db.commit()
-    db.refresh(recipe)
+    await db.commit()
+    await db.refresh(recipe)
 
     return RecipeResponse.model_validate(recipe)

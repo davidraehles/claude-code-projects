@@ -7,13 +7,14 @@ Provides reusable dependencies for database sessions, authentication, etc.
 import os
 import secrets
 import logging
-from typing import Generator, Optional
+from typing import Generator, AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 
-from app.database import get_db
+from app.database import get_db, get_async_db
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -64,6 +65,17 @@ def get_database() -> Generator[Session, None, None]:
         Session: SQLAlchemy database session
     """
     yield from get_db()
+
+
+async def get_async_database() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Get async database session for API endpoints.
+
+    Yields:
+        AsyncSession: SQLAlchemy async database session
+    """
+    async for session in get_async_db():
+        yield session
 
 
 # Security scheme for JWT authentication
