@@ -1,13 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <!-- Shopping cart body -->
-  <path d="M8 12h4l5 20h18l4-14H14" stroke="#E85A4F" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <!-- Cart wheels -->
-  <circle cx="17" cy="38" r="3" fill="#E85A4F"/>
-  <circle cx="31" cy="38" r="3" fill="#E85A4F"/>
-  <!-- Speed lines (motion) -->
-  <path d="M4 16h4M2 20h6M4 24h4" stroke="#7EC8A3" stroke-width="2" stroke-linecap="round"/>
-  <!-- Food items in cart -->
-  <circle cx="20" cy="24" r="3" fill="#7EC8A3"/>
-  <circle cx="28" cy="22" r="2.5" fill="#E85A4F" opacity="0.7"/>
-  <rect x="23" y="26" width="4" height="5" rx="1" fill="#7EC8A3" opacity="0.8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <!-- Go-cart body base (simplified racing cart) -->
+  <path d="M40 120 L160 120 L150 100 L50 100 Z" fill="#FF6F00" opacity="0.9"/>
+  
+  <!-- Shopping cart basket integrated into go-cart -->
+  <path d="M60 80 L70 60 L130 60 L140 80 L135 100 L65 100 Z" 
+        stroke="#FF6F00" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  
+  <!-- Cart grid pattern -->
+  <line x1="80" y1="65" x2="75" y2="95" stroke="#FF6F00" stroke-width="2"/>
+  <line x1="100" y1="63" x2="95" y2="95" stroke="#FF6F00" stroke-width="2"/>
+  <line x1="120" y1="65" x2="115" y2="95" stroke="#FF6F00" stroke-width="2"/>
+  
+  <!-- Wheels (go-cart style, larger) -->
+  <circle cx="70" cy="130" r="15" fill="#424242"/>
+  <circle cx="70" cy="130" r="10" fill="#616161"/>
+  <circle cx="70" cy="130" r="5" fill="#FF6F00"/>
+  
+  <circle cx="130" cy="130" r="15" fill="#424242"/>
+  <circle cx="130" cy="130" r="10" fill="#616161"/>
+  <circle cx="130" cy="130" r="5" fill="#FF6F00"/>
+  
+  <!-- Flame 1 (left side, dynamic) -->
+  <path d="M 20 110 Q 15 90 25 80 Q 20 85 22 75 Q 25 80 28 85 Q 30 95 25 105 Z" 
+        fill="#FF6F00" opacity="0.95">
+    <animate attributeName="d" 
+             values="M 20 110 Q 15 90 25 80 Q 20 85 22 75 Q 25 80 28 85 Q 30 95 25 105 Z;
+                     M 20 110 Q 18 88 27 78 Q 22 83 24 73 Q 27 78 30 83 Q 32 93 25 105 Z;
+                     M 20 110 Q 15 90 25 80 Q 20 85 22 75 Q 25 80 28 85 Q 30 95 25 105 Z"
+             dur="0.6s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Flame 2 (center-left) -->
+  <path d="M 35 115 Q 32 98 40 90 Q 36 93 37 85 Q 40 90 43 95 Q 44 105 40 113 Z" 
+        fill="#FF8F00" opacity="0.9">
+    <animate attributeName="d" 
+             values="M 35 115 Q 32 98 40 90 Q 36 93 37 85 Q 40 90 43 95 Q 44 105 40 113 Z;
+                     M 35 115 Q 34 96 42 88 Q 38 91 39 83 Q 42 88 45 93 Q 46 103 40 113 Z;
+                     M 35 115 Q 32 98 40 90 Q 36 93 37 85 Q 40 90 43 95 Q 44 105 40 113 Z"
+             dur="0.5s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Flame 3 (small, right side) -->
+  <path d="M 165 115 Q 162 100 168 92 Q 165 95 166 88 Q 168 92 170 96 Q 171 105 168 112 Z" 
+        fill="#FFA726" opacity="0.85">
+    <animate attributeName="d" 
+             values="M 165 115 Q 162 100 168 92 Q 165 95 166 88 Q 168 92 170 96 Q 171 105 168 112 Z;
+                     M 165 115 Q 163 98 170 90 Q 167 93 168 86 Q 170 90 172 94 Q 173 103 168 112 Z;
+                     M 165 115 Q 162 100 168 92 Q 165 95 166 88 Q 168 92 170 96 Q 171 105 168 112 Z"
+             dur="0.7s" repeatCount="indefinite"/>
+  </path>
+  
+  <!-- Speed lines (motion blur) -->
+  <line x1="5" y1="95" x2="15" y2="95" stroke="#FF6F00" stroke-width="3" stroke-linecap="round" opacity="0.6">
+    <animate attributeName="x1" values="5;0;5" dur="0.8s" repeatCount="indefinite"/>
+    <animate attributeName="x2" values="15;10;15" dur="0.8s" repeatCount="indefinite"/>
+  </line>
+  <line x1="10" y1="105" x2="22" y2="105" stroke="#FF8F00" stroke-width="3" stroke-linecap="round" opacity="0.5">
+    <animate attributeName="x1" values="10;5;10" dur="1s" repeatCount="indefinite"/>
+    <animate attributeName="x2" values="22;17;22" dur="1s" repeatCount="indefinite"/>
+  </line>
+  <line x1="8" y1="115" x2="18" y2="115" stroke="#FFA726" stroke-width="2" stroke-linecap="round" opacity="0.4">
+    <animate attributeName="x1" values="8;3;8" dur="1.2s" repeatCount="indefinite"/>
+    <animate attributeName="x2" values="18;13;18" dur="1.2s" repeatCount="indefinite"/>
+  </line>
+  
+  <!-- Groceries in cart (simple shapes) -->
+  <circle cx="90" cy="75" r="6" fill="#4CAF50" opacity="0.9"/>
+  <rect x="105" y="70" width="10" height="12" rx="2" fill="#FF6F00" opacity="0.8"/>
+  <circle cx="115" cy="82" r="5" fill="#FFC107" opacity="0.9"/>
 </svg>

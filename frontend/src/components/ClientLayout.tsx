@@ -7,11 +7,14 @@
 
 import { ReactNode, useEffect } from 'react'
 import { SessionProvider } from 'next-auth/react'
+import { ThemeProvider } from '@mui/material/styles'
+import CssBaseline from '@mui/material/CssBaseline'
 import { ErrorBoundary } from './ErrorBoundary'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { QueryProvider } from '@/providers/QueryProvider'
 import { SmoothScrollProvider } from '@/lib/animations/smooth-scroll'
 import { ScrollProgressIndicator } from '@/components/ui/progress-indicator'
+import { theme } from '@/lib/theme'
 
 interface ClientLayoutProps {
   children: ReactNode
@@ -70,16 +73,19 @@ export function ClientLayout({ children }: ClientLayoutProps) {
 
   return (
     <ErrorBoundary onError={handleError}>
-      <SessionProvider>
-        <QueryProvider>
-          <AuthProvider>
-            <SmoothScrollProvider>
-              <ScrollProgressIndicator />
-              {children}
-            </SmoothScrollProvider>
-          </AuthProvider>
-        </QueryProvider>
-      </SessionProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <SessionProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <SmoothScrollProvider>
+                <ScrollProgressIndicator />
+                {children}
+              </SmoothScrollProvider>
+            </AuthProvider>
+          </QueryProvider>
+        </SessionProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   )
 }

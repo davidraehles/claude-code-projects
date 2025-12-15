@@ -89,8 +89,8 @@ export const viewport = {
   maximumScale: 5,
   userScalable: true,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#FAF7F5' },
-    { media: '(prefers-color-scheme: dark)', color: '#1A1A2E' }
+    { media: '(prefers-color-scheme: light)', color: '#FAFAFA' },
+    { media: '(prefers-color-scheme: dark)', color: '#121212' }
   ],
 };
 
@@ -104,9 +104,7 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://api.fontshare.com/v2/css?f[]=cabinet-grotesk@400,500,700,800&display=swap" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-
+        
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
@@ -141,7 +139,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased font-body">
+      <body className="antialiased font-sans">
         <a href="#main-content" className="skip-to-content">
           Skip to main content
         </a>
