@@ -21,7 +21,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.services.auth import create_access_token, hash_password
+from app.api.v1.auth import create_access_token, hash_password
 
 
 client = TestClient(app)

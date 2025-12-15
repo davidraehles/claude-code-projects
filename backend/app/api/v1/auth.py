@@ -65,7 +65,7 @@ class UserResponse(BaseModel):
     email: str
     country: str
     subscription_tier: str
-    created_at: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

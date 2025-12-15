@@ -22,7 +22,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
 from app.main import app
-from app.services.auth import create_access_token, hash_password
+from app.api.v1.auth import create_access_token, hash_password
 
 
 client = TestClient(app)
