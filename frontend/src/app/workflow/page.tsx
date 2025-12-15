@@ -4,10 +4,12 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
 import CartPreview, { CartPreviewData } from '@/components/knuspr/CartPreview';
 import DeliverySlotPicker, { DeliverySlot } from '@/components/knuspr/DeliverySlotPicker';
 import MissingItemsSuggestions from '@/components/knuspr/MissingItemsSuggestions';
 import CartErrorHandler, { CartError } from '@/components/knuspr/CartErrorHandler';
+import { api } from '@/lib/api';
 
 type WorkflowStep = 'loading' | 'cart-preview' | 'delivery-selection' | 'review' | 'completed' | 'error';
 
@@ -45,6 +47,58 @@ function WorkflowPageContent() {
     return parsed;
   };
 
+  const generateCartMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+      if (!token) throw new Error('Not authenticated');
+
+      return api.createCartFromMealPlanWorkflow(
+        id,
+        {
+          preferred_dates: [],
+          preferred_time_slot: 'afternoon',
+          budget_optimization: false,
+        },
+        token
+      );
+    },
+    onSuccess: (data) => {
+      if (data.result) {
+        setState((prev) => ({
+          ...prev,
+          step: 'cart-preview',
+          cartData: data.result as unknown as CartPreviewData,
+          isLoading: false,
+        }));
+      } else {
+        throw new Error('Invalid response format');
+      }
+    },
+    onError: (err) => {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      let errorCode = 'GENERIC_ERROR';
+      if (errorMessage.includes('Not authenticated')) {
+        errorCode = 'MISSING_CREDENTIALS';
+      } else if (errorMessage.includes('timeout')) {
+        errorCode = 'KNUSPR_CONNECTION_TIMEOUT';
+      } else if (errorMessage.includes('not found')) {
+        errorCode = 'PRODUCT_NOT_FOUND';
+      }
+
+      setState((prev) => ({
+        ...prev,
+        step: 'error',
+        error: {
+          code: errorCode,
+          message: 'Failed to generate cart',
+          details: errorMessage,
+          severity: 'error',
+        },
+        isLoading: false,
+      }));
+    }
+  });
+
   // Fetch cart data on component mount
   useEffect(() => {
     const validatedMealPlanId = validateMealPlanId(mealPlanId);
@@ -65,74 +119,7 @@ function WorkflowPageContent() {
       return;
     }
 
-    const generateCart = async () => {
-      try {
-        // Get token from session/localStorage
-        const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-
-        if (!token) {
-          throw new Error('Not authenticated');
-        }
-
-        // Call workflow API
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1/workflows/meal-plan-with-groceries`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({
-              meal_plan_id: validatedMealPlanId,
-              delivery_preferences: {
-                preferred_dates: [],
-                preferred_time_slot: 'afternoon',
-                budget_optimization: false,
-              },
-            }),
-          }
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.detail || 'Failed to generate cart');
-        }
-
-        setState((prev) => ({
-          ...prev,
-          step: 'cart-preview',
-          cartData: data.result,
-          isLoading: false,
-        }));
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
-
-        let errorCode = 'GENERIC_ERROR';
-        if (errorMessage.includes('Not authenticated')) {
-          errorCode = 'MISSING_CREDENTIALS';
-        } else if (errorMessage.includes('timeout')) {
-          errorCode = 'KNUSPR_CONNECTION_TIMEOUT';
-        } else if (errorMessage.includes('not found')) {
-          errorCode = 'PRODUCT_NOT_FOUND';
-        }
-
-        setState((prev) => ({
-          ...prev,
-          step: 'error',
-          error: {
-            code: errorCode,
-            message: 'Failed to generate cart',
-            details: errorMessage,
-            severity: 'error',
-          },
-          isLoading: false,
-        }));
-      }
-    };
-
-    generateCart();
+    generateCartMutation.mutate(validatedMealPlanId);
   }, [mealPlanId]);
 
   const handleRetry = () => {

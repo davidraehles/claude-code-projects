@@ -2,49 +2,36 @@
 
 import { useState, FormEvent } from 'react'
 import { motion } from 'framer-motion'
+import { useMutation } from '@tanstack/react-query'
 import { Container } from '../ui/container'
 import { Button } from '../ui/button'
+import { api } from '@/lib/api'
 
 export function Hero() {
   const [email, setEmail] = useState('')
-  const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: (email: string) => api.joinWaitlist({
+      email,
+      metadata: { source: 'hero' }
+    }),
+    onSuccess: () => {
+      setSubmitted(true)
+      setEmail('')
+      setError(null)
+    },
+    onError: (err: Error) => {
+      setError(err.message || 'An unexpected error occurred')
+    }
+  })
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!email.trim()) return
 
-    setLoading(true)
-    setError(null)
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-      const response = await fetch(`${apiUrl}/api/v1/waitlist/`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: email.trim(),
-          metadata: {
-            source: 'hero',
-          },
-        }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}))
-        throw new Error(data.detail || 'Failed to join waitlist')
-      }
-
-      setSubmitted(true)
-      setEmail('')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An unexpected error occurred')
-    } finally {
-      setLoading(false)
-    }
+    mutation.mutate(email.trim())
   }
 
   // Animation variants
@@ -148,7 +135,7 @@ export function Hero() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="flex-1 px-6 py-4 text-lg rounded-xl bg-white/20 backdrop-blur-md border border-white/30 focus:border-white focus:outline-none placeholder:text-white/70 transition-all"
                 required
-                disabled={loading}
+                disabled={mutation.isPending}
                 aria-label="Email address"
                 whileFocus={{ scale: 1.02 }}
               />
@@ -156,10 +143,10 @@ export function Hero() {
                 <Button
                   type="submit"
                   className="px-12 py-4 text-xl font-semibold shadow-2xl shadow-primary-900/50 hover:shadow-primary/50 hover:-translate-y-1 whitespace-nowrap"
-                  disabled={loading || !email.trim()}
-                  aria-busy={loading}
+                  disabled={mutation.isPending || !email.trim()}
+                  aria-busy={mutation.isPending}
                 >
-                  {loading ? 'Joining...' : 'Join Waitlist'}
+                  {mutation.isPending ? 'Joining...' : 'Join Waitlist'}
                 </Button>
               </motion.div>
             </motion.form>

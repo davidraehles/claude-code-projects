@@ -104,7 +104,7 @@ test.describe('Auth Flow Debug - Vercel Preview', () => {
       const errorAlert = await page.locator('[role="alert"]').first().textContent().catch(() => null);
       const errorDiv = await page.locator('.error, [class*="error"]').first().textContent().catch(() => null);
       const errorText = await page.locator('.text-red-500, .text-red-600, .text-danger').first().textContent().catch(() => null);
-      
+
       const allErrors = [errorAlert, errorDiv, errorText].filter(Boolean);
       if (allErrors.length > 0) {
         console.log('Found error messages:', allErrors);

@@ -8,9 +8,11 @@ import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { useMutation } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
+import { api } from '@/lib/api'
 
 export default function SignupPage() {
   const router = useRouter()
@@ -18,7 +20,11 @@ export default function SignupPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+
+  const signupMutation = useMutation({
+    mutationFn: (data: { email: string; password: string; country: string }) =>
+      api.signup(data),
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,30 +41,13 @@ export default function SignupPage() {
       return
     }
 
-    setLoading(true)
-
     try {
-      // Call backend signup endpoint via Vercel proxy
-      // Use /api/v1 which Vercel rewrites to Railway backend
-      const res = await fetch('/api/v1/auth/register', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          country: 'US', // Default country
-        }),
+      // Call backend signup endpoint via API client
+      await signupMutation.mutateAsync({
+        email,
+        password,
+        country: 'US', // Default country
       })
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ detail: 'Signup failed' }))
-        console.error('Signup failed:', res.status, data)
-        setError(data.detail || 'Failed to create account')
-        setLoading(false)
-        return
-      }
 
       // Successful signup, now sign in
       console.log('Signup successful, attempting login...')
@@ -69,19 +58,13 @@ export default function SignupPage() {
       })
 
       console.log('SignIn result:', result)
-      console.log('SignIn result?.error:', result?.error)
-      console.log('SignIn result?.status:', result?.status)
-      console.log('SignIn result?.ok:', result?.ok)
-      console.log('Result keys:', result ? Object.keys(result) : 'null')
 
       if (result?.error) {
         console.error('Login after signup failed:', result.error)
         setError('Account created but login failed. Please try logging in.')
-        setLoading(false)
       } else if (result?.ok === false) {
         console.error('SignIn returned not ok')
         setError('Login failed. Please try again.')
-        setLoading(false)
       } else {
         // Successful login
         console.log('Login successful, redirecting to dashboard')
@@ -91,9 +74,10 @@ export default function SignupPage() {
     } catch (err) {
       console.error('Signup error:', err)
       setError(`An error occurred: ${err instanceof Error ? err.message : 'Please try again.'}`)
-      setLoading(false)
     }
   }
+
+  const loading = signupMutation.isPending
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center p-4">
