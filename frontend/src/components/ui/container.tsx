@@ -12,7 +12,7 @@ interface ContainerProps {
 const Container = ({ children, className, as = "div", ...props }: ContainerProps) => {
   const Comp = as
   return (
-    <Comp className={cn("w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8", className)} {...props}>
+    <Comp className={cn("w-full max-w-7xl mx-auto px-6 sm:px-8 lg:px-12", className)} {...props}>
       {children}
     </Comp>
   )

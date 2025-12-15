@@ -3,6 +3,7 @@
 import { useState, FormEvent } from 'react'
 import { motion } from 'framer-motion'
 import { useMutation } from '@tanstack/react-query'
+import Image from 'next/image'
 import { Container } from '../ui/container'
 import { Button } from '../ui/button'
 import { api } from '@/lib/api'
@@ -98,8 +99,24 @@ export function Hero() {
           animate="visible"
         >
           {/* Logo */}
+          <motion.div
+            className="mb-8 flex justify-center"
+            variants={itemVariants}
+          >
+            <div className="relative w-32 h-32 md:w-40 md:h-40 lg:w-48 lg:h-48">
+              <Image
+                src="/logo.svg"
+                alt="Go, Cart! Logo"
+                fill
+                priority
+                className="drop-shadow-2xl"
+              />
+            </div>
+          </motion.div>
+          
+          {/* Brand Name */}
           <motion.h2
-            className="text-4xl md:text-6xl lg:text-7xl font-black mb-12 bg-gradient-to-r from-white to-neutral-100 bg-clip-text text-transparent drop-shadow-2xl"
+            className="text-4xl md:text-5xl lg:text-6xl font-black mb-12 bg-gradient-to-r from-white to-neutral-100 bg-clip-text text-transparent drop-shadow-2xl"
             variants={itemVariants}
           >
             Go, Cart!
