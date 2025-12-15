@@ -2,34 +2,47 @@
 
 Central documentation for the **Go, Cart!** AI meal planning and grocery ordering platform.
 
-**Last Updated**: December 8, 2025
+**Last Updated**: December 14, 2025
 
 ## 🚀 Quick Start
 [quickstart.md](quickstart.md) - Local development setup (15 minutes)
 
 ## 📋 Table of Contents
 
-### Core Guides
+### Getting Started
 | Guide | Description |
 |-------|-------------|
-| [`quickstart.md`](quickstart.md) | Local development setup |
-| [`deployment.md`](deployment.md) | Production deployment (Railway + Vercel) |
-| [`architecture.md`](architecture.md) | System architecture & multi-agent workflows |
+| [Quickstart](quickstart.md) | Local development setup (15 min) |
+| [Development Guide](DEVELOPMENT_GUIDE.md) | Complete workflow: testing, linting, common tasks |
 
-### Feature Documentation
-| Feature | Status | Guide |
-|---------|--------|-------|
-| Meal Planning | ✅ Complete | [`architecture.md`](architecture.md)#meal-planning-workflow |
-| Grocery Lists | ✅ Complete | [`architecture.md`](architecture.md)#grocery-cart-workflow |
-| Knuspr Integration | ✅ Complete | [`deployment.md`](deployment.md)#knuspr-configuration |
-| Waitlist System | ✅ Complete | [`quickstart.md`](quickstart.md)#waitlist-testing |
+### Integration & Features
+| Guide | Description |
+|-------|-------------|
+| [Knuspr Integration](KNUSPR_INTEGRATION.md) | Complete grocery delivery integration guide |
+| [Architecture](architecture.md) | System architecture & multi-agent workflows |
 
-### Development
+### Deployment
+| Guide | Description |
+|-------|-------------|
+| [Railway Deployment](DEPLOYMENT_RAILWAY.md) | Multi-service production deployment |
+| [Deployment Overview](deployment.md) | Quick deployment reference |
+
+### Quick Reference
+| Feature | Status | Documentation |
+|---------|--------|---------------|
+| Meal Planning | ✅ Complete | [Architecture](architecture.md#meal-planning-workflow) |
+| Grocery Lists | ✅ Complete | [Architecture](architecture.md#grocery-cart-workflow) |
+| Knuspr Integration | ✅ Complete | [Knuspr Integration](KNUSPR_INTEGRATION.md) |
+| All 17 MCP Tools | ✅ Complete | [MCP Tools Reference](KNUSPR_INTEGRATION.md#mcp-tools-reference) |
+| Railway Deployment | ✅ Complete | [Railway Guide](DEPLOYMENT_RAILWAY.md) |
+
+### Development Tasks
 | Topic | Guide |
 |-------|-------|
-| [Testing](quickstart.md#testing) | Backend + Frontend test suites |
-| [Database](deployment.md#database-migrations) | Migrations + seeding |
-| [API Docs](http://localhost:8000/api/docs) | Interactive Swagger UI |
+| Testing | [Development Guide - Testing](DEVELOPMENT_GUIDE.md#testing) |
+| Database Migrations | [Development Guide - Database](DEVELOPMENT_GUIDE.md#database-management) |
+| Code Quality | [Development Guide - Code Quality](DEVELOPMENT_GUIDE.md#code-quality) |
+| API Docs | [Swagger UI](http://localhost:8000/api/docs) |
 
 ## 🎯 Key Features
 
@@ -74,7 +87,7 @@ API Docs: https://api.gocart.app/api/docs
 ## 🤝 Contributing
 ```
 feat: new feature
-fix: bug fixes  
+fix: bug fixes
 docs: documentation
 test: testing improvements
 ```

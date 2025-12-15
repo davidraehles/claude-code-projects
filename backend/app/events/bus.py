@@ -72,7 +72,10 @@ class EventBus:
             bool: True if published successfully, False otherwise
         """
         if not self.redis_client:
-            raise RuntimeError("EventBus not connected. Call connect() first.")
+            # Do not raise here; allow callers to continue gracefully when
+            # the event bus is not available (e.g., in tests or degraded mode).
+            print("⚠️  EventBus not connected. Skipping publish")
+            return False
 
         try:
             # Serialize event to JSON

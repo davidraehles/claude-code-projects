@@ -216,7 +216,7 @@ export function WaitlistForm({ className = "", onSuccess }: WaitlistFormProps) {
       case "submitting":
         return "Joining waitlist..."
       case "success":
-        return "Success! Check your email to verify."
+        return "Thanks for joining the waitlist! We'll be in touch soon."
       case "offline":
         return "Saved! We'll submit when you're back online."
       case "error":

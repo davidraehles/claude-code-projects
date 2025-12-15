@@ -5,11 +5,12 @@ Provides SQLAlchemy engine, session factory, and connection utilities.
 """
 
 import os
-from typing import Generator
+from typing import Generator, AsyncGenerator
 
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 # Database connection settings from environment variables
 # Railway provides DATABASE_URL, but we also support individual variables for local dev
@@ -24,7 +25,7 @@ if not DATABASE_URL:
     DB_NAME = os.getenv("DB_NAME", "recipe_app")
     DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
-# Create SQLAlchemy engine
+# Create SQLAlchemy engine (Sync)
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,  # Verify connections before using
@@ -33,8 +34,30 @@ engine = create_engine(
     echo=False,  # Set to True for SQL query logging during development
 )
 
-# Create session factory
+# Create session factory (Sync)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# Async Database Setup
+# Ensure we use the async driver
+ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+
+# Create SQLAlchemy engine (Async)
+async_engine = create_async_engine(
+    ASYNC_DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=10,
+    max_overflow=20,
+    echo=False,
+)
+
+# Create session factory (Async)
+AsyncSessionLocal = async_sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+)
 
 # Base class for ORM models
 Base = declarative_base()
@@ -42,7 +65,7 @@ Base = declarative_base()
 
 def get_db() -> Generator[Session, None, None]:
     """
-    Dependency function for FastAPI routes to get database session.
+    Dependency function for FastAPI routes to get database session (Sync).
 
     Usage:
         @app.get("/items/")
@@ -57,6 +80,23 @@ def get_db() -> Generator[Session, None, None]:
         yield db
     finally:
         db.close()
+
+
+async def get_async_db() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Dependency function for FastAPI routes to get database session (Async).
+
+    Usage:
+        @app.get("/items/")
+        async def read_items(db: AsyncSession = Depends(get_async_db)):
+            result = await db.execute(select(Item))
+            return result.scalars().all()
+
+    Yields:
+        AsyncSession: SQLAlchemy async database session
+    """
+    async with AsyncSessionLocal() as session:
+        yield session
 
 
 def init_db() -> None:

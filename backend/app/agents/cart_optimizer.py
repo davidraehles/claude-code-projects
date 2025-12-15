@@ -48,7 +48,37 @@ class MappedIngredient:
 
 class CartOptimizerAgent:
     """
-    Cart Optimizer Agent - Converts meal plans to Knuspr shopping carts
+    Main grocery shopping service agent that converts meal plans to Knuspr carts.
+
+    This agent has access to all 17 Knuspr MCP tools via self.knuspr_client:
+
+    Cart Management:
+    - search_products(query, max_results) - Find products by name
+    - create_cart(items) - Create shopping cart
+    - get_cart_content() - View current cart
+    - remove_from_cart(product_ids) - Remove items
+
+    Delivery:
+    - get_delivery_slots(start_date, end_date) - Get available times
+    - select_delivery_slot(cart_id, slot_id) - Choose delivery time
+    - get_delivery_info() - Get service area details
+
+    Personalization:
+    - get_frequent_items() - User's common purchases
+    - get_meal_suggestions() - Rohlik meal ideas
+    - get_shopping_list() - Saved lists
+
+    Orders:
+    - get_order_history(limit) - Past orders
+    - get_order_detail(order_id) - Specific order info
+    - get_upcoming_orders() - Scheduled deliveries
+
+    Account:
+    - get_account_data() - User profile and address
+    - get_premium_info() - Subscription status
+    - get_reusable_bags_info() - Bag credits
+    - get_announcements() - Service notifications
+    - get_shopping_scenarios() - Usage examples
 
     Responsibilities:
     - Extract ingredients from meal plan recipes
@@ -70,7 +100,7 @@ class CartOptimizerAgent:
 
         Args:
             knuspr_client: KnusprMCPClient for Knuspr API access
-            ingredient_mapper: IngredientMapper for ingredient→product mapping
+            ingredient_mapper: IngredientMapper for ingredient to product mapping
             db: Database connection for cart storage
             event_bus: EventBus for publishing events
         """

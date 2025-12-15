@@ -195,9 +195,8 @@ See [.claude/agents/AGENT-REGISTRY.md](./.claude/agents/AGENT-REGISTRY.md) for d
 
 ## Recent Changes
 - 001-grocery-list-generation: Added PostgreSQL (existing models: GroceryCart, CartItem, MealPlan, Recipe, Ingredient)
+- 001-grocery-list-generation: Added PostgreSQL (existing models: GroceryCart, CartItem, MealPlan, Recipe, Ingredient)
 
 - 2025-11-29: Multi-agent system registered (8 agents)
-- 2025-11-29: Feature 001 (Grocery Lists) - Implementation plan complete
 
 ## Active Technologies
-- PostgreSQL (existing models: GroceryCart, CartItem, MealPlan, Recipe, Ingredient) (001-grocery-list-generation)

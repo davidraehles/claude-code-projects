@@ -21,11 +21,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-import sys
-sys.path.insert(0, '/home/darae/claude-code-projects')
-
-from src.main import app
-from src.services.auth import create_access_token, hash_password
+from app.main import app
+from app.api.v1.auth import create_access_token, hash_password
 
 
 client = TestClient(app)
@@ -34,7 +31,7 @@ client = TestClient(app)
 @pytest.fixture
 def db_session():
     """Get database session"""
-    from src.db.session import SessionLocal
+    from app.database import SessionLocal
     session = SessionLocal()
     yield session
     session.close()
@@ -43,7 +40,7 @@ def db_session():
 @pytest.fixture
 def test_user_1(db_session):
     """Create first test user"""
-    from src.db.models import User
+    from app.models.user import User
 
     user = User(
         email=f"sectest1-{time.time()}@example.com",
@@ -60,7 +57,7 @@ def test_user_1(db_session):
 @pytest.fixture
 def test_user_2(db_session):
     """Create second test user"""
-    from src.db.models import User
+    from app.models.user import User
 
     user = User(
         email=f"sectest2-{time.time()}@example.com",
@@ -77,14 +74,14 @@ def test_user_2(db_session):
 @pytest.fixture
 def auth_headers_user1(test_user_1):
     """Get auth headers for user 1"""
-    token = create_access_token(data={"sub": test_user_1.email})
+    token = create_access_token(data={"sub": str(test_user_1.id)})
     return {"Authorization": f"Bearer {token}"}
 
 
 @pytest.fixture
 def auth_headers_user2(test_user_2):
     """Get auth headers for user 2"""
-    token = create_access_token(data={"sub": test_user_2.email})
+    token = create_access_token(data={"sub": str(test_user_2.id)})
     return {"Authorization": f"Bearer {token}"}
 
 
@@ -215,7 +212,7 @@ class TestPhase5AuthorizationSecurity:
             "/api/v1/users/me",
             "/api/v1/users/preferences",
             "/api/v1/recipes",
-            "/api/v1/mealplans",
+            "/api/v1/meal-plans",
         ]
 
         for endpoint in protected_endpoints:
@@ -655,7 +652,7 @@ class TestPhase5DependencyVulnerabilities:
         import os
 
         # Check for requirements.txt or similar
-        requirements_file = "/home/darae/claude-code-projects/requirements.txt"
+        requirements_file = "requirements.txt"
         assert os.path.exists(requirements_file), "requirements.txt not found"
 
         with open(requirements_file) as f:

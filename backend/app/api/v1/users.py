@@ -11,6 +11,7 @@ from pydantic import BaseModel, Field
 
 from app.api.dependencies import get_database, get_current_user_id
 from app.models.user import User
+from app.api.v1.auth import UserResponse
 from app.services.notifications import NotificationService, Notification as NotificationModel
 
 
@@ -46,6 +47,29 @@ class NotificationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# User Profile Endpoints
+
+@router.get("/me", response_model=UserResponse)
+async def get_current_user(
+    user_id: int = Depends(get_current_user_id),
+    db: Session = Depends(get_database)
+):
+    """
+    Get current user profile.
+
+    Args:
+        user_id: Current user ID
+        db: Database session
+
+    Returns:
+        User profile
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
 
 
 # User Preferences Endpoints

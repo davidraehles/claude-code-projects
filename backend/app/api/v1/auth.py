@@ -7,8 +7,10 @@ Provides JWT-based authentication with login, registration, and token refresh.
 from datetime import datetime, timedelta
 from typing import Optional
 import logging
+import os
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Response
+from fastapi.responses import JSONResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,11 +21,42 @@ import jwt
 from app.api.dependencies import get_database, SECRET_KEY, ALGORITHM
 from app.database import get_db
 from app.models.user import User
+from app.utils.rate_limit import AuthRateLimiter
+from app.schemas.error import ErrorResponse, ErrorType
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 security = HTTPBearer()
+
+# Auth-specific rate limiter instance
+auth_limiter = AuthRateLimiter()
+
+
+def _extract_client_ip_from_request(request: Request) -> str:
+    forwarded_for = request.headers.get("X-Forwarded-For")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    real_ip = request.headers.get("X-Real-IP")
+    if real_ip:
+        return real_ip
+    if request.client:
+        return request.client.host
+    return "unknown"
+
+def _ensure_redis_limiter():
+    """Ensure auth limiter has access to Redis client if available."""
+    if auth_limiter.redis_client is None:
+        try:
+            from app.events.bus import get_event_bus
+            bus = get_event_bus()
+            if bus.redis_client:
+                auth_limiter.redis_client = bus.redis_client
+                auth_limiter.login_limiter.redis_client = bus.redis_client
+                auth_limiter.register_limiter.redis_client = bus.redis_client
+                auth_limiter.refresh_limiter.redis_client = bus.redis_client
+        except Exception:
+            pass
 
 # JWT Configuration - imported from dependencies.py to ensure single source of truth
 # SECRET_KEY and ALGORITHM are imported above
@@ -65,7 +98,7 @@ class UserResponse(BaseModel):
     email: str
     country: str
     subscription_tier: str
-    created_at: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -74,17 +107,7 @@ class UserResponse(BaseModel):
 # Helper Functions
 
 def hash_password(password: str) -> str:
-    """Hash a password using bcrypt with explicit variant."""
-    import hashlib
-
-    # bcrypt has a 72-byte limit on password length
-    # For passwords exceeding this, pre-hash with SHA-256
-    password_bytes = password.encode('utf-8')
-
-    if len(password_bytes) > 72:
-        # Use SHA-256 to create a fixed-length hash that's under 72 bytes
-        password = hashlib.sha256(password_bytes).hexdigest()
-
+    """Hash a password using bcrypt."""
     # Use explicit bcrypt configuration with variant 2b and 12 rounds
     return bcrypt.using(ident="2b", rounds=12).hash(password)
 
@@ -274,7 +297,9 @@ async def require_admin_async(
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     user_data: UserRegister,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_database),
+    request: Request = None,
+    response: Response = None
 ):
     """
     Register a new user.
@@ -289,13 +314,45 @@ async def register(
     Raises:
         HTTPException: If email already exists
     """
-    # Check if user already exists
+    _ensure_redis_limiter()
+    
+    # Check if user already exists (do this before consuming rate-limiter quota)
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
+        # Return 400 Bad Request without leaking tokens
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
+
+    # Rate limit check (per-IP) - only apply for actual registration attempts
+    client_ip = _extract_client_ip_from_request(request)
+    is_allowed, metadata = auth_limiter.check_register_limit(client_ip)
+    if not is_allowed:
+        retry_after = metadata.get("retry_after") or auth_limiter.register_limiter.window_seconds
+        err = ErrorResponse(
+            error_type=ErrorType.RATE_LIMIT,
+            message="Too many registration attempts. Please try again later.",
+            details={"limit": metadata.get("limit"), "remaining": 0, "reset_at": metadata.get("reset_at")},
+            path=str(request.url.path),
+            request_id=request.headers.get("X-Request-ID"),
+        )
+        return JSONResponse(
+            status_code=429,
+            content={**err.model_dump(mode="json"), "error": "Too many registration attempts"},
+            headers={
+                "X-RateLimit-Limit": str(metadata.get("limit")),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": metadata.get("reset_at"),
+                "Retry-After": str(retry_after),
+            }
+        )
+
+    # Attach rate limit headers to response
+    if response is not None:
+        response.headers["X-RateLimit-Limit"] = str(metadata.get("limit"))
+        response.headers["X-RateLimit-Remaining"] = str(metadata.get("remaining"))
+        response.headers["X-RateLimit-Reset"] = metadata.get("reset_at")
 
     # Create new user
     hashed_password = hash_password(user_data.password)
@@ -311,6 +368,13 @@ async def register(
     db.commit()
     db.refresh(new_user)
 
+    # Clear failed login attempts after creating the user for test isolation
+    try:
+        auth_limiter.clear_failed_logins(new_user.email)
+    except Exception:
+        pass
+
+
     # Generate tokens
     access_token = create_access_token({"sub": str(new_user.id)})
     refresh_token = create_refresh_token({"sub": str(new_user.id)})
@@ -325,7 +389,9 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     credentials: UserLogin,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_database),
+    request: Request = None,
+    response: Response = None
 ):
     """
     Login a user and return JWT tokens.
@@ -340,21 +406,73 @@ async def login(
     Raises:
         HTTPException: If credentials are invalid
     """
+    _ensure_redis_limiter()
+    client_ip = _extract_client_ip_from_request(request)
+
+    # Check if account is locked due to failed attempts
+    locked, unlock_time = auth_limiter.is_account_locked(credentials.email)
+    if locked:
+        content = {"error": "Account temporarily locked", "unlock_at": unlock_time.isoformat()}
+        return JSONResponse(
+            status_code=403,
+            content=content,
+            headers={
+                "X-RateLimit-Limit": str(auth_limiter.login_limiter.max_requests),
+                "X-RateLimit-Remaining": str(auth_limiter.login_limiter.max_requests),
+                "X-RateLimit-Reset": "",
+            }
+        )
+
     # Find user
     user = db.query(User).filter(User.email == credentials.email).first()
+
     if not user:
+        # For non-existent users, enforce IP-based rate limiting to prevent abuse
+        is_allowed, metadata = auth_limiter.check_login_limit(client_ip)
+        if not is_allowed:
+            err = ErrorResponse(
+                error_type=ErrorType.RATE_LIMIT,
+                message="Too many login attempts. Please try again later.",
+                details={"limit": metadata.get("limit"), "remaining": 0, "reset_at": metadata.get("reset_at")},
+                path=str(request.url.path),
+                request_id=request.headers.get("X-Request-ID"),
+            )
+            return JSONResponse(
+                status_code=429,
+                content={**err.model_dump(mode="json"), "error": "Too many login attempts"},
+                headers={
+                    "X-RateLimit-Limit": str(metadata.get("limit")),
+                    "X-RateLimit-Remaining": "0",
+                    "X-RateLimit-Reset": metadata.get("reset_at"),
+                    "Retry-After": str(metadata.get("retry_after")) if metadata.get("retry_after") else str(auth_limiter.login_limiter.window_seconds),
+                }
+            )
+
+        # Record failed login attempt and include rate limit headers
+        auth_limiter.record_failed_login(credentials.email, client_ip)
+        # Surface rate-limit headers for consistency in responses
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={
+                "WWW-Authenticate": "Bearer",
+                "X-RateLimit-Limit": str(auth_limiter.login_limiter.max_requests),
+                "X-RateLimit-Remaining": str(auth_limiter.login_limiter.max_requests),
+            },
         )
 
     # Verify password
     if not verify_password(credentials.password, user.password_hash):
+        # For failed attempts on existing accounts, record the failure and do NOT apply IP-level blocking here
+        auth_limiter.record_failed_login(credentials.email, client_ip)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
-            headers={"WWW-Authenticate": "Bearer"},
+            headers={
+                "WWW-Authenticate": "Bearer",
+                "X-RateLimit-Limit": str(auth_limiter.login_limiter.max_requests),
+                "X-RateLimit-Remaining": str(auth_limiter.login_limiter.max_requests),
+            },
         )
 
     # Check if account is deleted
@@ -363,6 +481,35 @@ async def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Account has been deleted"
         )
+
+    # Successful login: clear failed attempts
+    auth_limiter.clear_failed_logins(credentials.email)
+
+    # Enforce IP-based login limit for successful logins (counts towards quota)
+    is_allowed, metadata = auth_limiter.check_login_limit(client_ip)
+    if not is_allowed:
+        err = ErrorResponse(
+            error_type=ErrorType.RATE_LIMIT,
+            message="Too many login attempts. Please try again later.",
+            details={"limit": metadata.get("limit"), "remaining": 0, "reset_at": metadata.get("reset_at")},
+            path=str(request.url.path),
+            request_id=request.headers.get("X-Request-ID"),
+        )
+        return JSONResponse(
+            status_code=429,
+            content={**err.model_dump(mode="json"), "error": "Too many login attempts"},
+            headers={
+                "X-RateLimit-Limit": str(metadata.get("limit")),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": metadata.get("reset_at"),
+                "Retry-After": str(metadata.get("retry_after")) if metadata.get("retry_after") else str(auth_limiter.login_limiter.window_seconds),
+            }
+        )
+
+    if response is not None:
+        response.headers["X-RateLimit-Limit"] = str(metadata.get("limit"))
+        response.headers["X-RateLimit-Remaining"] = str(metadata.get("remaining"))
+        response.headers["X-RateLimit-Reset"] = metadata.get("reset_at")
 
     # Generate tokens
     access_token = create_access_token({"sub": str(user.id)})
@@ -378,7 +525,9 @@ async def login(
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh_token(
     token_data: TokenRefresh,
-    db: Session = Depends(get_database)
+    db: Session = Depends(get_database),
+    request: Request = None,
+    response: Response = None
 ):
     """
     Refresh an access token using a refresh token.
@@ -393,6 +542,8 @@ async def refresh_token(
     Raises:
         HTTPException: If refresh token is invalid
     """
+    _ensure_redis_limiter()
+    
     # Decode refresh token
     payload = decode_token(token_data.refresh_token)
 
@@ -405,6 +556,32 @@ async def refresh_token(
 
     # Get user ID
     user_id = int(payload.get("sub"))
+
+    # Per-user refresh rate limiting
+    is_allowed, metadata = auth_limiter.check_refresh_limit(user_id)
+    if not is_allowed:
+        err = ErrorResponse(
+            error_type=ErrorType.RATE_LIMIT,
+            message="Too many token refresh attempts. Please try again later.",
+            details={"limit": metadata.get("limit"), "remaining": 0, "reset_at": metadata.get("reset_at")},
+            path=str(request.url.path),
+            request_id=request.headers.get("X-Request-ID"),
+        )
+        return JSONResponse(
+            status_code=429,
+            content={**err.model_dump(mode="json"), "error": "Too many token refresh attempts"},
+            headers={
+                "X-RateLimit-Limit": str(metadata.get("limit")),
+                "X-RateLimit-Remaining": "0",
+                "X-RateLimit-Reset": metadata.get("reset_at"),
+                "Retry-After": str(metadata.get("retry_after")) if metadata.get("retry_after") else str(auth_limiter.refresh_limiter.window_seconds),
+            }
+        )
+
+    if response is not None:
+        response.headers["X-RateLimit-Limit"] = str(metadata.get("limit"))
+        response.headers["X-RateLimit-Remaining"] = str(metadata.get("remaining"))
+        response.headers["X-RateLimit-Reset"] = metadata.get("reset_at")
 
     # Verify user exists
     user = db.query(User).filter(User.id == user_id).first()

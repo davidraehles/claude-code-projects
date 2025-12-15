@@ -20,11 +20,8 @@ import statistics
 import pytest
 from fastapi.testclient import TestClient
 
-import sys
-sys.path.insert(0, '/home/darae/claude-code-projects')
-
-from src.main import app
-from src.services.auth import create_access_token, hash_password
+from app.main import app
+from app.api.v1.auth import create_access_token, hash_password
 
 
 client = TestClient(app)

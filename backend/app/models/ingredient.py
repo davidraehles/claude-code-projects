@@ -32,7 +32,7 @@ class Allergen(Base):
     id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False, unique=True, index=True)
     description = Column(Text, nullable=True)
-    severity = Column(String(20), nullable=False, comment="low, medium, high, severe")
+    severity = Column(String(20), nullable=False, default="medium", comment="low, medium, high, severe")
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
     # Relationships
@@ -105,6 +105,9 @@ class Ingredient(Base):
     # Metadata fields
     aliases = Column(JSONType, nullable=True, comment="List of alternative names")
     base_unit = Column(String(50), nullable=True, comment="gram, ml, piece, etc.")
+    # Legacy compatibility: some tests and older code expect `unit` and `calories_per_unit`
+    unit = Column(String(50), nullable=True, comment="Legacy unit field, use `base_unit` instead")
+    calories_per_unit = Column(Float, nullable=True, comment="Calories per declared unit")
     unit_conversions = Column(JSONType, nullable=True, comment="Conversion factors to base unit")
     nutrition_per_100g = Column(JSONType, nullable=True, comment="Calories, protein, carbs, fat, fiber")
     seasonal_availability = Column(JSONType, nullable=True, comment="Months when in season")
@@ -151,6 +154,17 @@ class Ingredient(Base):
             "is_common": self.is_common,
             "allergens": [a.name for a in self.allergens] if self.allergens else [],
         }
+
+    def __init__(self, *args, **kwargs):
+        # Ensure normalized_name is populated for legacy tests and inserts
+        if "normalized_name" not in kwargs and "name" in kwargs:
+            kwargs["normalized_name"] = str(kwargs["name"]).lower()
+
+        # Map legacy `unit` to `base_unit` when provided
+        if "base_unit" not in kwargs and "unit" in kwargs:
+            kwargs["base_unit"] = kwargs.get("unit")
+
+        super().__init__(*args, **kwargs)
 
 
 # Association table for ingredient-allergen many-to-many relationship

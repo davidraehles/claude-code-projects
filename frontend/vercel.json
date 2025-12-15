@@ -3,10 +3,11 @@
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "framework": "nextjs",
+  "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/api/v1/:path*",
-      "destination": "https://meal-planner.up.railway.app/api/v1/:path*"
+      "source": "/api/v1/:path(.*)",
+      "destination": "https://meal-planner.up.railway.app/api/v1/:path"
     }
   ]
 }

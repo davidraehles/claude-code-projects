@@ -74,7 +74,7 @@ export const SYSTEM_ENDPOINTS = {
  * Waitlist endpoints
  */
 export const WAITLIST_ENDPOINTS = {
-  JOIN: `${API_V1}/waitlist`,
+  JOIN: `${API_V1}/waitlist/`,
   VERIFY: `${API_V1}/waitlist/verify`,
   STATUS: (email: string) => `${API_V1}/waitlist/status?email=${encodeURIComponent(email)}`,
 } as const;

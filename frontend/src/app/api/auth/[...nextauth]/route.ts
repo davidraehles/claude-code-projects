@@ -46,8 +46,20 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
+          // Use full Railway URL for server-side requests (NextAuth runs on server)
+          // Don't use the /api/v1 proxy as that only works client-side
+          // For Vercel deployment, NEXT_PUBLIC_API_URL should be set to Railway URL
+          // If not set, use Railway URL directly as fallback instead of localhost
+          const rawUrl = (process.env.NEXT_PUBLIC_API_URL || process.env.BACKEND_URL || '').trim()
+          // Validate URL - if it's not meal-planner.up.railway.app, use the correct one
+          const backendUrl = (rawUrl && rawUrl.includes('meal-planner.up.railway.app'))
+            ? rawUrl
+            : 'https://meal-planner.up.railway.app'
+
+          console.log('NextAuth authorize - using backend URL:', backendUrl)
+
           // Call backend login endpoint
-          const loginRes = await fetch(`${API_URL}/api/v1/auth/login`, {
+          const loginRes = await fetch(`${backendUrl}/api/v1/auth/login`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -59,15 +71,28 @@ export const authOptions: NextAuthOptions = {
           })
 
           if (!loginRes.ok) {
-            const error = await loginRes.json().catch(() => ({ detail: 'Login failed' }))
-            console.error('Login failed:', error)
+            const errorText = await loginRes.text()
+            let error
+            try {
+              error = JSON.parse(errorText)
+            } catch {
+              error = { detail: errorText || 'Login failed' }
+            }
+            console.error('NextAuth - Login failed:', {
+              status: loginRes.status,
+              statusText: loginRes.statusText,
+              error,
+              email: credentials.email,
+              backendUrl
+            })
             return null
           }
 
           const tokens = await loginRes.json()
+          console.log('NextAuth - Login successful, fetching user info')
 
           // Fetch user info using access token
-          const userRes = await fetch(`${API_URL}/api/v1/auth/me`, {
+          const userRes = await fetch(`${backendUrl}/api/v1/auth/me`, {
             method: 'GET',
             headers: {
               'Authorization': `Bearer ${tokens.access_token}`,

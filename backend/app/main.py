@@ -69,6 +69,48 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         logger.info("Creating database tables (development mode)")
         Base.metadata.create_all(bind=engine)
 
+    # Seed test user for development/testing (if enabled)
+    if os.getenv("SEED_TEST_USER", "false").lower() in ("true", "1", "yes"):
+        logger.info("Seeding test user for development/testing...")
+        try:
+            from app.database import SessionLocal
+            from app.models.user import User
+            from app.api.v1.auth import hash_password
+
+            TEST_EMAIL = "test@example.com"
+            TEST_PASSWORD = "testpassword123"
+            TEST_COUNTRY = "US"
+
+            db = SessionLocal()
+            try:
+                existing_user = db.query(User).filter(User.email == TEST_EMAIL).first()
+
+                if existing_user:
+                    logger.info(f"Test user already exists (ID: {existing_user.id}), updating password")
+                    existing_user.password_hash = hash_password(TEST_PASSWORD)
+                    existing_user.country = TEST_COUNTRY
+                    existing_user.deleted_at = None
+                    db.commit()
+                else:
+                    logger.info("Creating new test user")
+                    new_user = User(
+                        email=TEST_EMAIL,
+                        password_hash=hash_password(TEST_PASSWORD),
+                        country=TEST_COUNTRY,
+                        subscription_tier="free",
+                        preferences={}
+                    )
+                    db.add(new_user)
+                    db.commit()
+                    db.refresh(new_user)
+                    logger.info(f"Test user created successfully (ID: {new_user.id})")
+
+                logger.info(f"Test user ready: {TEST_EMAIL} / {TEST_PASSWORD}")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.error(f"Failed to seed test user: {e}", exc_info=True)
+
     # Initialize Redis event bus
     try:
         event_bus = get_event_bus()
@@ -159,14 +201,30 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
 
 # Initialize FastAPI application
+# Expose docs at the traditional root paths for compatibility and keep
+# the existing `/api/*` paths redirecting to the root docs to support
+# older tests and tooling.
 app = FastAPI(
     title="Recipe & Meal Planning API",
     description="Multi-agent system for recipe harvesting, meal planning, and grocery shopping",
     version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
+    docs_url="/docs",
+    redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Back-compat redirects to preserve older `/api/docs` and `/api/redoc` paths
+from fastapi.responses import RedirectResponse
+
+
+@app.get("/api/docs", include_in_schema=False)
+async def docs_redirect():
+    return RedirectResponse(url="/docs")
+
+
+@app.get("/api/redoc", include_in_schema=False)
+async def redoc_redirect():
+    return RedirectResponse(url="/redoc")
 
 # CORS middleware configuration (production-hardened)
 def get_cors_origins():
@@ -315,6 +373,12 @@ async def liveness_probe():
     return await check_liveness()
 
 
+@app.get("/health/liveness", tags=["System"], include_in_schema=False)
+async def liveness_probe_compat():
+    """Compatibility endpoint: `/health/liveness` -> uses same implementation as `/health/live`."""
+    return await check_liveness()
+
+
 @app.get("/health/ready", tags=["System"])
 async def readiness_probe():
     """
@@ -325,6 +389,12 @@ async def readiness_probe():
     Returns:
         HealthCheckResponse: Full dependency health check
     """
+    return await check_readiness()
+
+
+@app.get("/health/readiness", tags=["System"], include_in_schema=False)
+async def readiness_probe_compat():
+    """Compatibility endpoint: `/health/readiness` -> uses same implementation as `/health/ready`."""
     return await check_readiness()
 
 
@@ -467,7 +537,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Import and include routers
-from app.api.v1 import recipes, ingredients, users, meal_plans, auth, grocery_carts, knuspr_credentials, workflows, waitlist
+from app.api.v1 import recipes, ingredients, users, meal_plans, auth, grocery_carts, knuspr_credentials, workflows, waitlist, carts
 
 app.include_router(recipes.router, prefix="/api/v1/recipes", tags=["Recipes"])
 app.include_router(ingredients.router, prefix="/api/v1/ingredients", tags=["Ingredients"])
@@ -475,6 +545,7 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["Users"])
 app.include_router(meal_plans.router, prefix="/api/v1/meal-plans", tags=["Meal Plans"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(grocery_carts.router, tags=["Grocery Carts"])
+app.include_router(carts.router, tags=["Carts (compat)"])
 app.include_router(knuspr_credentials.router, tags=["Knuspr Credentials"])
 app.include_router(workflows.router, prefix="/api/v1/workflows", tags=["Workflows"])
 app.include_router(waitlist.router, prefix="/api/v1/waitlist", tags=["Waitlist"])

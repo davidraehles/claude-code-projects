@@ -34,6 +34,7 @@ class ErrorType(str, Enum):
     CONFLICT = "conflict"
     SERVER = "server"
     SERVICE_UNAVAILABLE = "service_unavailable"
+    RATE_LIMIT = "rate_limit"
 
 
 class ErrorResponse(BaseModel):

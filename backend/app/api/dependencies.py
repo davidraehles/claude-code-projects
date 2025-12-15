@@ -7,13 +7,14 @@ Provides reusable dependencies for database sessions, authentication, etc.
 import os
 import secrets
 import logging
-from typing import Generator, Optional
+from typing import Generator, AsyncGenerator, Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 import jwt
 
-from app.database import get_db
+from app.database import get_db, get_async_db
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -66,8 +67,19 @@ def get_database() -> Generator[Session, None, None]:
     yield from get_db()
 
 
+async def get_async_database() -> AsyncGenerator[AsyncSession, None]:
+    """
+    Get async database session for API endpoints.
+
+    Yields:
+        AsyncSession: SQLAlchemy async database session
+    """
+    async for session in get_async_db():
+        yield session
+
+
 # Security scheme for JWT authentication
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def decode_token(token: str) -> dict:
@@ -101,7 +113,7 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_database)
 ) -> int:
     """
@@ -117,6 +129,14 @@ async def get_current_user_id(
     Raises:
         HTTPException: If token is invalid or user not found
     """
+    # If no credentials were provided, return 401 Unauthorized
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # Decode and validate token
     payload = decode_token(credentials.credentials)
 
