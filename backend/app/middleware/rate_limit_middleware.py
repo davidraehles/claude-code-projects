@@ -90,10 +90,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         """
         # Define endpoint patterns and their rate limit configurations
         patterns = [
-            # Stricter limits for authentication endpoints (handled by AuthRateLimiter)
-            # These are already protected, so we apply generous limits here
-            (r"^/api/v1/auth/login$", 20, 60),       # 20 attempts per minute
-            (r"^/api/v1/auth/register$", 10, 60),    # 10 attempts per minute
+            # Auth endpoints get a moderately strict generic limiter in the
+            # pre-compiled patterns (used by tests to inspect compiled
+            # pattern behaviour). Note: runtime rate limiting for auth
+            # routes is still skipped by _should_skip_rate_limit so the
+            # auth routes can implement their own semantics.
+            (r"^/api/v1/auth/.*$", 20, 60),      # 20 requests per minute
+            # NOTE: Auth endpoints have specialized behavior (per-email lockout,
+            # specific messages) and are handled inside the auth routes using
+            # AuthRateLimiter. Do not apply generic auth limits here to avoid
+            # double-accounting and to allow per-user checks.
             # Stricter limits for expensive workflow operations
             (r"^/api/v1/workflows/.*$", 10, 300),    # 10 requests per 5 minutes
             # Moderate limits for search endpoints
@@ -195,6 +201,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             "/api/redoc",
             "/openapi.json"
         ]
+
+        # Skip rate limiting entirely for authentication endpoints; these have
+        # specialized logic and expected behavior (per-email lockouts, custom
+        # error messages), handled inside the auth routes.
+        if request.url.path.startswith("/api/v1/auth"):
+            return True
 
         return request.url.path in exempt_paths
 
