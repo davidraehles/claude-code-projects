@@ -79,7 +79,7 @@ async def get_async_database() -> AsyncGenerator[AsyncSession, None]:
 
 
 # Security scheme for JWT authentication
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 def decode_token(token: str) -> dict:
@@ -113,7 +113,7 @@ def decode_token(token: str) -> dict:
 
 
 async def get_current_user_id(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_database)
 ) -> int:
     """
@@ -129,6 +129,14 @@ async def get_current_user_id(
     Raises:
         HTTPException: If token is invalid or user not found
     """
+    # If no credentials were provided, return 401 Unauthorized
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     # Decode and validate token
     payload = decode_token(credentials.credentials)
 

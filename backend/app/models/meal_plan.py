@@ -198,6 +198,12 @@ class MealPlanRecipe(Base):
     def __repr__(self) -> str:
         return f"<MealPlanRecipe(meal_plan_id={self.meal_plan_id}, day={self.day_number}, meal={self.meal_type})>"
 
+    def __init__(self, *args, **kwargs):
+        # Backwards compatibility: accept `day_of_week` in place of `day_number`
+        if "day_of_week" in kwargs and "day_number" not in kwargs:
+            kwargs["day_number"] = kwargs.pop("day_of_week")
+        super().__init__(*args, **kwargs)
+
 
 class GroceryCart(Base):
     """
@@ -335,6 +341,17 @@ class CartItem(Base):
 
     def __repr__(self) -> str:
         return f"<CartItem(id={self.id}, name='{self.name}', quantity={self.quantity} {self.unit})>"
+
+    def __init__(self, *args, **kwargs):
+        # Backwards compatibility: accept `ingredient_name` for `name`
+        if "ingredient_name" in kwargs and "name" not in kwargs:
+            kwargs["name"] = kwargs.pop("ingredient_name")
+
+        # Backwards compatibility: accept single `recipe_id` and store in `recipe_ids`
+        if "recipe_id" in kwargs and "recipe_ids" not in kwargs:
+            kwargs["recipe_ids"] = [kwargs.pop("recipe_id")]
+
+        super().__init__(*args, **kwargs)
 
 
 # Indexes

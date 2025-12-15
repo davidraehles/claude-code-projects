@@ -14,7 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from app.api.dependencies import get_database, get_current_user_id
-from app.models.meal_plan import MealPlan, GroceryCart, CartItem
+from app.models.meal_plan import MealPlan, MealPlanRecipe, GroceryCart, CartItem
 from app.models.recipe import Recipe
 from app.agents.cart_optimizer import CartOptimizerAgent
 from app.services.knuspr_mcp_client import KnusprMCPClient, KnusprCountry

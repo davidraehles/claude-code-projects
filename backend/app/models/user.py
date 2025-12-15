@@ -59,10 +59,12 @@ class User(Base):
     # Authentication
     email = Column(String(255), nullable=False, unique=True, index=True)
     password_hash = Column(String(255), nullable=False)
+    # Legacy convenience field - some tests and older code use `full_name`
+    full_name = Column(String(255), nullable=True)
 
     # User metadata
     country = Column(
-        String(2), nullable=False, comment="ISO 3166-1 alpha-2 country code"
+        String(2), nullable=True, comment="ISO 3166-1 alpha-2 country code"
     )
     subscription_tier = Column(
         String(50),
@@ -106,6 +108,16 @@ class User(Base):
 
     def __repr__(self) -> str:
         return f"<User(id={self.id}, email='{self.email}', country='{self.country}')>"
+
+    def __init__(self, *args, **kwargs):
+        """Constructor compatibility shim.
+
+        Accept both `password_hash` (current canonical name) and
+        `hashed_password` (legacy test/code usage) to ease migration.
+        """
+        if "hashed_password" in kwargs and "password_hash" not in kwargs:
+            kwargs["password_hash"] = kwargs.pop("hashed_password")
+        super().__init__(*args, **kwargs)
 
     def to_dict(self) -> dict:
         """
