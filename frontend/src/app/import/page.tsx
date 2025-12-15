@@ -1,25 +1,38 @@
 'use client'
 
 /**
- * Recipe Import Page - Import recipes from URLs
+ * Recipe Import Page - Import recipes from URLs with MVI pattern (ARCH-004)
+ * Refactored to use reducer for form state management.
  * Supports: HTML (Ottolenghi, BBC), API (Spoonacular), RSS feeds
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/contexts/AuthContext'
 import { useImportRecipe } from '@/hooks/queries/useRecipes'
 import { useFileUpload } from '@/hooks/queries/useFileUpload'
+import { useReducerWithDevTools } from '@/hooks/useReducerWithDevTools'
+import {
+  importFormReducer,
+  getInitialImportFormState,
+  selectIsUrlValid,
+  selectHasFile,
+  selectFileInfo,
+  selectCanSubmitUrl,
+  selectCanSubmitFile,
+  selectImportRequest,
+  selectHasSuccess,
+} from '@/reducers/importFormReducer'
 import { Header } from '@/components/layout/Header'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/Input'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/Card'
 
 const SUPPORTED_SOURCES = [
-  { type: 'html', label: 'Website (HTML)', description: 'Ottolenghi, BBC Good Food, etc.' },
-  { type: 'api', label: 'API (JSON)', description: 'Spoonacular, Edamam, etc.' },
-  { type: 'rss', label: 'RSS Feed', description: 'Blog feeds, news, etc.' },
+  { type: 'html' as const, label: 'Website (HTML)', description: 'Ottolenghi, BBC Good Food, etc.' },
+  { type: 'api' as const, label: 'API (JSON)', description: 'Spoonacular, Edamam, etc.' },
+  { type: 'rss' as const, label: 'RSS Feed', description: 'Blog feeds, news, etc.' },
 ]
 
 export default function ImportPage() {
@@ -29,16 +42,27 @@ export default function ImportPage() {
   const { mutate: uploadFile, isPending: isUploading, error: uploadError } = useFileUpload()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [url, setUrl] = useState('')
-  const [sourceType, setSourceType] = useState<'html' | 'api' | 'rss'>('html')
-  const [success, setSuccess] = useState(false)
-  const [uploadSuccess, setUploadSuccess] = useState(false)
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  // Form state with reducer and DevTools (ARCH-004 + ARCH-011)
+  const [formState, dispatch] = useReducerWithDevTools(
+    importFormReducer,
+    getInitialImportFormState(),
+    'ImportForm'
+  )
 
   // Debug: Log auth state
   useEffect(() => {
     console.log('[ImportPage] Auth state:', { token: !!token, user: user?.email, authLoading })
   }, [token, user, authLoading])
+
+  // Redirect after successful import
+  useEffect(() => {
+    if (selectHasSuccess(formState)) {
+      const timer = setTimeout(() => {
+        router.push('/dashboard')
+      }, 2000)
+      return () => clearTimeout(timer)
+    }
+  }, [formState, router])
 
   if (authLoading) {
     return (
@@ -53,47 +77,38 @@ export default function ImportPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!url.trim()) return
+    if (!selectCanSubmitUrl(formState)) return
 
-    importRecipe(
-      { url: url.trim(), source_type: sourceType },
-      {
-        onSuccess: () => {
-          setSuccess(true)
-          setUrl('')
-          // Redirect to dashboard after 2 seconds
-          setTimeout(() => {
-            router.push('/dashboard')
-          }, 2000)
-        },
-      }
-    )
+    const requestData = selectImportRequest(formState)
+
+    importRecipe(requestData, {
+      onSuccess: () => {
+        dispatch({ type: 'URL_IMPORT_SUCCEEDED' })
+      },
+    })
   }
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
-      setSelectedFile(file)
+      dispatch({ type: 'USER_SELECTED_FILE', payload: file })
     }
   }
 
   const handleFileUpload = () => {
-    if (!selectedFile) return
+    if (!selectCanSubmitFile(formState)) return
 
-    uploadFile(selectedFile, {
+    uploadFile(formState.selectedFile!, {
       onSuccess: () => {
-        setUploadSuccess(true)
-        setSelectedFile(null)
+        dispatch({ type: 'FILE_UPLOAD_SUCCEEDED' })
         if (fileInputRef.current) {
           fileInputRef.current.value = ''
         }
-        // Redirect to dashboard after 2 seconds
-        setTimeout(() => {
-          router.push('/dashboard')
-        }, 2000)
       },
     })
   }
+
+  const fileInfo = selectFileInfo(formState)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -114,7 +129,7 @@ export default function ImportPage() {
         </div>
 
         {/* Success Message */}
-        {success && (
+        {formState.urlImportSuccess && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
             <div className="flex items-start">
               <span className="text-2xl mr-3">✅</span>
@@ -152,8 +167,8 @@ export default function ImportPage() {
                 <Input
                   label="Recipe URL"
                   type="url"
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
+                  value={formState.url}
+                  onChange={(e) => dispatch({ type: 'USER_CHANGED_URL', payload: e.target.value })}
                   placeholder="https://www.ottolenghi.co.uk/recipes/..."
                   required
                   disabled={isPending}
@@ -173,8 +188,11 @@ export default function ImportPage() {
                         type="radio"
                         name="sourceType"
                         value={source.type}
-                        checked={sourceType === source.type}
-                        onChange={(e) => setSourceType(e.target.value as 'html' | 'api' | 'rss')}
+                        checked={formState.sourceType === source.type}
+                        onChange={(e) => dispatch({ 
+                          type: 'USER_SELECTED_SOURCE_TYPE', 
+                          payload: e.target.value as 'html' | 'api' | 'rss' 
+                        })}
                         disabled={isPending}
                         className="mt-1 mr-3"
                       />
@@ -192,7 +210,7 @@ export default function ImportPage() {
                 type="submit"
                 variant="primary"
                 className="w-full"
-                disabled={isPending || !url.trim()}
+                disabled={isPending || !selectCanSubmitUrl(formState)}
               >
                 {isPending ? (
                   <span className="flex items-center justify-center">
@@ -217,7 +235,7 @@ export default function ImportPage() {
             <CardDescription>Import recipes from HTML or PDF files</CardDescription>
           </CardHeader>
           <CardContent>
-            {uploadSuccess && (
+            {formState.fileUploadSuccess && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
                 <div className="flex items-start">
                   <span className="text-2xl mr-3">✅</span>
@@ -266,10 +284,10 @@ export default function ImportPage() {
                 </p>
               </div>
 
-              {selectedFile && (
+              {fileInfo && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-gray-700">
-                    <strong>Selected:</strong> {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)
+                    <strong>Selected:</strong> {fileInfo.name} ({fileInfo.sizeKB} KB)
                   </p>
                 </div>
               )}
@@ -279,7 +297,7 @@ export default function ImportPage() {
                 type="button"
                 variant="primary"
                 className="w-full"
-                disabled={isUploading || !selectedFile}
+                disabled={isUploading || !selectCanSubmitFile(formState)}
                 onClick={handleFileUpload}
               >
                 {isUploading ? (
