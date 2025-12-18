@@ -47,7 +47,7 @@ class EventBus:
             decode_responses=True
         )
         self.pubsub = self.redis_client.pubsub()
-        print(f"✅ Connected to Redis at {self.redis_host}:{self.redis_port}")
+        print(f"✅ Connected to Redis at {self.settings.host}:{self.settings.port}")
 
     async def disconnect(self):
         """Close Redis connection and cleanup resources."""

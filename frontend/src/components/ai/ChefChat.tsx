@@ -12,7 +12,7 @@ export function ChefChat() {
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    
+
     const userMsg = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -22,7 +22,7 @@ export function ChefChat() {
       // Placeholder for API call
       // const response = await fetch('/api/chat', { ... });
       // const data = await response.json();
-      
+
       // Simulate response
       setTimeout(() => {
         setMessages(prev => [...prev, { role: 'assistant', content: 'I can help you refine that meal plan. What would you like to change?' }]);
@@ -50,11 +50,12 @@ export function ChefChat() {
         {loading && <div className="text-sm text-gray-500">Chef is thinking...</div>}
       </CardContent>
       <CardFooter className="gap-2">
-        <Input 
-          value={input} 
-          onChange={(e) => setInput(e.target.value)} 
-          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-          placeholder="Ask for changes..." 
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && !loading && sendMessage()}
+          placeholder="Ask for changes..."
+          disabled={loading}
         />
         <Button onClick={sendMessage} disabled={loading}>Send</Button>
       </CardFooter>

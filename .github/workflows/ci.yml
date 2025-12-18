@@ -74,20 +74,20 @@ jobs:
     needs: [backend-test, frontend-test]
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    
+
     steps:
     - uses: actions/checkout@v4
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      
+
     - name: Build Backend
       uses: docker/build-push-action@v5
       with:
         context: ./backend
         push: false
         tags: meal-planner-backend:latest
-        
+
     - name: Build Frontend
       uses: docker/build-push-action@v5
       with:

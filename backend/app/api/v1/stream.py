@@ -20,21 +20,21 @@ async def stream_events(request: Request):
         redis = await get_redis_client()
         pubsub = redis.pubsub()
         # Subscribe to all agent events
-        await pubsub.subscribe("agent_events")
-        
+        await pubsub.psubscribe("events:*")
+
         try:
             while True:
                 if await request.is_disconnected():
                     break
-                
+
                 message = await pubsub.get_message(ignore_subscribe_messages=True)
                 if message:
                     data = message['data']
                     yield {"data": data}
-                
+
                 await asyncio.sleep(0.1)
         finally:
-            await pubsub.unsubscribe()
+            await pubsub.punsubscribe()
             await pubsub.close()
             await redis.close()
 

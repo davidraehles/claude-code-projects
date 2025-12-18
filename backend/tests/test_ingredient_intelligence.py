@@ -5,12 +5,14 @@ Tests the agent functionality without full database setup.
 """
 
 import pytest
+from unittest.mock import MagicMock
 from app.agents.ingredient_intelligence import IngredientIntelligenceAgent
 
 
 def test_normalize_ingredient_name():
     """Test ingredient name normalization."""
-    agent = IngredientIntelligenceAgent(db_session=None)
+    mock_event_bus = MagicMock()
+    agent = IngredientIntelligenceAgent(event_bus=mock_event_bus, db_session=None)
 
     # Test basic normalization
     assert agent.normalize_ingredient_name("Fresh Spinach") == "spinach"

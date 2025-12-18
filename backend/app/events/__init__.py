@@ -130,10 +130,13 @@ class AgentErrorEvent(BaseModel):
     stack_trace: Optional[str] = None
 
 
+from app.events.bus import EventBus
+
 # Export all event types and models
 __all__ = [
     "EventType",
     "Event",
+    "EventBus",
     "RecipeHarvestRequestedEvent",
     "RecipeHarvestCompletedEvent",
     "RecipeHarvestFailedEvent",

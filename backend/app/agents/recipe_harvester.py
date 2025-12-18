@@ -24,7 +24,7 @@ from pydantic import BaseModel, Field, field_validator
 
 from app.agents.base import Agent, CapabilityManifest
 from app.events import Event, EventType
-# Note: HtmlScraper import will be done inside the method to avoid circular imports if any, 
+# Note: HtmlScraper import will be done inside the method to avoid circular imports if any,
 # or I can import it here if I'm sure. Let's import it here.
 # But wait, HtmlScraper might not be in the same directory structure or might have dependencies.
 # I'll check if I can import it.
@@ -346,19 +346,19 @@ class RecipeHarvesterAgent(Agent):
 
         try:
             await self.publish(EventType.RECIPE_HARVEST_STARTED, {"url": url}, event.correlation_id)
-            
+
             # Import here to avoid circular dependency if any
             from app.agents.html_scraper import HtmlScraper
-            
+
             # For now, just use HTML scraper
             scraper = HtmlScraper(logger_instance=self.logger)
             recipes = []
             async for recipe in scraper.scrape(url):
                 recipes.append(recipe)
-            
+
             # In a real implementation, we would save to DB here
             # and check for duplicates
-            
+
             await self.publish(EventType.RECIPE_HARVEST_COMPLETED, {
                 "url": url,
                 "recipes_count": len(recipes),

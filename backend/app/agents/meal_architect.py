@@ -63,11 +63,59 @@ class MealArchitectAgent(Agent):
 
     async def handle_event(self, event: Event):
         if event.type == EventType.MEAL_PLAN_REQUESTED:
-            # TODO: Implement async wrapper
-            pass
+            self.logger.info(f"Processing meal plan request: {event.event_id}")
+            try:
+                payload = event.payload
+                user_id = payload.get("user_id")
+                start_date_str = payload.get("start_date")
+                start_date = date.fromisoformat(start_date_str) if start_date_str else date.today()
+                num_days = payload.get("num_days", 7)
+
+                # Run generation
+                meal_plan = self.generate_meal_plan(
+                    user_id=user_id,
+                    start_date=start_date,
+                    num_days=num_days,
+                    num_people=payload.get("num_people", 2),
+                    dietary_restrictions=payload.get("dietary_restrictions"),
+                    excluded_ingredients=payload.get("excluded_ingredients"),
+                    target_calories_per_day=payload.get("target_calories_per_day"),
+                    target_budget=payload.get("target_budget"),
+                    preferred_cuisines=payload.get("preferred_cuisines"),
+                    meals_per_day=payload.get("meals_per_day", 3)
+                )
+
+                await self.publish(
+                    EventType.MEAL_PLAN_GENERATED,
+                    {
+                        "meal_plan_id": meal_plan.id,
+                        "user_id": user_id,
+                        "status": "success"
+                    },
+                    correlation_id=event.correlation_id
+                )
+            except Exception as e:
+                self.logger.error(f"Error generating meal plan: {e}")
+                await self.publish(
+                    EventType.MEAL_PLAN_FAILED,
+                    {
+                        "error": str(e),
+                        "user_id": event.payload.get("user_id")
+                    },
+                    correlation_id=event.correlation_id
+                )
+
         elif event.type == EventType.MEAL_PLAN_REFINEMENT_REQUESTED:
-            # TODO: Implement refinement logic
-            pass
+            self.logger.info(f"Received meal plan refinement request: {event.event_id}")
+            # Placeholder for refinement logic
+            await self.publish(
+                EventType.MEAL_PLAN_FAILED,
+                {
+                    "error": "Refinement not yet implemented",
+                    "user_id": event.payload.get("user_id")
+                },
+                correlation_id=event.correlation_id
+            )
 
     def generate_meal_plan(
         self,

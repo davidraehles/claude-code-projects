@@ -119,8 +119,18 @@ class CartOptimizerAgent(Agent):
 
     async def handle_event(self, event: Event):
         if event.type == EventType.CART_CREATION_REQUESTED:
-            # TODO: Implement async wrapper
-            pass
+            self.logger.info(f"Processing cart creation request: {event.event_id}")
+            try:
+                payload = event.payload
+                await self.create_cart_from_meal_plan(
+                    meal_plan_id=payload.get("meal_plan_id"),
+                    user_id=payload.get("user_id"),
+                    delivery_preferences=payload.get("delivery_preferences")
+                )
+            except Exception as e:
+                # Error is already logged and published in create_cart_from_meal_plan
+                # But if it raises, we catch it here to prevent agent crash
+                self.logger.error(f"Error handling cart creation event: {e}")
 
 
     async def create_cart_from_meal_plan(

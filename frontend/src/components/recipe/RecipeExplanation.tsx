@@ -20,7 +20,7 @@ export function RecipeExplanation({ recipeId, context = 'meal_plan' }: RecipeExp
       // Placeholder for API call
       // const res = await fetch(`/api/recipes/${recipeId}/explain?context=${context}`);
       // const data = await res.json();
-      
+
       // Simulate response
       setTimeout(() => {
         setExplanation("This recipe was chosen because it matches your preference for Italian cuisine, uses seasonal ingredients (tomatoes, basil), and fits within your daily calorie target.");
@@ -35,10 +35,10 @@ export function RecipeExplanation({ recipeId, context = 'meal_plan' }: RecipeExp
   return (
     <div className="mt-4">
       {!explanation ? (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          onClick={handleExplain} 
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExplain}
           disabled={loading}
           className="gap-2 text-blue-600 border-blue-200 hover:bg-blue-50"
         >

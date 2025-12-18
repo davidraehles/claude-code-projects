@@ -60,11 +60,50 @@ class IngredientIntelligenceAgent(Agent):
 
     async def handle_event(self, event: Event):
         if event.type == EventType.INGREDIENT_CLASSIFICATION_REQUESTED:
-            # TODO: Implement async wrapper for synchronous logic
-            pass
+            self.logger.info(f"Processing ingredient classification request: {event.event_id}")
+            try:
+                ingredient_name = event.payload.get("ingredient_name")
+                ingredient = self.find_ingredient(ingredient_name)
+                category = ingredient.category.value if ingredient else "unknown"
+
+                await self.publish(
+                    EventType.INGREDIENT_CLASSIFICATION_COMPLETED,
+                    {
+                        "ingredient_name": ingredient_name,
+                        "category": category,
+                        "ingredient_id": ingredient.id if ingredient else None
+                    },
+                    correlation_id=event.correlation_id
+                )
+            except Exception as e:
+                self.logger.error(f"Error classifying ingredient: {e}")
+
         elif event.type == EventType.INGREDIENT_SUBSTITUTION_REQUESTED:
-            # TODO: Implement async wrapper for synchronous logic
-            pass
+            self.logger.info(f"Processing substitution request: {event.event_id}")
+            try:
+                ingredient_name = event.payload.get("ingredient_name")
+                ingredient = self.find_ingredient(ingredient_name)
+                substitutions = []
+                if ingredient:
+                    subs = self.get_substitutions(ingredient.id)
+                    substitutions = [
+                        {
+                            "substitute_name": s.substitute.name,
+                            "score": s.score,
+                            "notes": s.notes
+                        } for s in subs
+                    ]
+
+                await self.publish(
+                    EventType.INGREDIENT_SUBSTITUTION_COMPLETED,
+                    {
+                        "ingredient_name": ingredient_name,
+                        "substitutions": substitutions
+                    },
+                    correlation_id=event.correlation_id
+                )
+            except Exception as e:
+                self.logger.error(f"Error getting substitutions: {e}")
 
     def normalize_ingredient_name(self, name: str) -> str:
         """

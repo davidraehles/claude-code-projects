@@ -27,14 +27,14 @@ class CapabilityManifest(BaseModel):
 class Agent(ABC):
     """
     Abstract base class for all agents.
-    
+
     Agents are autonomous units that:
     1. Listen for specific events
     2. Process data
     3. Publish results as new events
     4. Maintain their own state
     """
-    
+
     def __init__(self, event_bus: EventBus):
         self.event_bus = event_bus
         self.manifest = self.get_manifest()
