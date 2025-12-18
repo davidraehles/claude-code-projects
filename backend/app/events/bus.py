@@ -5,7 +5,6 @@ Implements publish-subscribe pattern using Redis for asynchronous
 event-driven communication between agents.
 """
 
-import os
 import json
 import asyncio
 from typing import Callable, Dict, List, Optional
@@ -13,6 +12,7 @@ import redis.asyncio as redis
 from datetime import datetime
 
 from app.events import Event, EventType
+from app.config.redis import get_redis_settings
 
 
 class EventBus:
@@ -29,10 +29,7 @@ class EventBus:
 
     def __init__(self):
         """Initialize event bus with Redis connection."""
-        self.redis_host = os.getenv("REDIS_HOST", "localhost")
-        self.redis_port = int(os.getenv("REDIS_PORT", "6379"))
-        self.redis_db = int(os.getenv("REDIS_DB", "0"))
-
+        self.settings = get_redis_settings()
         self.redis_client: Optional[redis.Redis] = None
         self.pubsub: Optional[redis.client.PubSub] = None
         self.handlers: Dict[EventType, List[Callable]] = {}
@@ -46,8 +43,10 @@ class EventBus:
             redis.ConnectionError: If connection fails
         """
         self.redis_client = await redis.from_url(
-            f"redis://{self.redis_host}:{self.redis_port}/{self.redis_db}",
+            self.settings.url,
             encoding="utf-8",
+            decode_responses=True
+        )
             decode_responses=True,
         )
         self.pubsub = self.redis_client.pubsub()

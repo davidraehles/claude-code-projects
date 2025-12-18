@@ -16,9 +16,11 @@ from app.models.ingredient import (
     Allergen,
     SubstitutionRule,
 )
+from app.agents.base import Agent, CapabilityManifest
+from app.events import Event, EventType, EventBus
 
 
-class IngredientIntelligenceAgent:
+class IngredientIntelligenceAgent(Agent):
     """
     Agent for ingredient intelligence operations.
 
@@ -29,14 +31,40 @@ class IngredientIntelligenceAgent:
     - Ingredient matching with fuzzy search
     """
 
-    def __init__(self, db_session: Session):
+    def __init__(self, event_bus: EventBus, db_session: Session):
         """
         Initialize the Ingredient Intelligence Agent.
 
         Args:
+            event_bus: Event bus for communication
             db_session: SQLAlchemy database session
         """
+        super().__init__(event_bus)
         self.db = db_session
+
+    def get_manifest(self) -> CapabilityManifest:
+        return CapabilityManifest(
+            name="ingredient-intelligence",
+            version="1.0.0",
+            description="Provides ingredient classification and substitutions",
+            capabilities=["classify_ingredient", "suggest_substitutions"],
+            input_events=[
+                EventType.INGREDIENT_CLASSIFICATION_REQUESTED,
+                EventType.INGREDIENT_SUBSTITUTION_REQUESTED
+            ],
+            output_events=[
+                EventType.INGREDIENT_CLASSIFICATION_COMPLETED,
+                EventType.INGREDIENT_SUBSTITUTION_COMPLETED
+            ]
+        )
+
+    async def handle_event(self, event: Event):
+        if event.type == EventType.INGREDIENT_CLASSIFICATION_REQUESTED:
+            # TODO: Implement async wrapper for synchronous logic
+            pass
+        elif event.type == EventType.INGREDIENT_SUBSTITUTION_REQUESTED:
+            # TODO: Implement async wrapper for synchronous logic
+            pass
 
     def normalize_ingredient_name(self, name: str) -> str:
         """

@@ -14,9 +14,11 @@ from app.models.recipe import Recipe
 from app.models.meal_plan import MealPlan, MealPlanRecipe
 from app.models.ingredient import Ingredient
 from app.agents.ingredient_intelligence import IngredientIntelligenceAgent
+from app.agents.base import Agent, CapabilityManifest
+from app.events import Event, EventType, EventBus
 
 
-class MealArchitectAgent:
+class MealArchitectAgent(Agent):
     """
     Agent for generating optimized meal plans.
 
@@ -28,17 +30,44 @@ class MealArchitectAgent:
     - Ensure ingredient availability
     """
 
-    def __init__(self, db_session: Session, use_workflow: bool = True):
+    def __init__(self, event_bus: EventBus, db_session: Session, use_workflow: bool = True):
         """
         Initialize Meal Architect Agent.
 
         Args:
+            event_bus: Event bus for communication
             db_session: Database session
             use_workflow: Whether to use LangGraph workflow (default: True)
         """
+        super().__init__(event_bus)
         self.db = db_session
-        self.ingredient_agent = IngredientIntelligenceAgent(db_session)
+        self.ingredient_agent = IngredientIntelligenceAgent(event_bus, db_session)
         self.use_workflow = use_workflow
+
+    def get_manifest(self) -> CapabilityManifest:
+        return CapabilityManifest(
+            name="meal-architect",
+            version="1.0.0",
+            description="Generates optimized meal plans",
+            capabilities=["generate_meal_plan", "refine_meal_plan"],
+            input_events=[
+                EventType.MEAL_PLAN_REQUESTED,
+                EventType.MEAL_PLAN_REFINEMENT_REQUESTED
+            ],
+            output_events=[
+                EventType.MEAL_PLAN_GENERATED,
+                EventType.MEAL_PLAN_FAILED,
+                EventType.MEAL_PLAN_REFINED
+            ]
+        )
+
+    async def handle_event(self, event: Event):
+        if event.type == EventType.MEAL_PLAN_REQUESTED:
+            # TODO: Implement async wrapper
+            pass
+        elif event.type == EventType.MEAL_PLAN_REFINEMENT_REQUESTED:
+            # TODO: Implement refinement logic
+            pass
 
     def generate_meal_plan(
         self,

@@ -29,6 +29,7 @@ from app.monitoring.metrics import (
 )
 from app.services.knuspr_mcp_client import KnusprMCPClient
 from app.services.ingredient_mapper import IngredientMapper
+from app.agents.base import Agent, CapabilityManifest
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class MappedIngredient:
     category: str
 
 
-class CartOptimizerAgent:
+class CartOptimizerAgent(Agent):
     """
     Main grocery shopping service agent that converts meal plans to Knuspr carts.
 
@@ -90,24 +91,37 @@ class CartOptimizerAgent:
 
     def __init__(
         self,
+        event_bus: EventBus,
         knuspr_client: KnusprMCPClient,
         ingredient_mapper: IngredientMapper,
         db,
-        event_bus: Optional[EventBus] = None,
     ):
         """
         Initialize Cart Optimizer Agent.
-
-        Args:
-            knuspr_client: KnusprMCPClient for Knuspr API access
-            ingredient_mapper: IngredientMapper for ingredient to product mapping
-            db: Database connection for cart storage
-            event_bus: EventBus for publishing events
         """
+        super().__init__(event_bus)
         self.knuspr_client = knuspr_client
         self.ingredient_mapper = ingredient_mapper
         self.db = db
-        self.event_bus = event_bus
+
+    def get_manifest(self) -> CapabilityManifest:
+        return CapabilityManifest(
+            name="cart-optimizer",
+            version="1.0.0",
+            description="Optimizes grocery carts for Knuspr",
+            capabilities=["create_cart", "optimize_cart"],
+            input_events=[EventType.CART_CREATION_REQUESTED],
+            output_events=[
+                EventType.CART_CREATED,
+                EventType.CART_CREATION_FAILED
+            ]
+        )
+
+    async def handle_event(self, event: Event):
+        if event.type == EventType.CART_CREATION_REQUESTED:
+            # TODO: Implement async wrapper
+            pass
+
 
     async def create_cart_from_meal_plan(
         self,

@@ -406,7 +406,7 @@ services:
 2. **Vue** - Easier learning curve, great for small teams
 3. **Svelte** - Best performance, smallest bundle
 
-**Decision**: TBD in planning phase, recommend React or Vue.
+**Decision**: Next.js 16 + React 19.
 
 **MVP Requirements**:
 - Authentication (login, signup, logout)
@@ -415,13 +415,13 @@ services:
 - Cart preview (read-only, editing in Knuspr)
 - User preferences (dietary, country)
 
-**Tech Stack** (tentative):
-- Framework: React 18 or Vue 3
-- Routing: React Router or Vue Router
-- State: TanStack Query or Pinia
+**Tech Stack**:
+- Framework: Next.js 16 (App Router)
+- UI Library: React 19
+- State: TanStack Query
 - Styling: Tailwind CSS (mobile-first utility classes)
-- Forms: React Hook Form or VeeValidate
-- Build: Vite or Create React App
+- Forms: React Hook Form + Zod
+- Build: Turbopack (Next.js default)
 
 **Mobile-First Strategy**:
 - Start with 375px viewport (iPhone SE)

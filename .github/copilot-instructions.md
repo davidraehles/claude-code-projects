@@ -1,7 +1,7 @@
 # meal-planner Development Guidelines
 
-**Last Updated**: December 2024
-**Branch**: `001-grocery-list-generation`
+**Last Updated**: December 2025
+**Branch**: `002-multi-agent-recipe-app`
 **Phase**: MVP - Meal Planning & Grocery Integration
 
 ## Quick Navigation
@@ -11,6 +11,20 @@
 - **Tests**: Unit tests in `/backend/tests/`, E2E in `/frontend/e2e/`
 - **Specs**: Architecture & decisions in `/specs/002-multi-agent-recipe-app/`
 - **Agents**: Local & awesome-copilot agents in `.github/agents/`
+
+## 📚 Coding Standards & Instructions
+
+**CRITICAL**: Before generating code, ALWAYS refer to the specific instruction file for the domain you are working in. These files contain the source of truth for coding standards.
+
+| Domain | Instruction File | Key Focus |
+|--------|------------------|-----------|
+| **Next.js** | `.github/instructions/nextjs.instructions.md` | App Router, Server Components, Project Structure |
+| **React** | `.github/instructions/reactjs.instructions.md` | Hooks, Functional Components, TypeScript |
+| **Python** | `.github/instructions/python.instructions.md` | PEP 8, Pydantic V2, Type Hints |
+| **Testing** | `.github/instructions/playwright-typescript.instructions.md` | Locators, Assertions, E2E Structure |
+| **Security** | `.github/instructions/security-and-owasp.instructions.md` | OWASP Top 10, Auth, Input Validation |
+| **Performance** | `.github/instructions/performance-optimization.instructions.md` | Optimization strategies for all layers |
+| **Docker** | `.github/instructions/containerization-docker-best-practices.instructions.md` | Image optimization, Security |
 
 ## Active Technologies
 
@@ -24,6 +38,7 @@
 ### Frontend Stack
 - **Language**: TypeScript 5.x (strict mode)
 - **Framework**: Next.js 16 with React 19 (App Router)
+- **Architecture**: Model-View-Intent (MVI) pattern
 - **Styling**: Tailwind CSS 3.x, Framer Motion, GSAP (60fps target)
 - **Forms**: React Hook Form 7.x + Zod validation
 - **State**: React Query (TanStack Query)
@@ -169,36 +184,35 @@ npm run analyze
 ## Code Style Guidelines
 
 ### Python (Backend)
-- Use async/await patterns for I/O operations
-- Follow PEP 8 + Black formatting (120 char lines)
-- Use Pydantic V2 for validation
-- Type hints on all functions (mypy strict)
-- Docstrings: Google style
-- Error handling: Custom exceptions with context
+> **Ref**: `.github/instructions/python.instructions.md`
+- **Async First**: Use `async/await` for all I/O operations (DB, API calls).
+- **Validation**: Use **Pydantic V2** for all data schemas.
+- **Typing**: Strict type hints required (mypy).
+- **Style**: PEP 8 + Black (120 chars). Google-style docstrings.
+- **Error Handling**: Use custom exceptions with context; never swallow errors.
 
 ### TypeScript (Frontend)
-- Use strict mode (strict: true)
-- Type all function parameters and returns
-- Use React 19 patterns (hooks, Actions, Server Components)
-- Components: Functional with hooks
-- Naming: PascalCase for components, camelCase for utilities
-- Format with Prettier, lint with ESLint
+> **Ref**: `.github/instructions/nextjs.instructions.md` & `.github/instructions/reactjs.instructions.md`
+- **Strict Mode**: `strict: true` is non-negotiable.
+- **Architecture**: Model-View-Intent (MVI) pattern required for all new features.
+- **React 19**: Use Server Components by default. Use `'use client'` only when necessary (interactivity/hooks).
+- **No `next/dynamic` SSR hacks**: Follow the `nextjs.instructions.md` for Client/Server component composition.
+- **Naming**: `PascalCase` for components, `camelCase` for hooks/utils.
+- **Forms**: React Hook Form + Zod.
 
 ## Testing Guidelines
 
 ### Backend
-- Unit tests for business logic
-- Integration tests for API endpoints
-- Use pytest fixtures and mocks
-- Aim for >80% coverage on new code
-- Test async code with pytest-asyncio
+- **Framework**: `pytest` with `pytest-asyncio`.
+- **Coverage**: >80% for new logic.
+- **Fixtures**: Use `conftest.py` for shared async fixtures.
 
-### Frontend
-- Unit tests with React Testing Library (user-centric)
-- E2E tests with Playwright (critical user journeys)
-- Accessibility testing (axe, manual keyboard testing)
-- Performance testing (Lighthouse, Core Web Vitals)
-- Aim for >70% coverage on new components
+### Frontend (E2E & Unit)
+> **Ref**: `.github/instructions/playwright-typescript.instructions.md`
+- **Locators**: Use **user-facing locators** (`getByRole`, `getByText`) ONLY. Avoid CSS selectors.
+- **Assertions**: Use auto-retrying web-first assertions (`await expect(locator).toBeVisible()`).
+- **Structure**: Group tests with `test.describe`. Use `test.step` for clarity.
+- **Accessibility**: Integrate `axe-core` checks in E2E tests.
 
 ## Development Workflow
 
