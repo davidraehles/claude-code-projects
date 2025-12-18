@@ -52,8 +52,7 @@ def test_stream_endpoint_auth_and_event_delivery(monkeypatch):
             if len(lines) >= 5:
                 break
 
-        combined = "
-".join(lines)
+        combined = "\n".join(lines)
         # The event payload or type may be split across chunks; assert against combined content
         assert ("ok" in combined) or ("MEAL_PLAN_GENERATED" in combined), (
             "Expected event payload not found in SSE stream: " + combined
