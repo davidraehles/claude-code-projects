@@ -43,12 +43,18 @@ def test_stream_endpoint_auth_and_event_delivery(monkeypatch):
         # read a few lines from the streaming response
         # httpx's Response.iter_lines() does not accept the same kwargs as requests
         # so use the iterator as provided and stop when we get at least one non-empty line
+        # Collect a small window of non-empty lines to account for chunking
         lines = []
         for chunk in response.iter_lines():
             if not chunk:
                 continue
             lines.append(chunk)
-            if len(lines) >= 1:
+            if len(lines) >= 5:
                 break
 
-        assert any("ok" in line or "MEAL_PLAN_GENERATED" in line for line in lines)
+        combined = "
+".join(lines)
+        # The event payload or type may be split across chunks; assert against combined content
+        assert ("ok" in combined) or ("MEAL_PLAN_GENERATED" in combined), (
+            "Expected event payload not found in SSE stream: " + combined
+        )
