@@ -1,43 +1,43 @@
 'use client';
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+/**
+ * Workflow page - Cart generation workflow with MVI pattern (ARCH-004).
+ * Refactored to use reducer for state machine management.
+ */
+
+import React, { useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
-import CartPreview, { CartPreviewData } from '@/components/knuspr/CartPreview';
+import CartPreview from '@/components/knuspr/CartPreview';
 import DeliverySlotPicker, { DeliverySlot } from '@/components/knuspr/DeliverySlotPicker';
 import MissingItemsSuggestions from '@/components/knuspr/MissingItemsSuggestions';
-import CartErrorHandler, { CartError } from '@/components/knuspr/CartErrorHandler';
+import CartErrorHandler from '@/components/knuspr/CartErrorHandler';
 import { api } from '@/lib/api';
-
-type WorkflowStep = 'loading' | 'cart-preview' | 'delivery-selection' | 'review' | 'completed' | 'error';
-
-interface WorkflowState {
-  step: WorkflowStep;
-  cartData: CartPreviewData | null;
-  selectedDeliverySlot: DeliverySlot | null;
-  error: CartError | null;
-  isLoading: boolean;
-}
-
-// Workflow step navigation constants
-const WORKFLOW_STEPS = ['cart-preview', 'delivery-selection', 'review'] as const;
-const getStepIndex = (step: WorkflowStep): number => WORKFLOW_STEPS.indexOf(step as typeof WORKFLOW_STEPS[number]);
-const isStepComplete = (step: WorkflowStep, currentStep: WorkflowStep): boolean => getStepIndex(step) < getStepIndex(currentStep);
-const isStepAccessible = (step: WorkflowStep, currentStep: WorkflowStep): boolean => getStepIndex(step) <= getStepIndex(currentStep);
+import { useReducerWithDevTools } from '@/hooks/useReducerWithDevTools';
+import {
+  workflowReducer,
+  getInitialWorkflowState,
+  selectIsStepComplete,
+  selectIsStepAccessible,
+  selectIsLoading,
+  selectCartItemCount,
+  selectHasDeliverySlot,
+  selectIsReadyForCheckout,
+  type WorkflowStep,
+} from '@/reducers/workflowReducer';
 
 function WorkflowPageContent() {
   const searchParams = useSearchParams();
   const mealPlanId = searchParams.get('meal_plan_id');
 
-  const [state, setState] = useState<WorkflowState>({
-    step: 'loading',
-    cartData: null,
-    selectedDeliverySlot: null,
-    error: null,
-    isLoading: true,
-  });
+  // Workflow state with reducer and DevTools (ARCH-004 + ARCH-011)
+  const [state, dispatch] = useReducerWithDevTools(
+    workflowReducer,
+    getInitialWorkflowState(),
+    'WorkflowStateMachine'
+  );
 
   // Validate and parse meal plan ID
   const validateMealPlanId = (id: string | null): number | null => {
@@ -47,6 +47,7 @@ function WorkflowPageContent() {
     return parsed;
   };
 
+  // Cart generation mutation
   const generateCartMutation = useMutation({
     mutationFn: async (id: number) => {
       const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
@@ -63,13 +64,13 @@ function WorkflowPageContent() {
       );
     },
     onSuccess: (data) => {
-      if (data.result) {
-        setState((prev) => ({
-          ...prev,
-          step: 'cart-preview',
-          cartData: data.result as unknown as CartPreviewData,
-          isLoading: false,
-        }));
+      if (data.result && typeof data.result === 'object') {
+        // Map API response to CartPreviewData format
+        const cartData = data.result as unknown as import('@/components/knuspr/CartPreview').CartPreviewData;
+        dispatch({
+          type: 'CART_GENERATION_SUCCEEDED',
+          payload: { cartData },
+        });
       } else {
         throw new Error('Invalid response format');
       }
@@ -85,18 +86,18 @@ function WorkflowPageContent() {
         errorCode = 'PRODUCT_NOT_FOUND';
       }
 
-      setState((prev) => ({
-        ...prev,
-        step: 'error',
-        error: {
-          code: errorCode,
-          message: 'Failed to generate cart',
-          details: errorMessage,
-          severity: 'error',
+      dispatch({
+        type: 'CART_GENERATION_FAILED',
+        payload: {
+          error: {
+            code: errorCode,
+            message: 'Failed to generate cart',
+            details: errorMessage,
+            severity: 'error',
+          },
         },
-        isLoading: false,
-      }));
-    }
+      });
+    },
   });
 
   // Fetch cart data on component mount
@@ -104,52 +105,55 @@ function WorkflowPageContent() {
     const validatedMealPlanId = validateMealPlanId(mealPlanId);
 
     if (!validatedMealPlanId) {
-      setState((prev) => ({
-        ...prev,
-        step: 'error',
-        error: {
-          code: 'MISSING_MEAL_PLAN',
-          message: 'No meal plan specified',
-          details: 'Please select a valid meal plan to create a cart.',
-          severity: 'error',
-          suggestions: ['Go back and select a meal plan', 'Create a new meal plan first'],
+      dispatch({
+        type: 'CART_GENERATION_FAILED',
+        payload: {
+          error: {
+            code: 'MISSING_MEAL_PLAN',
+            message: 'No meal plan specified',
+            details: 'Please select a valid meal plan to create a cart.',
+            severity: 'error',
+            suggestions: ['Go back and select a meal plan', 'Create a new meal plan first'],
+          },
         },
-        isLoading: false,
-      }));
+      });
       return;
     }
 
+    dispatch({ type: 'WORKFLOW_STARTED', payload: { mealPlanId: validatedMealPlanId } });
     generateCartMutation.mutate(validatedMealPlanId);
-  }, [mealPlanId]);
+  }, [mealPlanId, dispatch, generateCartMutation]);
 
+  // Event handlers
   const handleRetry = () => {
-    setState((prev) => ({
-      ...prev,
-      step: 'loading',
-      isLoading: true,
-      error: null,
-      cartData: null,
-      selectedDeliverySlot: null,
-    }));
+    dispatch({ type: 'USER_CLICKED_RETRY' });
+    const validatedMealPlanId = validateMealPlanId(mealPlanId);
+    if (validatedMealPlanId) {
+      generateCartMutation.mutate(validatedMealPlanId);
+    }
   };
 
   const handleDeliverySlotSelect = (slot: DeliverySlot) => {
-    setState((prev) => ({
-      ...prev,
-      selectedDeliverySlot: slot,
-      step: 'review',
-    }));
+    dispatch({ type: 'USER_SELECTED_DELIVERY_SLOT', payload: { slot } });
   };
 
   const handleCheckout = () => {
-    if (state.cartData) {
-      // Open Knuspr cart in new window
-      window.open(state.cartData.knuspr_url, '_blank');
+    // Defensive guard: ensure checkout conditions are met
+    if (!selectIsReadyForCheckout(state) || !state.cartData) {
+      return;
+    }
+    dispatch({ type: 'USER_CLICKED_CHECKOUT' });
+    window.open(state.cartData.knuspr_url, '_blank');
+  };
+
+  const handleNavigateToStep = (step: WorkflowStep) => {
+    if (selectIsStepAccessible(state, step)) {
+      dispatch({ type: 'USER_NAVIGATED_TO_STEP', payload: { step } });
     }
   };
 
   // Render based on workflow step
-  if (state.isLoading && state.step === 'loading') {
+  if (selectIsLoading(state) && state.step === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-4xl">
@@ -174,7 +178,7 @@ function WorkflowPageContent() {
       <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 p-4 sm:p-6 lg:p-8">
         <div className="mx-auto max-w-2xl">
           <Link
-            href="/meals"
+            href="/meal-plans"
             className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -197,7 +201,7 @@ function WorkflowPageContent() {
         {/* Header */}
         <div className="mb-8">
           <Link
-            href="/meals"
+            href="/meal-plans"
             className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium mb-4"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -222,16 +226,17 @@ function WorkflowPageContent() {
             { name: 'Complete', step: 'review' as const },
           ].map((item, idx, arr) => {
             const isCurrentStep = state.step === item.step;
-            const isComplete = isStepComplete(item.step, state.step);
-            const isAccessible = isStepAccessible(item.step, state.step) && WORKFLOW_STEPS.includes(state.step as typeof WORKFLOW_STEPS[number]);
+            const isComplete = selectIsStepComplete(state, item.step);
+            const isAccessible = selectIsStepAccessible(state, item.step);
 
             return (
               <React.Fragment key={item.step}>
                 <button
-                  onClick={() => isAccessible && setState((prev) => ({ ...prev, step: item.step }))}
+                  onClick={() => handleNavigateToStep(item.step)}
+                  disabled={!isAccessible}
                   className={`flex flex-col items-center gap-2 flex-1 pb-6 relative text-sm font-medium ${
                     isCurrentStep ? 'text-blue-600' : isComplete ? 'text-green-600' : 'text-gray-400'
-                  }`}
+                  } ${isAccessible ? 'cursor-pointer' : 'cursor-not-allowed'}`}
                 >
                   <div
                     className={`flex h-10 w-10 items-center justify-center rounded-full border-2 font-bold ${
@@ -249,7 +254,7 @@ function WorkflowPageContent() {
                 {idx < arr.length - 1 && (
                   <div
                     className={`h-0.5 w-8 mb-8 ${
-                      isStepComplete(item.step, state.step) ? 'bg-green-600' : 'bg-gray-300'
+                      selectIsStepComplete(state, item.step) ? 'bg-green-600' : 'bg-gray-300'
                     }`}
                   />
                 )}
@@ -266,7 +271,7 @@ function WorkflowPageContent() {
               <div className="rounded-lg bg-white p-6 shadow-sm">
                 <CartPreview
                   data={state.cartData}
-                  onCheckout={() => setState((prev) => ({ ...prev, step: 'delivery-selection' }))}
+                  onCheckout={() => handleNavigateToStep('delivery-selection')}
                   isLoading={false}
                 />
               </div>
@@ -301,8 +306,8 @@ function WorkflowPageContent() {
               <h3 className="text-lg font-semibold text-green-900">Ready to Checkout?</h3>
               <p className="text-green-800">
                 Your cart is ready with{' '}
-                <strong className="font-semibold">{state.cartData?.item_count}</strong> items.
-                {state.selectedDeliverySlot && (
+                <strong className="font-semibold">{selectCartItemCount(state)}</strong> items.
+                {selectHasDeliverySlot(state) && state.selectedDeliverySlot && (
                   <>
                     {' '}
                     Delivery scheduled for{' '}
@@ -315,7 +320,8 @@ function WorkflowPageContent() {
               </p>
               <button
                 onClick={handleCheckout}
-                className="w-full rounded-lg bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 transition-colors"
+                disabled={!selectIsReadyForCheckout(state)}
+                className="w-full rounded-lg bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-3 px-4 transition-colors"
               >
                 Complete Order on Knuspr →
               </button>
