@@ -15,9 +15,10 @@ class RedisSettings:
     @property
     def url(self) -> str:
         """Get Redis connection URL."""
+        # Return a non-authenticated URL for display/logging. Avoid embedding
+        # passwords in URLs to prevent accidental leakage in logs.
         schema = "rediss" if self.ssl else "redis"
-        auth = f":{self.password}@" if self.password else ""
-        return f"{schema}://{auth}{self.host}:{self.port}/{self.db}"
+        return f"{schema}://{self.host}:{self.port}/{self.db}"
 
 @lru_cache()
 def get_redis_settings() -> RedisSettings:
@@ -31,10 +32,16 @@ def get_redis_pool() -> redis.ConnectionPool:
     global _pool
     if _pool is None:
         settings = get_redis_settings()
-        _pool = redis.ConnectionPool.from_url(
-            settings.url,
+        # Use ConnectionPool with explicit credentials to avoid embedding
+        # secrets in the URL string which may be logged.
+        _pool = redis.ConnectionPool(
+            host=settings.host,
+            port=settings.port,
+            db=settings.db,
+            password=settings.password,
+            ssl=settings.ssl,
             encoding="utf-8",
-            decode_responses=True
+            decode_responses=True,
         )
     return _pool
 

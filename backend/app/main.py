@@ -537,7 +537,7 @@ async def global_exception_handler(request: Request, exc: Exception):
 
 
 # Import and include routers
-from app.api.v1 import recipes, ingredients, users, meal_plans, auth, grocery_carts, knuspr_credentials, workflows, waitlist, carts
+from app.api.v1 import recipes, ingredients, users, meal_plans, auth, grocery_carts, knuspr_credentials, workflows, waitlist, carts, stream
 
 app.include_router(recipes.router, prefix="/api/v1/recipes", tags=["Recipes"])
 app.include_router(ingredients.router, prefix="/api/v1/ingredients", tags=["Ingredients"])
@@ -549,6 +549,7 @@ app.include_router(carts.router, tags=["Carts (compat)"])
 app.include_router(knuspr_credentials.router, tags=["Knuspr Credentials"])
 app.include_router(workflows.router, prefix="/api/v1/workflows", tags=["Workflows"])
 app.include_router(waitlist.router, prefix="/api/v1/waitlist", tags=["Waitlist"])
+app.include_router(stream.router, prefix="/api/v1", tags=["Events"])
 
 
 if __name__ == "__main__":
@@ -557,7 +558,7 @@ if __name__ == "__main__":
     host = os.getenv("API_HOST", "0.0.0.0")
     port = int(os.getenv("API_PORT", "8000"))
 
-    print(f"🌐 Starting server on {host}:{port}")
+    logger.info("Starting server on %s:%s", host, port)
 
     uvicorn.run(
         "app.main:app",
