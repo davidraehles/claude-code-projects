@@ -35,6 +35,14 @@ def test_stream_endpoint_auth_and_event_delivery(monkeypatch):
         assert response.status_code == 200
         assert response.headers["content-type"].startswith("text/event-stream")
 
+        # Wait until the server side registers the SSE queue to avoid race conditions
+        import time
+        start = time.time()
+        while not getattr(bus, '_sse_queues', []):
+            if time.time() - start > 1.0:
+                pytest.fail("SSE queue was not registered by server in time")
+            time.sleep(0.01)
+
         # Publish an event for user 1
         event = Event(event_type=EventType.MEAL_PLAN_GENERATED, correlation_id="c2", payload={"msg": "ok"}, user_id=1)
         # publish asynchronously
