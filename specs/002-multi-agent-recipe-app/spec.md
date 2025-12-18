@@ -1,102 +1,176 @@
-# Feature Specification: Multi-Agent Recipe and Meal Planning System
-
-**Feature Branch**: `002-multi-agent-recipe-app`
-**Created**: 2025-11-14
-**Status**: Implementation in Progress (Phase 1D - Recipe Harvester Agent)
-**Input**: Multi-agent architecture for recipe harvesting, meal planning, and grocery optimization with Knuspr integration
-
-**Implementation Progress**:
-- Phase 1D (Recipe Harvester): ✅ Code complete | 🔄 Testing in progress | ⏳ API integration pending
-- Phase 1E (Ingredient Intelligence): ⏳ Not started
-- Phase 2 (Meal Architect): ⏳ Not started
-- Phase 3 (Cart Optimizer): ⏳ Not started
-
-## User Scenarios & Testing *(mandatory)*
-
-### User Story 1 - Recipe Discovery and Import (Priority: P1)
-
-A user wants to build a personal recipe collection from various online sources (blogs, recipe sites, RSS feeds) without manual data entry. The system automatically harvests, normalizes, and stores recipes in a consistent format.
-
-**Why this priority**: This is the foundation of the entire system - without recipes, there's nothing to plan meals from or optimize grocery orders with. It delivers immediate value by eliminating tedious manual recipe entry.
-
-**Independent Test**: Can be fully tested by providing URLs to recipe sources and verifying that recipes are correctly extracted, normalized, and stored with all key attributes (ingredients, steps, timing, servings).
-
-**Acceptance Scenarios**:
-
-1. **Given** a URL to a recipe blog post, **When** the user submits it to the harvester, **Then** the system extracts the recipe with ingredients, instructions, cooking time, and servings
-2. **Given** an RSS feed of a cooking website, **When** the system polls the feed, **Then** new recipes are automatically discovered and added to the collection
-3. **Given** a website with an API, **When** the API connector is configured, **Then** recipes are fetched via API calls with proper rate limiting
-4. **Given** multiple recipe sources for the same recipe, **When** recipes are harvested, **Then** duplicates are detected and merged intelligently
-
+---
+title: Feature Specification - Multi-Agent Recipe and Meal Planning System
+version: 1.0.0
+date_created: 2025-11-14
+last_updated: 2025-12-15
+owner: Meal Planner Team
+tags: [app, design, process, ai, automation]
 ---
 
-### User Story 2 - Ingredient Intelligence and Substitution (Priority: P2)
+# Introduction
 
-A user wants to adapt recipes based on dietary preferences, seasonal availability, or pantry inventory. The system understands ingredient taxonomy and suggests appropriate substitutions.
+This specification defines the requirements and architecture for the Multi-Agent Recipe and Meal Planning System. This system leverages a multi-agent architecture to automate the entire meal planning lifecycle: from harvesting recipes from the web, to generating personalized weekly meal plans, and finally optimizing grocery lists for seamless integration with the Knuspr delivery service.
 
-**Why this priority**: This enables recipe flexibility and personalization, making the system useful beyond basic recipe storage. It addresses real cooking scenarios where exact ingredients may not be available.
+## 1. Purpose & Scope
 
-**Independent Test**: Can be tested by selecting a recipe and requesting substitutions for specific ingredients, then verifying suggestions are semantically appropriate (e.g., suggesting olive oil for canola oil, not sugar for salt).
+The purpose of this specification is to outline the functional and non-functional requirements for the "Go, Cart!" application's core AI features.
 
-**Acceptance Scenarios**:
+**Scope:**
+- **Recipe Harvesting**: Automated extraction and normalization of recipes from various web sources.
+- **Ingredient Intelligence**: Understanding ingredient taxonomy, substitutions, and dietary attributes.
+- **Meal Planning**: AI-driven generation of weekly meal plans based on user preferences and constraints.
+- **Cart Optimization**: Intelligent mapping of meal plan ingredients to Knuspr store items, optimizing for cost and availability.
+- **Agent Architecture**: A scalable, modular multi-agent system using LangGraph.
 
-1. **Given** a recipe with dairy ingredients, **When** the user specifies a vegan diet, **Then** the system suggests plant-based alternatives with ratios
-2. **Given** a recipe requiring out-of-season produce, **When** the user requests seasonal alternatives, **Then** the system suggests currently available ingredients
-3. **Given** a recipe with a missing pantry ingredient, **When** the user marks it unavailable, **Then** the system suggests substitutions from their inventory
-4. **Given** an ingredient substitution, **When** applied to a recipe, **Then** the system adjusts quantities and instructions where necessary
+**Out of Scope:**
+- Payment processing (handled by Knuspr).
+- Physical delivery logistics.
+- Social sharing features (Phase 2).
 
----
+## 2. Definitions
 
-### User Story 3 - Automated Weekly Meal Planning (Priority: P2)
+- **Knuspr**: A grocery delivery service (known as Rohlik in other markets) that serves as the primary integration target for grocery fulfillment.
+- **Agent**: An autonomous software unit responsible for a specific domain of tasks (e.g., Recipe Harvester, Meal Architect).
+- **MCP (Model Context Protocol)**: A standard for connecting AI models to external tools and data sources.
+- **LangGraph**: A library for building stateful, multi-actor applications with LLMs, used to orchestrate the agents.
+- **Harvester**: The agent responsible for scraping and parsing recipes.
+- **Architect**: The agent responsible for generating meal plans.
+- **Optimizer**: The agent responsible for converting ingredients into a shopping cart.
 
-A user wants to generate a balanced weekly meal plan that considers dietary constraints, variety, preparation time, and ingredient reuse to minimize waste.
+## 3. Requirements, Constraints & Guidelines
 
-**Why this priority**: This is the core value proposition - turning a recipe collection into actionable meal plans. It requires Recipe Discovery (P1) but delivers significant time-saving value.
+### Functional Requirements
 
-**Independent Test**: Can be tested by specifying weekly constraints (servings, dietary preferences, time budget) and verifying the generated plan meets all constraints while providing variety.
+- **REQ-001**: **Recipe Discovery and Import**
+  - The system must allow users to import recipes via URL.
+  - The system must automatically extract ingredients, instructions, prep time, cook time, and servings.
+  - The system must support RSS feed polling for automated discovery.
+- **REQ-002**: **Ingredient Intelligence and Substitution**
+  - The system must suggest ingredient substitutions based on dietary restrictions (e.g., vegan, gluten-free).
+  - The system must identify seasonal ingredients and suggest alternatives.
+- **REQ-003**: **Automated Weekly Meal Planning**
+  - The system must generate a 7-day meal plan based on user preferences (e.g., "4 dinners, vegetarian, under 30 mins").
+  - The system must minimize food waste by reusing ingredients across recipes in a plan.
+- **REQ-004**: **Knuspr Grocery Cart Optimization**
+  - The system must convert a meal plan into a Knuspr shopping cart.
+  - The system must group items by store section.
+  - The system must handle out-of-stock items by suggesting alternatives.
+- **REQ-005**: **Agent Hot-Swapping**
+  - The system must allow individual agents to be updated or replaced without system downtime.
 
-**Acceptance Scenarios**:
+### Constraints
 
-1. **Given** user constraints (4 dinners, 30-min max prep, vegetarian), **When** requesting a meal plan, **Then** the system generates a valid plan meeting all constraints
-2. **Given** a generated meal plan, **When** reviewing ingredients, **Then** the system maximizes ingredient reuse across recipes to minimize waste
-3. **Given** previous meal plans, **When** generating a new plan, **Then** the system ensures variety by avoiding recently used recipes
-4. **Given** a meal plan, **When** the user dislikes a suggested recipe, **Then** the system regenerates with an alternative that maintains constraints
+- **CON-001**: Backend must be built with **Python 3.11+** and **FastAPI**.
+- **CON-002**: Frontend must be built with **Next.js 16** and **React 19**.
+- **CON-003**: Database must be **PostgreSQL 16+**.
+- **CON-004**: Application must be **WCAG 2.1 AAA** compliant.
+- **CON-005**: All external API integrations (Knuspr) must handle rate limiting and authentication securely.
 
----
+### Guidelines
 
-### User Story 4 - Knuspr Grocery Cart Optimization (Priority: P3)
+- **GUD-001**: Follow the "Library-First Architecture" for backend packages.
+- **GUD-002**: Use Pydantic V2 for all data validation.
+- **GUD-003**: Ensure all UI components are responsive and support 60fps animations.
 
-A user wants to automatically generate an optimized Knuspr grocery order from their meal plan, with items grouped by store section and optimized for delivery slots.
+## 4. Interfaces & Data Contracts
 
-**Why this priority**: This is the final convenience layer that connects meal planning to actual grocery procurement. It requires a working meal plan (P2) and adds delivery optimization value.
+### Core Entities (Simplified)
 
-**Independent Test**: Can be tested by providing a meal plan and verifying the generated Knuspr cart contains all required ingredients, properly categorized, with delivery slot selection.
+**User**
+```typescript
+interface User {
+  id: number;
+  email: string;
+  preferences: UserPreferences;
+  subscriptionTier: 'free' | 'basic' | 'premium';
+}
+```
 
-**Acceptance Scenarios**:
+**Recipe**
+```typescript
+interface Recipe {
+  id: number;
+  title: string;
+  sourceUrl: string;
+  ingredients: Ingredient[];
+  instructions: Step[];
+  dietaryTags: string[];
+}
+```
 
-1. **Given** a weekly meal plan, **When** generating a grocery order, **Then** the system creates a Knuspr cart with all required ingredients
-2. **Given** a Knuspr cart, **When** items are added, **Then** they are grouped by store section (produce, dairy, meat, etc.) for efficient shopping
-3. **Given** multiple delivery slot options, **When** ordering, **Then** the system suggests the most cost-effective or earliest available slot
-4. **Given** items out of stock at Knuspr, **When** building the cart, **Then** the system suggests alternatives or flags items for manual purchase
+**MealPlan**
+```typescript
+interface MealPlan {
+  id: number;
+  userId: number;
+  startDate: string;
+  days: MealPlanDay[];
+  status: 'draft' | 'active' | 'completed';
+}
+```
 
----
+### API Endpoints
 
-### User Story 5 - Agent Hot-Swapping and Scalability (Priority: P3)
+- `POST /api/v1/recipes/harvest`: Submit a URL for harvesting.
+- `POST /api/v1/plans/generate`: Generate a new meal plan.
+- `POST /api/v1/cart/knuspr/sync`: Sync a meal plan to a Knuspr cart.
 
-A developer wants to upgrade individual agents (e.g., swap a basic ingredient parser for an ML-powered one) without system downtime or affecting other agents.
+## 5. Acceptance Criteria
 
-**Why this priority**: This is an architectural quality attribute that enables long-term maintainability and evolution. It's lower priority than user-facing features but critical for system sustainability.
+- **AC-001**: Given a valid recipe URL, When submitted to the harvester, Then the recipe is saved with >90% accuracy for ingredients and instructions.
+- **AC-002**: Given a user with "Vegan" preference, When generating a meal plan, Then no recipes with animal products are included.
+- **AC-003**: Given a generated meal plan, When "Create Cart" is clicked, Then a Knuspr cart is created with all necessary ingredients matched to available products.
+- **AC-004**: Given an out-of-stock item at Knuspr, When syncing the cart, Then the system prompts the user with a valid alternative product.
+- **AC-005**: The system shall support concurrent usage by at least 10 users without performance degradation.
 
-**Independent Test**: Can be tested by deploying an agent update and verifying other agents continue functioning normally, with seamless capability handoff.
+## 6. Test Automation Strategy
 
-**Acceptance Scenarios**:
+- **Test Levels**:
+  - **Unit Tests**: Python `pytest` for backend logic, Jest for frontend components.
+  - **Integration Tests**: API endpoint testing with `pytest-asyncio` and test database.
+  - **End-to-End Tests**: Playwright tests for critical user journeys (Login -> Plan -> Cart).
+- **Coverage Requirements**: Minimum 80% code coverage for backend and frontend.
+- **Performance Testing**: Lighthouse CI for frontend performance and accessibility; `locust` for API load testing.
+- **CI/CD Integration**: Tests run on every Pull Request via GitHub Actions.
 
-1. **Given** a running system with multiple agents, **When** deploying a new version of one agent, **Then** the system continues operating without downtime
-2. **Given** a new agent with enhanced capabilities, **When** it registers its capability manifest, **Then** the orchestrator routes appropriate requests to it
-3. **Given** multiple instances of the same agent type, **When** load increases, **Then** the system scales that agent independently without affecting others
-4. **Given** an agent failure, **When** it stops responding, **Then** the system detects failure and routes requests to healthy instances
+## 7. Rationale & Context
 
----
+The decision to use a multi-agent architecture is driven by the need for specialized intelligence in distinct domains (harvesting vs. planning vs. shopping). This allows for independent scaling and evolution of each capability.
+
+The integration with Knuspr is a key differentiator, providing a seamless "plan to plate" experience that competitors lack.
+
+## 8. Dependencies & External Integrations
+
+### External Systems
+- **EXT-001**: **Knuspr (Rohlik) API** - Required for product search, cart management, and checkout.
+- **EXT-002**: **OpenAI API** - Required for LLM capabilities (GPT-4o) used by agents.
+
+### Infrastructure Dependencies
+- **INF-001**: **PostgreSQL** - Primary relational database.
+- **INF-002**: **Redis** - Caching and message broker for agents.
+- **INF-003**: **Docker** - Containerization for consistent deployment.
+
+## 9. Examples & Edge Cases
+
+**Edge Case: Recipe with no clear ingredients list**
+If the harvester encounters a page where ingredients are unstructured text, it should attempt to use the LLM to parse it. If confidence is low, it should flag the recipe for manual review.
+
+**Edge Case: Knuspr API downtime**
+If the Knuspr API is unavailable, the system should allow the user to export the shopping list as a text file or email, and retry the sync later.
+
+## 10. Validation Criteria
+
+- All **P1** and **P2** user stories must be implemented and verified.
+- **Lighthouse Performance Score** must be > 95 on key pages.
+- **Accessibility Audit** must show 0 critical violations (WCAG 2.1 AA).
+- **Security Audit** must pass with no high-severity vulnerabilities.
+
+## 11. Related Specifications / Further Reading
+
+- [Architecture Documentation](../../docs/architecture.md)
+- [Data Model Specification](./data-model.md)
+- [Implementation Plan](./plan.md)
+
 
 ### Edge Cases
 

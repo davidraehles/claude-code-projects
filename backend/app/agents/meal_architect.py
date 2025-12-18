@@ -14,9 +14,11 @@ from app.models.recipe import Recipe
 from app.models.meal_plan import MealPlan, MealPlanRecipe
 from app.models.ingredient import Ingredient
 from app.agents.ingredient_intelligence import IngredientIntelligenceAgent
+from app.agents.base import Agent, CapabilityManifest
+from app.events import Event, EventType, EventBus
 
 
-class MealArchitectAgent:
+class MealArchitectAgent(Agent):
     """
     Agent for generating optimized meal plans.
 
@@ -28,17 +30,92 @@ class MealArchitectAgent:
     - Ensure ingredient availability
     """
 
-    def __init__(self, db_session: Session, use_workflow: bool = True):
+    def __init__(self, event_bus: EventBus, db_session: Session, use_workflow: bool = True):
         """
         Initialize Meal Architect Agent.
 
         Args:
+            event_bus: Event bus for communication
             db_session: Database session
             use_workflow: Whether to use LangGraph workflow (default: True)
         """
+        super().__init__(event_bus)
         self.db = db_session
-        self.ingredient_agent = IngredientIntelligenceAgent(db_session)
+        self.ingredient_agent = IngredientIntelligenceAgent(event_bus, db_session)
         self.use_workflow = use_workflow
+
+    def get_manifest(self) -> CapabilityManifest:
+        return CapabilityManifest(
+            name="meal-architect",
+            version="1.0.0",
+            description="Generates optimized meal plans",
+            capabilities=["generate_meal_plan", "refine_meal_plan"],
+            input_events=[
+                EventType.MEAL_PLAN_REQUESTED,
+                EventType.MEAL_PLAN_REFINEMENT_REQUESTED
+            ],
+            output_events=[
+                EventType.MEAL_PLAN_GENERATED,
+                EventType.MEAL_PLAN_FAILED,
+                EventType.MEAL_PLAN_REFINED
+            ]
+        )
+
+    async def handle_event(self, event: Event):
+        if event.type == EventType.MEAL_PLAN_REQUESTED:
+            self.logger.info(f"Processing meal plan request: {event.event_id}")
+            try:
+                payload = event.payload
+                user_id = payload.get("user_id")
+                start_date_str = payload.get("start_date")
+                start_date = date.fromisoformat(start_date_str) if start_date_str else date.today()
+                num_days = payload.get("num_days", 7)
+
+                # Run generation
+                meal_plan = self.generate_meal_plan(
+                    user_id=user_id,
+                    start_date=start_date,
+                    num_days=num_days,
+                    num_people=payload.get("num_people", 2),
+                    dietary_restrictions=payload.get("dietary_restrictions"),
+                    excluded_ingredients=payload.get("excluded_ingredients"),
+                    target_calories_per_day=payload.get("target_calories_per_day"),
+                    target_budget=payload.get("target_budget"),
+                    preferred_cuisines=payload.get("preferred_cuisines"),
+                    meals_per_day=payload.get("meals_per_day", 3)
+                )
+
+                await self.publish(
+                    EventType.MEAL_PLAN_GENERATED,
+                    {
+                        "meal_plan_id": meal_plan.id,
+                        "user_id": user_id,
+                        "status": "success"
+                    },
+                    correlation_id=event.correlation_id
+                )
+            except Exception as e:
+                self.logger.error(f"Error generating meal plan: {e}")
+                await self.publish(
+                    EventType.MEAL_PLAN_FAILED,
+                    {
+                        "error": str(e),
+                        "user_id": event.payload.get("user_id")
+                    },
+                    correlation_id=event.correlation_id
+                )
+
+        elif event.type == EventType.MEAL_PLAN_REFINEMENT_REQUESTED:
+            self.logger.info(f"Received meal plan refinement request: {event.event_id}")
+            # Placeholder for refinement logic
+            await self.publish(
+                EventType.MEAL_PLAN_FAILED,
+                {
+                    "error": "Refinement not yet implemented",
+                    "user_id": event.payload.get("user_id")
+                },
+                correlation_id=event.correlation_id
+            )
 
     def generate_meal_plan(
         self,

@@ -32,6 +32,8 @@ class EventType(str, Enum):
     MEAL_PLAN_REQUESTED = "meal_plan.requested"
     MEAL_PLAN_GENERATED = "meal_plan.generated"
     MEAL_PLAN_FAILED = "meal_plan.failed"
+    MEAL_PLAN_REFINEMENT_REQUESTED = "meal_plan.refinement.requested"
+    MEAL_PLAN_REFINED = "meal_plan.refined"
 
     # Grocery Cart Events
     CART_CREATION_REQUESTED = "cart.creation.requested"
@@ -128,10 +130,13 @@ class AgentErrorEvent(BaseModel):
     stack_trace: Optional[str] = None
 
 
+from app.events.bus import EventBus
+
 # Export all event types and models
 __all__ = [
     "EventType",
     "Event",
+    "EventBus",
     "RecipeHarvestRequestedEvent",
     "RecipeHarvestCompletedEvent",
     "RecipeHarvestFailedEvent",

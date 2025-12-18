@@ -453,9 +453,9 @@ class TestPhase5CartOperations:
             headers=auth_headers
         )
 
-        assert response.status_code == 405
-        # data = response.json()
-        # assert isinstance(data.get("carts"), list) or isinstance(data, list)
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
 
 
 @pytest.mark.asyncio

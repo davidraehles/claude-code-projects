@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 from app.workflows.meal_planning_state import MealPlanningState
 from app.models.meal_plan import MealPlan, MealPlanRecipe
 from app.agents.meal_architect import MealArchitectAgent
+from app.events.bus import get_event_bus
 
 
 def initialize_state_node(state: MealPlanningState) -> MealPlanningState:
@@ -173,7 +174,8 @@ def fetch_recipes_node(state: MealPlanningState) -> MealPlanningState:
             {"name": "fetch_recipes", "timestamp": start_time, "status": "started"}
         )
 
-        agent = MealArchitectAgent(db, use_workflow=False)
+        event_bus = get_event_bus()
+        agent = MealArchitectAgent(event_bus=event_bus, db_session=db, use_workflow=False)
 
         # Get candidate recipes
         min_recipes = state["num_days"] * state["meals_per_day"]
@@ -246,7 +248,8 @@ def solve_optimization_node(state: MealPlanningState) -> MealPlanningState:
             {"name": "solve_optimization", "timestamp": start_time, "status": "started"}
         )
 
-        agent = MealArchitectAgent(db, use_workflow=False)
+        event_bus = get_event_bus()
+        agent = MealArchitectAgent(event_bus=event_bus, db_session=db, use_workflow=False)
 
         # Reconstruct Recipe objects from state
         from app.models.recipe import Recipe

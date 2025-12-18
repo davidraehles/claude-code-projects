@@ -6,6 +6,7 @@ and improved nutrition calculation features.
 """
 
 import pytest
+from unittest.mock import MagicMock
 from datetime import date, timedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -94,7 +95,7 @@ class TestDietaryRestrictionFiltering:
         )
 
         # Generate meal plan with vegan restriction
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -131,7 +132,7 @@ class TestDietaryRestrictionFiltering:
         )
 
         # Generate with vegetarian restriction
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -162,7 +163,7 @@ class TestDietaryRestrictionFiltering:
             dietary_tags=[]
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -197,7 +198,7 @@ class TestDietaryRestrictionFiltering:
             dietary_tags=["gluten_free"]
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -231,7 +232,7 @@ class TestDietaryRestrictionFiltering:
             dietary_tags=None
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -288,7 +289,7 @@ class TestRecipeVarietyHistory:
         db_session.commit()
 
         # Get candidate recipes
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -335,7 +336,7 @@ class TestRecipeVarietyHistory:
         db_session.commit()
 
         # Get candidate recipes
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -361,7 +362,7 @@ class TestImprovedNutritionCalculation:
             nutrition={"calories": 500}  # 500 cal per serving
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         # Calculate for 2 servings (recipe has 2 servings default)
         calories = agent._calculate_recipe_calories(recipe, servings=2)
@@ -377,7 +378,7 @@ class TestImprovedNutritionCalculation:
             nutrition=None  # No nutrition data
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         # Calculate calories
         calories = agent._calculate_recipe_calories(recipe, servings=2)
@@ -397,7 +398,7 @@ class TestImprovedNutritionCalculation:
             ["rice", "beans", "onion", "tomato"]
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         # Calculate cost
         cost = agent._estimate_recipe_cost(recipe, servings=2)
@@ -425,7 +426,7 @@ class TestExcludedIngredients:
             ["flour", "sugar", "cocoa", "eggs"]
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,
@@ -460,7 +461,7 @@ class TestExcludedIngredients:
             ["apple", "banana", "orange"]
         )
 
-        agent = MealArchitectAgent(db_session)
+        agent = MealArchitectAgent(event_bus=MagicMock(), db_session=db_session)
 
         candidates = agent._get_candidate_recipes(
             user_id=test_user.id,

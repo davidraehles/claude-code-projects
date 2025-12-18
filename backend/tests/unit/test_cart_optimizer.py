@@ -64,7 +64,10 @@ async def test_create_cart_success_emits_event_and_metrics(
 ):
     # Setup
     agent = CartOptimizerAgent(
-        mock_knuspr_client, mock_ingredient_mapper, mock_db, mock_event_bus
+        event_bus=mock_event_bus,
+        knuspr_client=mock_knuspr_client,
+        ingredient_mapper=mock_ingredient_mapper,
+        db=mock_db
     )
 
     # Mock internal methods
@@ -106,7 +109,10 @@ async def test_create_cart_failure_emits_event_and_metrics(
 ):
     # Setup
     agent = CartOptimizerAgent(
-        mock_knuspr_client, mock_ingredient_mapper, mock_db, mock_event_bus
+        event_bus=mock_event_bus,
+        knuspr_client=mock_knuspr_client,
+        ingredient_mapper=mock_ingredient_mapper,
+        db=mock_db
     )
 
     # Mock failure

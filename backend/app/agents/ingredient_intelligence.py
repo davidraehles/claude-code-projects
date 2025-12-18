@@ -16,9 +16,11 @@ from app.models.ingredient import (
     Allergen,
     SubstitutionRule,
 )
+from app.agents.base import Agent, CapabilityManifest
+from app.events import Event, EventType, EventBus
 
 
-class IngredientIntelligenceAgent:
+class IngredientIntelligenceAgent(Agent):
     """
     Agent for ingredient intelligence operations.
 
@@ -29,14 +31,79 @@ class IngredientIntelligenceAgent:
     - Ingredient matching with fuzzy search
     """
 
-    def __init__(self, db_session: Session):
+    def __init__(self, event_bus: EventBus, db_session: Session):
         """
         Initialize the Ingredient Intelligence Agent.
 
         Args:
+            event_bus: Event bus for communication
             db_session: SQLAlchemy database session
         """
+        super().__init__(event_bus)
         self.db = db_session
+
+    def get_manifest(self) -> CapabilityManifest:
+        return CapabilityManifest(
+            name="ingredient-intelligence",
+            version="1.0.0",
+            description="Provides ingredient classification and substitutions",
+            capabilities=["classify_ingredient", "suggest_substitutions"],
+            input_events=[
+                EventType.INGREDIENT_CLASSIFICATION_REQUESTED,
+                EventType.INGREDIENT_SUBSTITUTION_REQUESTED
+            ],
+            output_events=[
+                EventType.INGREDIENT_CLASSIFICATION_COMPLETED,
+                EventType.INGREDIENT_SUBSTITUTION_COMPLETED
+            ]
+        )
+
+    async def handle_event(self, event: Event):
+        if event.type == EventType.INGREDIENT_CLASSIFICATION_REQUESTED:
+            self.logger.info(f"Processing ingredient classification request: {event.event_id}")
+            try:
+                ingredient_name = event.payload.get("ingredient_name")
+                ingredient = self.find_ingredient(ingredient_name)
+                category = ingredient.category.value if ingredient else "unknown"
+
+                await self.publish(
+                    EventType.INGREDIENT_CLASSIFICATION_COMPLETED,
+                    {
+                        "ingredient_name": ingredient_name,
+                        "category": category,
+                        "ingredient_id": ingredient.id if ingredient else None
+                    },
+                    correlation_id=event.correlation_id
+                )
+            except Exception as e:
+                self.logger.error(f"Error classifying ingredient: {e}")
+
+        elif event.type == EventType.INGREDIENT_SUBSTITUTION_REQUESTED:
+            self.logger.info(f"Processing substitution request: {event.event_id}")
+            try:
+                ingredient_name = event.payload.get("ingredient_name")
+                ingredient = self.find_ingredient(ingredient_name)
+                substitutions = []
+                if ingredient:
+                    subs = self.get_substitutions(ingredient.id)
+                    substitutions = [
+                        {
+                            "substitute_name": s.substitute.name,
+                            "score": s.score,
+                            "notes": s.notes
+                        } for s in subs
+                    ]
+
+                await self.publish(
+                    EventType.INGREDIENT_SUBSTITUTION_COMPLETED,
+                    {
+                        "ingredient_name": ingredient_name,
+                        "substitutions": substitutions
+                    },
+                    correlation_id=event.correlation_id
+                )
+            except Exception as e:
+                self.logger.error(f"Error getting substitutions: {e}")
 
     def normalize_ingredient_name(self, name: str) -> str:
         """

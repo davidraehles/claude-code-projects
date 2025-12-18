@@ -38,7 +38,7 @@
 - AI: Anthropic Claude
 - Monitoring: Prometheus + Grafana
 - Container: Docker + Docker Compose
-- Frontend: React/Vue (mobile-first) - TBD
+- Frontend: Next.js 16 + React 19 (mobile-first)
 
 ---
 

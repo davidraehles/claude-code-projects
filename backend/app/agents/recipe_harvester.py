@@ -22,6 +22,13 @@ import logging
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.agents.base import Agent, CapabilityManifest
+from app.events import Event, EventType
+# Note: HtmlScraper import will be done inside the method to avoid circular imports if any,
+# or I can import it here if I'm sure. Let's import it here.
+# But wait, HtmlScraper might not be in the same directory structure or might have dependencies.
+# I'll check if I can import it.
+
 logger = logging.getLogger(__name__)
 
 
@@ -306,3 +313,62 @@ class DuplicateDetector:
         candidates.sort(key=lambda x: x[1], reverse=True)
 
         return candidates
+
+
+class RecipeHarvesterAgent(Agent):
+    """
+    Agent responsible for harvesting recipes from various sources.
+    """
+
+    def get_manifest(self) -> CapabilityManifest:
+        return CapabilityManifest(
+            name="recipe-harvester",
+            version="1.0.0",
+            description="Harvests recipes from URLs and APIs",
+            capabilities=["scrape_url", "detect_duplicates"],
+            input_events=[EventType.RECIPE_HARVEST_REQUESTED],
+            output_events=[
+                EventType.RECIPE_HARVEST_COMPLETED,
+                EventType.RECIPE_HARVEST_FAILED,
+                EventType.RECIPE_SAVED,
+                EventType.RECIPE_DUPLICATE_DETECTED
+            ]
+        )
+
+    async def handle_event(self, event: Event):
+        if event.type == EventType.RECIPE_HARVEST_REQUESTED:
+            await self._handle_harvest_request(event)
+
+    async def _handle_harvest_request(self, event: Event):
+        url = event.payload.get("url")
+        if not url:
+            return
+
+        try:
+            await self.publish(EventType.RECIPE_HARVEST_STARTED, {"url": url}, event.correlation_id)
+
+            # Import here to avoid circular dependency if any
+            from app.agents.html_scraper import HtmlScraper
+
+            # For now, just use HTML scraper
+            scraper = HtmlScraper(logger_instance=self.logger)
+            recipes = []
+            async for recipe in scraper.scrape(url):
+                recipes.append(recipe)
+
+            # In a real implementation, we would save to DB here
+            # and check for duplicates
+
+            await self.publish(EventType.RECIPE_HARVEST_COMPLETED, {
+                "url": url,
+                "recipes_count": len(recipes),
+                "recipes": [r.dict() for r in recipes]
+            }, event.correlation_id)
+
+        except Exception as e:
+            self.logger.error(f"Harvest failed: {e}")
+            await self.publish(EventType.RECIPE_HARVEST_FAILED, {
+                "url": url,
+                "error": str(e)
+            }, event.correlation_id)
+

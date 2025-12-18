@@ -262,7 +262,7 @@ class TestHTMLRecipeScraper:
             "@type": "Recipe",
             "name": "Test Recipe",
             "recipeIngredient": ["salt", "pepper"],
-            "recipeInstructions": "Mix well",
+            "recipeInstructions": "Mix well and cook for 20 minutes until done.",
             "prepTime": "PT10M",
             "cookTime": "PT20M",
             "recipeYield": "4 servings",

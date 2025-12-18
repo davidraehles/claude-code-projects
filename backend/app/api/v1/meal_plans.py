@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from app.api.dependencies import get_database, get_current_user_id
 from app.models.meal_plan import MealPlan, MealPlanRecipe, GroceryCart, CartItem
 from app.agents.meal_architect import MealArchitectAgent
+from app.events.bus import get_event_bus, EventBus
 
 
 router = APIRouter()
@@ -145,6 +146,7 @@ async def create_meal_plan(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_database),
     user_id: int = Depends(get_current_user_id),
+    event_bus: EventBus = Depends(get_event_bus),
 ):
     """
     Create a new meal plan.
@@ -157,11 +159,12 @@ async def create_meal_plan(
         background_tasks: FastAPI background tasks
         db: Database session
         user_id: Current user ID
+        event_bus: Event bus for agent communication
 
     Returns:
         Created meal plan
     """
-    agent = MealArchitectAgent(db)
+    agent = MealArchitectAgent(event_bus=event_bus, db_session=db)
 
     try:
         meal_plan = agent.generate_meal_plan(
@@ -261,6 +264,7 @@ async def get_meal_plan(
     meal_plan_id: int,
     db: Session = Depends(get_database),
     user_id: int = Depends(get_current_user_id),
+    event_bus: EventBus = Depends(get_event_bus),
 ):
     """
     Get detailed meal plan.
@@ -289,7 +293,7 @@ async def get_meal_plan(
             detail=f"Meal plan {meal_plan_id} not found",
         )
 
-    agent = MealArchitectAgent(db)
+    agent = MealArchitectAgent(event_bus=event_bus, db_session=db)
     summary = agent.get_meal_plan_summary(meal_plan_id)
 
     return MealPlanDetailResponse(

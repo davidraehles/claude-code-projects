@@ -29,6 +29,7 @@ from app.monitoring.metrics import (
 )
 from app.services.knuspr_mcp_client import KnusprMCPClient
 from app.services.ingredient_mapper import IngredientMapper
+from app.agents.base import Agent, CapabilityManifest
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class MappedIngredient:
     category: str
 
 
-class CartOptimizerAgent:
+class CartOptimizerAgent(Agent):
     """
     Main grocery shopping service agent that converts meal plans to Knuspr carts.
 
@@ -90,24 +91,47 @@ class CartOptimizerAgent:
 
     def __init__(
         self,
+        event_bus: EventBus,
         knuspr_client: KnusprMCPClient,
         ingredient_mapper: IngredientMapper,
         db,
-        event_bus: Optional[EventBus] = None,
     ):
         """
         Initialize Cart Optimizer Agent.
-
-        Args:
-            knuspr_client: KnusprMCPClient for Knuspr API access
-            ingredient_mapper: IngredientMapper for ingredient to product mapping
-            db: Database connection for cart storage
-            event_bus: EventBus for publishing events
         """
+        super().__init__(event_bus)
         self.knuspr_client = knuspr_client
         self.ingredient_mapper = ingredient_mapper
         self.db = db
-        self.event_bus = event_bus
+
+    def get_manifest(self) -> CapabilityManifest:
+        return CapabilityManifest(
+            name="cart-optimizer",
+            version="1.0.0",
+            description="Optimizes grocery carts for Knuspr",
+            capabilities=["create_cart", "optimize_cart"],
+            input_events=[EventType.CART_CREATION_REQUESTED],
+            output_events=[
+                EventType.CART_CREATED,
+                EventType.CART_CREATION_FAILED
+            ]
+        )
+
+    async def handle_event(self, event: Event):
+        if event.type == EventType.CART_CREATION_REQUESTED:
+            self.logger.info(f"Processing cart creation request: {event.event_id}")
+            try:
+                payload = event.payload
+                await self.create_cart_from_meal_plan(
+                    meal_plan_id=payload.get("meal_plan_id"),
+                    user_id=payload.get("user_id"),
+                    delivery_preferences=payload.get("delivery_preferences")
+                )
+            except Exception as e:
+                # Error is already logged and published in create_cart_from_meal_plan
+                # But if it raises, we catch it here to prevent agent crash
+                self.logger.error(f"Error handling cart creation event: {e}")
+
 
     async def create_cart_from_meal_plan(
         self,

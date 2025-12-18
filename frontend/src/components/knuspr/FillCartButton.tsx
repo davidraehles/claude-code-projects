@@ -52,7 +52,8 @@ export function FillCartButton({
       setFormEmail(credentialStatus.data.knuspr_email || '')
       setRememberCredentials(true)
     }
-  }, [credentialStatus.data, formEmail])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [credentialStatus.data])
 
   // Validate form
   const validateForm = (): boolean => {
