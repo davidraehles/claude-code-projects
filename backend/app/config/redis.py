@@ -34,15 +34,19 @@ def get_redis_pool() -> redis.ConnectionPool:
         settings = get_redis_settings()
         # Use ConnectionPool with explicit credentials to avoid embedding
         # secrets in the URL string which may be logged.
-        _pool = redis.ConnectionPool(
-            host=settings.host,
-            port=settings.port,
-            db=settings.db,
-            password=settings.password,
-            ssl=settings.ssl,
-            encoding="utf-8",
-            decode_responses=True,
-        )
+        pool_kwargs = {
+            "host": settings.host,
+            "port": settings.port,
+            "db": settings.db,
+            "password": settings.password,
+            "encoding": "utf-8",
+            "decode_responses": True,
+        }
+
+        if settings.ssl:
+            pool_kwargs["ssl"] = True
+
+        _pool = redis.ConnectionPool(**pool_kwargs)
     return _pool
 
 async def get_redis_client() -> redis.Redis:

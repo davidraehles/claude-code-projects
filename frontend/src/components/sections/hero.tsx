@@ -158,7 +158,7 @@ export function Hero() {
               transition={{ type: 'spring', stiffness: 200, damping: 25 }}
             >
               <h3 className="text-2xl font-bold mb-4">🎉 Thanks for joining the waitlist!</h3>
-              <p className="text-lg">We'll be in touch soon.</p>
+              <p className="text-lg">We&apos;ll be in touch soon.</p>
               <Button
                 className="mt-6"
                 onClick={() => setSubmitted(false)}

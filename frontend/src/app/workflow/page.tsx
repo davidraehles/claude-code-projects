@@ -31,14 +31,6 @@ function WorkflowPageContent() {
   const searchParams = useSearchParams();
   const mealPlanId = searchParams.get('meal_plan_id');
 
-  const [state, setState] = useState<WorkflowState>({
-    step: 'loading',
-    cartData: null,
-    selectedDeliverySlot: null,
-    error: null,
-    isLoading: true,
-  });
-
   // Validate and parse meal plan ID
   const validateMealPlanId = (id: string | null): number | null => {
     if (!id) return null;
@@ -46,6 +38,33 @@ function WorkflowPageContent() {
     if (isNaN(parsed) || parsed <= 0) return null;
     return parsed;
   };
+
+  const validatedId = validateMealPlanId(mealPlanId);
+
+  const [state, setState] = useState<WorkflowState>(() => {
+    if (!validatedId) {
+      return {
+        step: 'error',
+        cartData: null,
+        selectedDeliverySlot: null,
+        error: {
+          code: 'MISSING_MEAL_PLAN',
+          message: 'No meal plan specified',
+          details: 'Please select a valid meal plan to create a cart.',
+          severity: 'error',
+          suggestions: ['Go back and select a meal plan', 'Create a new meal plan first'],
+        },
+        isLoading: false,
+      };
+    }
+    return {
+      step: 'loading',
+      cartData: null,
+      selectedDeliverySlot: null,
+      error: null,
+      isLoading: true,
+    };
+  });
 
   const generateCartMutation = useMutation({
     mutationFn: async (id: number) => {
@@ -101,26 +120,11 @@ function WorkflowPageContent() {
 
   // Fetch cart data on component mount
   useEffect(() => {
-    const validatedMealPlanId = validateMealPlanId(mealPlanId);
-
-    if (!validatedMealPlanId) {
-      setState((prev) => ({
-        ...prev,
-        step: 'error',
-        error: {
-          code: 'MISSING_MEAL_PLAN',
-          message: 'No meal plan specified',
-          details: 'Please select a valid meal plan to create a cart.',
-          severity: 'error',
-          suggestions: ['Go back and select a meal plan', 'Create a new meal plan first'],
-        },
-        isLoading: false,
-      }));
-      return;
+    if (validatedId && state.step === 'loading' && !state.cartData && !state.error) {
+      generateCartMutation.mutate(validatedId);
     }
-
-    generateCartMutation.mutate(validatedMealPlanId);
-  }, [mealPlanId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [validatedId]);
 
   const handleRetry = () => {
     setState((prev) => ({

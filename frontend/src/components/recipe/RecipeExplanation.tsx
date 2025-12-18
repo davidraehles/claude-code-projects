@@ -51,7 +51,7 @@ export function RecipeExplanation({ recipeId, context = 'meal_plan' }: RecipeExp
             <div className="flex items-start gap-2">
               <Sparkles className="w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600" />
               <div>
-                <p className="font-semibold mb-1 text-blue-900">Chef's Reasoning</p>
+                <p className="font-semibold mb-1 text-blue-900">Chef&apos;s Reasoning</p>
                 <p>{explanation}</p>
               </div>
             </div>

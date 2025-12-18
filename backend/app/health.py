@@ -133,9 +133,9 @@ async def check_redis() -> ComponentHealth:
             message="Redis connection successful",
             latency_ms=round(latency_ms, 2),
             details={
-                "host": event_bus.redis_host,
-                "port": event_bus.redis_port,
-                "db": event_bus.redis_db,
+                "host": event_bus.settings.host,
+                "port": event_bus.settings.port,
+                "db": event_bus.settings.db,
             },
         )
 

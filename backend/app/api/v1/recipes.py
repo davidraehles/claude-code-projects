@@ -486,6 +486,16 @@ async def list_recipes(
     if source_type:
         query = query.filter(Recipe.source_type == source_type.lower())
 
+    # Calculate total count before pagination
+    try:
+        count_query = select(func.count()).select_from(query.subquery())
+        total_result = await db.execute(count_query)
+        total = total_result.scalar_one()
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.warning("Failed to count recipes: %s", e)
+        total = 0
+
     # Apply pagination and ordering
     query = query.order_by(desc(Recipe.created_at)).offset(skip).limit(limit)
 
@@ -500,12 +510,8 @@ async def list_recipes(
         logger.exception("Failed to fetch recipes: %s", e)
         return RecipeListResponse(items=[], total=0, skip=skip, limit=limit)
 
-    # Try to get total count, but fall back to the length of fetched items
-    try:
-        count_query = select(func.count()).select_from(query.subquery())
-        total_result = await db.execute(count_query)
-        total = total_result.scalar_one()
-    except Exception:
+    # Fallback if total count failed
+    if total == 0 and recipes:
         total = len(recipes)
 
     return RecipeListResponse(
