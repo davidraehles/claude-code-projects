@@ -6,7 +6,7 @@
  */
 
 import React, { useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
@@ -22,7 +22,6 @@ import {
   selectIsStepComplete,
   selectIsStepAccessible,
   selectIsLoading,
-  selectHasError,
   selectCartItemCount,
   selectHasDeliverySlot,
   selectIsReadyForCheckout,
@@ -30,7 +29,6 @@ import {
 } from '@/reducers/workflowReducer';
 
 function WorkflowPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const mealPlanId = searchParams.get('meal_plan_id');
 
@@ -66,10 +64,12 @@ function WorkflowPageContent() {
       );
     },
     onSuccess: (data) => {
-      if (data.result) {
+      if (data.result && typeof data.result === 'object') {
+        // Map API response to CartPreviewData format
+        const cartData = data.result as unknown as import('@/components/knuspr/CartPreview').CartPreviewData;
         dispatch({
           type: 'CART_GENERATION_SUCCEEDED',
-          payload: { cartData: data.result as any },
+          payload: { cartData },
         });
       } else {
         throw new Error('Invalid response format');
@@ -122,7 +122,7 @@ function WorkflowPageContent() {
 
     dispatch({ type: 'WORKFLOW_STARTED', payload: { mealPlanId: validatedMealPlanId } });
     generateCartMutation.mutate(validatedMealPlanId);
-  }, [mealPlanId]);
+  }, [mealPlanId, dispatch, generateCartMutation]);
 
   // Event handlers
   const handleRetry = () => {
@@ -138,10 +138,12 @@ function WorkflowPageContent() {
   };
 
   const handleCheckout = () => {
-    if (state.cartData) {
-      dispatch({ type: 'USER_CLICKED_CHECKOUT' });
-      window.open(state.cartData.knuspr_url, '_blank');
+    // Defensive guard: ensure checkout conditions are met
+    if (!selectIsReadyForCheckout(state) || !state.cartData) {
+      return;
     }
+    dispatch({ type: 'USER_CLICKED_CHECKOUT' });
+    window.open(state.cartData.knuspr_url, '_blank');
   };
 
   const handleNavigateToStep = (step: WorkflowStep) => {

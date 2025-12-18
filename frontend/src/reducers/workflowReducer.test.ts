@@ -2,11 +2,12 @@
  * Tests for workflowReducer
  */
 
+import type { CartPreviewData } from '@/components/knuspr/CartPreview'
+import type { DeliverySlot } from '@/components/knuspr/DeliverySlotPicker'
 import {
   workflowReducer,
   getInitialWorkflowState,
   selectIsStepComplete,
-  selectIsStepAccessible,
   selectIsLoading,
   selectHasError,
   selectCartItemCount,
@@ -15,6 +16,32 @@ import {
   type WorkflowState,
   type WorkflowAction,
 } from './workflowReducer'
+
+// Mock data factories for type-safe test data
+function createMockCartData(overrides?: Partial<CartPreviewData>): CartPreviewData {
+  return {
+    cart_id: 'test-cart-123',
+    knuspr_url: 'https://knuspr.de/cart',
+    total_price: 50.0,
+    item_count: 10,
+    delivery_slot: null,
+    items_by_section: {},
+    unavailable_items: [],
+    created_at: new Date().toISOString(),
+    ...overrides,
+  }
+}
+
+function createMockDeliverySlot(overrides?: Partial<DeliverySlot>): DeliverySlot {
+  return {
+    slot_id: 'slot-123',
+    date: '2024-12-20',
+    time_range: '10:00-12:00',
+    price: 5.99,
+    available: true,
+    ...overrides,
+  }
+}
 
 describe('workflowReducer', () => {
   describe('getInitialWorkflowState', () => {
@@ -55,17 +82,11 @@ describe('workflowReducer', () => {
   describe('CART_GENERATION_SUCCEEDED action', () => {
     it('should set cart data and move to cart-preview step', () => {
       const initialState = getInitialWorkflowState()
-      const mockCartData = {
-        item_count: 10,
-        total_price: 50.0,
-        knuspr_url: 'https://knuspr.de/cart',
-        unavailable_items: [],
-        delivery_slot: null,
-      }
+      const mockCartData = createMockCartData()
 
       const action: WorkflowAction = {
         type: 'CART_GENERATION_SUCCEEDED',
-        payload: { cartData: mockCartData as any },
+        payload: { cartData: mockCartData },
       }
 
       const newState = workflowReducer(initialState, action)
@@ -104,22 +125,17 @@ describe('workflowReducer', () => {
     it('should save delivery slot and move to review step', () => {
       const initialState: WorkflowState = {
         step: 'delivery-selection',
-        cartData: { item_count: 5 } as any,
+        cartData: createMockCartData({ item_count: 5 }),
         selectedDeliverySlot: null,
         error: null,
         isLoading: false,
       }
 
-      const mockSlot = {
-        slot_id: 'slot-123',
-        date: '2024-12-20',
-        time_range: '10:00-12:00',
-        price: 5.99,
-      }
+      const mockSlot = createMockDeliverySlot()
 
       const action: WorkflowAction = {
         type: 'USER_SELECTED_DELIVERY_SLOT',
-        payload: { slot: mockSlot as any },
+        payload: { slot: mockSlot },
       }
 
       const newState = workflowReducer(initialState, action)
@@ -133,8 +149,8 @@ describe('workflowReducer', () => {
     it('should move to completed step', () => {
       const initialState: WorkflowState = {
         step: 'review',
-        cartData: { item_count: 5 } as any,
-        selectedDeliverySlot: { slot_id: 'slot-123' } as any,
+        cartData: createMockCartData({ item_count: 5 }),
+        selectedDeliverySlot: createMockDeliverySlot(),
         error: null,
         isLoading: false,
       }
@@ -176,8 +192,8 @@ describe('workflowReducer', () => {
     it('should reset to initial state', () => {
       const initialState: WorkflowState = {
         step: 'review',
-        cartData: { item_count: 5 } as any,
-        selectedDeliverySlot: { slot_id: 'slot-123' } as any,
+        cartData: createMockCartData({ item_count: 5 }),
+        selectedDeliverySlot: createMockDeliverySlot(),
         error: null,
         isLoading: false,
       }
@@ -246,7 +262,7 @@ describe('workflowReducer', () => {
       it('should return cart item count', () => {
         const state: WorkflowState = {
           step: 'cart-preview',
-          cartData: { item_count: 15 } as any,
+          cartData: createMockCartData({ item_count: 15 }),
           selectedDeliverySlot: null,
           error: null,
           isLoading: false,
@@ -265,7 +281,7 @@ describe('workflowReducer', () => {
         const state: WorkflowState = {
           step: 'review',
           cartData: null,
-          selectedDeliverySlot: { slot_id: 'slot-123' } as any,
+          selectedDeliverySlot: createMockDeliverySlot(),
           error: null,
           isLoading: false,
         }
@@ -282,8 +298,8 @@ describe('workflowReducer', () => {
       it('should return true when all conditions met', () => {
         const state: WorkflowState = {
           step: 'review',
-          cartData: { item_count: 5 } as any,
-          selectedDeliverySlot: null,
+          cartData: createMockCartData({ item_count: 5 }),
+          selectedDeliverySlot: createMockDeliverySlot(),
           error: null,
           isLoading: false,
         }
@@ -293,8 +309,8 @@ describe('workflowReducer', () => {
       it('should return false when step is not review', () => {
         const state: WorkflowState = {
           step: 'cart-preview',
-          cartData: { item_count: 5 } as any,
-          selectedDeliverySlot: null,
+          cartData: createMockCartData({ item_count: 5 }),
+          selectedDeliverySlot: createMockDeliverySlot(),
           error: null,
           isLoading: false,
         }
@@ -304,8 +320,8 @@ describe('workflowReducer', () => {
       it('should return false when loading', () => {
         const state: WorkflowState = {
           step: 'review',
-          cartData: { item_count: 5 } as any,
-          selectedDeliverySlot: null,
+          cartData: createMockCartData({ item_count: 5 }),
+          selectedDeliverySlot: createMockDeliverySlot(),
           error: null,
           isLoading: true,
         }
@@ -315,9 +331,20 @@ describe('workflowReducer', () => {
       it('should return false when has error', () => {
         const state: WorkflowState = {
           step: 'review',
-          cartData: { item_count: 5 } as any,
-          selectedDeliverySlot: null,
+          cartData: createMockCartData({ item_count: 5 }),
+          selectedDeliverySlot: createMockDeliverySlot(),
           error: { code: 'ERROR', message: 'Test', details: '', severity: 'error' },
+          isLoading: false,
+        }
+        expect(selectIsReadyForCheckout(state)).toBe(false)
+      })
+
+      it('should return false when no delivery slot selected', () => {
+        const state: WorkflowState = {
+          step: 'review',
+          cartData: createMockCartData({ item_count: 5 }),
+          selectedDeliverySlot: null,
+          error: null,
           isLoading: false,
         }
         expect(selectIsReadyForCheckout(state)).toBe(false)

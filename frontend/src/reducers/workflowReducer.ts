@@ -99,7 +99,7 @@ export function workflowReducer(
 
     case 'USER_NAVIGATED_TO_STEP':
       // Only allow navigation to accessible steps
-      if (!isStepAccessible(action.payload.step, state.step)) {
+      if (!selectIsStepAccessible(state, action.payload.step)) {
         return state
       }
       return {
@@ -163,14 +163,6 @@ export function selectIsStepAccessible(state: WorkflowState, step: WorkflowStep)
 }
 
 /**
- * Helper for reducer logic
- */
-function isStepAccessible(step: WorkflowStep, currentStep: WorkflowStep): boolean {
-  return getStepIndex(step) <= getStepIndex(currentStep) && 
-         WORKFLOW_STEPS.includes(currentStep as typeof WORKFLOW_STEPS[number])
-}
-
-/**
  * Selector: Check if workflow is in loading state
  */
 export function selectIsLoading(state: WorkflowState): boolean {
@@ -204,6 +196,7 @@ export function selectHasDeliverySlot(state: WorkflowState): boolean {
 export function selectIsReadyForCheckout(state: WorkflowState): boolean {
   return state.step === 'review' && 
          state.cartData !== null && 
+         state.selectedDeliverySlot !== null &&
          !state.isLoading && 
          state.error === null
 }

@@ -114,10 +114,31 @@ export function importFormReducer(
 }
 
 /**
+ * Internal helper: Validate URL format (basic http/https check)
+ */
+function isValidUrl(rawUrl: string): boolean {
+  const trimmed = rawUrl.trim()
+  if (!trimmed) return false
+
+  // Require explicit http/https protocol to avoid malformed or protocol-less URLs
+  if (!/^https?:\/\//i.test(trimmed)) {
+    return false
+  }
+
+  try {
+    // Using the URL constructor provides basic structural validation
+    new URL(trimmed)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Selector: Check if URL is valid for import
  */
 export function selectIsUrlValid(state: ImportFormState): boolean {
-  return state.url.trim().length > 0
+  return isValidUrl(state.url)
 }
 
 /**

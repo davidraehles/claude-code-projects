@@ -16,8 +16,6 @@ import { useReducerWithDevTools } from '@/hooks/useReducerWithDevTools'
 import {
   importFormReducer,
   getInitialImportFormState,
-  selectIsUrlValid,
-  selectHasFile,
   selectFileInfo,
   selectCanSubmitUrl,
   selectCanSubmitFile,
@@ -96,9 +94,13 @@ export default function ImportPage() {
   }
 
   const handleFileUpload = () => {
-    if (!selectCanSubmitFile(formState)) return
+    const { selectedFile } = formState
+    // Defensive guard: selectCanSubmitFile should ensure a file exists
+    if (!selectedFile || !selectCanSubmitFile(formState)) {
+      return
+    }
 
-    uploadFile(formState.selectedFile!, {
+    uploadFile(selectedFile, {
       onSuccess: () => {
         dispatch({ type: 'FILE_UPLOAD_SUCCEEDED' })
         if (fileInputRef.current) {

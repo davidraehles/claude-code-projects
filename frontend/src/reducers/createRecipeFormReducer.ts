@@ -142,10 +142,18 @@ export function createRecipeFormReducer(
 }
 
 /**
+ * Title validation constraints
+ */
+const MIN_TITLE_LENGTH = 3
+const MAX_TITLE_LENGTH = 120
+
+/**
  * Selector: Check if title is valid
  */
 export function selectIsTitleValid(state: CreateRecipeFormState): boolean {
-  return state.title.trim().length > 0
+  const trimmedTitle = state.title.trim()
+  const length = trimmedTitle.length
+  return length >= MIN_TITLE_LENGTH && length <= MAX_TITLE_LENGTH
 }
 
 /**
