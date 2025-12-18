@@ -9,7 +9,6 @@ import json
 import asyncio
 from typing import Callable, Dict, List, Optional
 import redis.asyncio as redis
-from datetime import datetime
 
 from app.events import Event, EventType
 from app.config.redis import get_redis_settings
@@ -46,8 +45,6 @@ class EventBus:
             self.settings.url,
             encoding="utf-8",
             decode_responses=True
-        )
-            decode_responses=True,
         )
         self.pubsub = self.redis_client.pubsub()
         print(f"✅ Connected to Redis at {self.redis_host}:{self.redis_port}")
